@@ -356,6 +356,15 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
    typing always available. Remove the visible per-question countdown and
    auto-submit; keep time as a quiet parent-page signal. Explaining aloud
    also answers "prevent guessing" (7).
+9. **TVs and every screen** (parked). Smart TVs mostly can't run NextDNS
+   themselves. Best: home router DNS → NextDNS covers TV, console, guests
+   (force all DNS through it, since Chromecast/Google TV and some Rokus
+   hard-code Google DNS); or manual DNS on the TV; Apple TV takes the same
+   profile as the iPhone. Vendor apps: Samsung SmartThings API (power off,
+   input, channel), Roku local control API, LG webOS local commands, a
+   smart plug for any brand — on/off and app launch, not per-app blocking.
+   Product feature later ("every screen in the house"); router DNS is
+   enough for the POC.
 5. **Bounties and a support circle** (parked). Parents post bounties for
    extra work; others in his life join in (an uncle reading with him 3 h a
    week; the parent offers a gift card to the helper) — framed as
