@@ -211,6 +211,18 @@ settings) waits until the log shows what the tool is. Lessons from InDusk:
     Storybook framework; a "stories" dev route; tokens file; sample label;
     the drift test. A one-command "show me every state" is the payoff.
 
+### Merged (2026-10-20, Sandy: "you can do all the merges")
+
+idea-factory #1; homework-gate #3 (Storybook) and #5 (field-notebook
+direction + `design/references.md` with the brief and reference
+screenshots). **Mistake:** #4 was stacked on #3; merging #3 with
+`--delete-branch` deleted #4's base and GitHub closed #4. Reopened as #5
+against `main`. Factory lesson: with stacked PRs, retarget children to
+`main` before deleting a merged base (or don't delete it until they're
+retargeted). With many parallel PRs this is a real failure mode. Also: `gh`
+inside `idea-factory/homework-gate/` resolved the wrong repo once — pass
+`-R infinitedusky/homework-gate`.
+
 ### Ideas raised, not yet decided (2026-10-20)
 
 From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
