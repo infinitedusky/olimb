@@ -291,6 +291,19 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
    needs both; too-fast or flip-flopping answers recorded as signals for
    parent/profile, never penalties on screen. Guessing often means tired /
    too hard / anxious → profile ("guesses more after 9pm") → tutor adapts.
+8. **Painless quiz: spoken or visual, like a game** (Sandy). Example item:
+   "Walk me through how you would divide fractions." Hold-to-talk answer,
+   one friendly follow-up for the why ("how many eighths fit in three
+   quarters?"), credit for steps + meaning; "I don't know" opens the tutor
+   (two-strikes rule). Plus visual items (drag fraction bars, pick the
+   picture, order the steps) and quick taps for early wins; the shark eats
+   a bit of the to-do list after each. Speech: browser Web Speech API first
+   (Chrome/Edge on his laptop), a transcription provider later. Grading:
+   model on the transcript against a short rubric, tolerant of messy maths
+   transcription. Risk: speaking aloud at night isn't always comfortable →
+   typing always available. Remove the visible per-question countdown and
+   auto-submit; keep time as a quiet parent-page signal. Explaining aloud
+   also answers "prevent guessing" (7).
 5. **Bounties and a support circle** (parked). Parents post bounties for
    extra work; others in his life join in (an uncle reading with him 3 h a
    week; the parent offers a gift card to the helper) — framed as
