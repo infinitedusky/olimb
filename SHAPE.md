@@ -24,6 +24,15 @@ proposes, agents build with evidence, telemetry judges, PostHog-native. Open que
 (recommended MIT, like PostHog's core) and the public repo's name. The current idea-factory repo stays private
 (the log and ideas describe a real family); the public project gets a fresh repo.
 
+## The core engine: parallel execution as a graph (Sandy, 2026-10-20)
+
+Name: **Idea Factory** (decided). Build the core engine first, as soon as possible: **plans are made of tasks;
+tasks form a dependency graph** (node = task, edge = dependency); running a plan runs every task whose
+dependencies are done, in parallel, each agent on its own branch/worktree, producing PRs. A **VS Code
+visualization** of the graph running. If people already do this, borrow what we can (InDusk's unbuilt
+`run-the-graph` plan, its session manager and worktrees; open-source parallel runners and graph engines —
+`research/parallel-engine.md` when written).
+
 ## Positioning (Sandy, 2026-10-20)
 
 Lightsprint reads as **an extension of Linear** (tickets in, code out), and Linear is its natural competitor.
