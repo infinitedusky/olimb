@@ -47,8 +47,11 @@ fix.
 - **One engine process is the single writer.** Agents, the CLI, the VS Code view and the UI talk to it. Agents
   never write status; they emit events (or call a tool) and the engine records them. (Kills InDusk's other bug:
   two processes each holding session state, launching a task twice.)
-- **Postgres from day one** (Sandy), with migrations from the first commit and an append-only event table the
-  graph view subscribes to. The application is database-driven, working on repos — like Lightsprint, whose data
+- **Postgres from day one, so the engine is server-friendly** (Sandy): the engine is one server process owning
+  the database — local in development (Docker Postgres or PGlite), hosted for real, same code. The CLI, the VS Code
+  view and the UI are clients over HTTP plus a live stream; none touch the database directly. The live feed is
+  `LISTEN/NOTIFY` on the append-only event table, fanned out over WebSocket/SSE, so several machines can watch one
+  run. Workspace, membership and stacks are rows from the start, not a retrofit. Migrations from the first commit. The application is database-driven, working on repos — like Lightsprint, whose data
   model we're reconstructing from its public docs and open-source plugins to design ours properly before
   writing engine code (`research/parallel-engine.md`).
 
