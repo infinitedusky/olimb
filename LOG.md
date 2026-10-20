@@ -195,8 +195,11 @@ settings) waits until the log shows what the tool is. Lessons from InDusk:
     draws in as steps complete; the gate = a shark mouth (vermilion lips,
     interlocking white teeth) that opens on FREE TIME; one next step per
     screen; no red/failure language ("Not yet… That's information, not a
-    verdict"); paper by day, cyanotype at night. Step 3 of elicitation
-    (Sandy reacts) is next.
+    verdict"); paper by day, cyanotype at night.
+    **Sandy's reaction (step 3):** likes the shark mouth as the gate. Later,
+    not now: when it's all the way open it swallows the to-do list and
+    dances with you. Keep it a few seconds, tap to skip, quieter with
+    reduced motion — it sits between him and free time.
     - Tedious: finding a public-domain image (Wikimedia API needs a user
       agent; most search hits were junk), converting it to ink, screenshot
       checks. Judgement: reading the references into a brief, the
