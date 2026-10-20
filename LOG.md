@@ -244,6 +244,21 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
    compare recall weeks later — a real within-student experiment at N=1;
    follow-up rate after "I don't know"; gate pass rate and quiz time not
    worse.
+5. **Bounties and a support circle** (parked). Parents post bounties for
+   extra work; others in his life join in (an uncle reading with him 3 h a
+   week; the parent offers a gift card to the helper) — framed as
+   relationships forming his support group, not paying people. Research:
+   overjustification effect (contingent rewards for things he'd do anyway
+   can lower motivation; unexpected celebrations least harmful);
+   self-determination theory (autonomy, competence, relatedness — the circle
+   is relatedness). Risk (Sandy): nobody joins → "why is no one helping
+   me". Rule if built: the circle is never shown as a count or ranking; he
+   sees what people did, never who didn't. Needs a child psychologist
+   before building. Cheapest evidence: text three relatives a real invite,
+   see who says yes.
+   - **Factory lessons:** capture without chasing; some ideas can't be
+     tested cheaply or by the agent — say so and offer the cheapest real
+     evidence; mark "needs expert" and keep parked rather than fake it.
 - **How to test (proposed):** simulated students (answer-demander, guesser,
   quitter, solid) × the sample worksheet; judge scores replies against the
   directives; baseline tutor vs directive tutor; a deliberately bad tutor
