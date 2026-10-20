@@ -14,6 +14,18 @@ the loop it ran, and here are its telemetry results. It's all green, so you can 
 "Still all green." Metrics keep coming in, and **every idea, the moment it arrives, is analysed against them** —
 the data that supports it, augments it, or argues against it is attached to the idea.
 
+## Positioning (Sandy, 2026-10-20)
+
+Lightsprint reads as **an extension of Linear** (tickets in, code out), and Linear is its natural competitor.
+The idea factory should read as **an extension of PostHog** (data in, code out, data checks it), and **PostHog is
+ours** — its self-driving loop (June 2026: signals → agent → draft PR → metric back to baseline) is the closest
+thing to us. The customer is a PostHog user with data nobody acts on fast enough. The factory uses PostHog's own
+building blocks (insights, flags, experiments) and feels like part of it.
+Platform risk, and the defences: **telemetry-neutral** (PostHog *and* Datadog — PostHog will never be the layer
+that reads your Datadog); **deep where PostHog won't go** (PRs on any stack with their evidence, demos with
+labelled fake data, an agent that pushes back on whether an idea is worth building — their loop is a feature
+inside analytics, ours is the product); and the best extension of PostHog is also what PostHog would buy.
+
 ## What it is
 
 An entrepreneur machine. A person has many ideas; the machine tests them all
