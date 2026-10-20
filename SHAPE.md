@@ -115,6 +115,84 @@ Details and sources in `research/`.
   rather than answers, grades, tracks progress over time). The iOS and native
   locking pieces stay outside the loop at first.
 
+- **It builds the supporting work as it goes** (Sandy, 2026-10-20) — kept from
+  InDusk, which did this well: mockup first, then build, then stories, plus a
+  design system, changelog and docs, each encouraged at the right moment.
+  Here they are by-products, never gates: nothing waits on a document, a
+  missing one is flagged, not blocking (InDusk's gates and reviews are what
+  made it cumbersome). Every artifact needs a reader or it isn't made: mockup
+  → Sandy before code; design system → the next mockup and the app; stories
+  (Storybook) → the demonstration, every state including faked ones;
+  changelog → Sandy and the pitch; docs → the next session.
+
+- **Storybook is the home of the design system, stories and mockups**
+  (Sandy, 2026-10-20), as its own server — not built into our UI (InDusk
+  built its looks/approval flow into the admin and fought it). Tokens and
+  components documented there; mockups are page stories built only from
+  design-system components (so an approved mockup is most of the real
+  screen); every state is a story, with fake data via MSW, labelled; the
+  same stories serve as PR demonstrations.
+
+- **PRs are a source of production failures, so each carries telemetry and a
+  rollback plan** (Sandy, 2026-10-20). At volume (hundreds of PRs a day) a
+  problem can surface after many later merges: redeploying the old version
+  undoes all of them, and reverting one PR can conflict with work built on
+  it. The practice: separate deploy from release with feature flags (PostHog)
+  so rollback means turning off one flag; release gradually with a guard
+  metric; tag events with the release and the flags on, so a late problem
+  traces to one PR; schema changes go expand-then-contract so they stay
+  reversible. Every PR's pitch states: the off switch (which flag; "none"
+  must be justified), how we'd know (guard metric), schema impact, and
+  whether it can be reverted alone. Work is PRs only; `main` is production.
+  Schema changes: additive (new table, nullable/defaulted column, index built
+  concurrently) is flag-safe; breaking (NOT NULL without default, drop/rename,
+  type change, tighter constraint) needs expand-then-contract across PRs.
+  Trap: additive schema can still break rollback through data (e.g. a new
+  enum value written while the flag was on, which flag-off code can't read).
+  So "does the flag work?" is two checks — flag-off code against the new
+  schema, and against data written with the flag on — and the PR
+  demonstration runs both: flag on, write data, flag off, old path still
+  works.
+  No gating migrations by person (Sandy: slow, and no safer). Classify each
+  change by schema *and data* — the same NOT NULL / unique / backfill is
+  trivial or dangerous depending on row counts, nulls, duplicates. Use
+  existing tools for the schema side (Squawk, Atlas migrate lint,
+  strong_migrations; pgroll/Reshape for expand-contract), add the data side
+  by querying the real database. Simple → goes; needs care → agent splits it
+  into expand-contract PRs; hard/irreversible → more evidence (dry run on a
+  DB copy, snapshot first, "irreversible" stated in the pitch), Sandy still
+  decides. Database is a module with a provider (most tools are
+  Postgres-first; Homework Gate is SQLite).
+
+- **Modules and providers** (Sandy, 2026-10-20). Modules are what the factory
+  can do; each needs a role filled; extensions are providers for a role, and
+  a module unlocks when its role has a provider. Telemetry → PostHog; design
+  system / stories / mockups → Storybook; server traces → salvaged local
+  OTel/Jaeger; model access for the app → Claude Code subscription (dev) or
+  Claude API (prod) — `HG_CLAUDE_CODE` is already this; code host → GitHub.
+  Builds on InDusk's extensions (`apps/indusk-mcp/extensions/`, ~20, each a
+  `manifest.json`: skill, MCP server, health checks, env template, detect),
+  which were a flat list with overlaps settled by hand in a README "decision
+  matrix". Keep it light: a module is a named role + manifest; no generic
+  adapter code until a second provider for a role is real. Settings shows each
+  role with its provider(s) — PostHog the only telemetry option for now.
+
+- **Foundational decisions are drawn out, not automated** (Sandy,
+  2026-10-20). Automating setup early takes decisions out of the person's
+  hands — easy, and useless. Setup decisions are mechanical (framework,
+  file layout, routes: automate) or foundational (look and feel, palette,
+  type, voice, density, audience: the person's). Foundational ones get an
+  elicitation process, not a question: references (sites/apps liked and
+  disliked, and why; who it's for) → the agent proposes 2–3 directions as
+  real stories of the app's own screens → the person reacts (pick, mix,
+  reject) → the choice is recorded with its why. Not a gate: the agent may
+  proceed on a default, but it is labelled provisional (agent-chosen) and
+  stays on the person's open list until decided.
+
+- **Tiny visual start, as mockups** (Sandy, 2026-10-20): the idea board
+  (inbox, three lanes — build / testing / parked — and a card per idea) and
+  a settings page, "Telemetry: PostHog" as the only option.
+
 ## Open questions
 
 - Comps: who already does each part (`research/comps-*.md`).
