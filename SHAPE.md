@@ -4,6 +4,14 @@ Working name. Brainstormed with Sandy, 2026-10-20, after deciding InDusk had
 grown more process than product. Draft: research in `research/` fills in the
 comps, the method and what to salvage.
 
+## The dream: company as code (Sandy, 2026-10-21 — "this has been a dream forever")
+
+A company whose logic lives in git (processes, standards, skills, integrations; changed by PR), whose state lives
+in a database (orders, messages, decisions, evidence; never in the code), that is changed on evidence by the
+factory (telemetry proposes, agents build, telemetry judges), and where people make the judgement calls and
+those calls are recorded as part of the company's record. Infrastructure as code took a decade to become the
+default; the tech-pack company (`LOG.md`) would be the first one written this way, from its first garment.
+
 ## What matters most (Sandy, 2026-10-20)
 
 1. **Agents produce PRs and the support for them.**
@@ -13,6 +21,13 @@ When someone asks "how do I know this will work?", the answer is never "trust me
 the loop it ran, and here are its telemetry results. It's all green, so you can launch production." After launch:
 "Still all green." Metrics keep coming in, and **every idea, the moment it arrives, is analysed against them** —
 the data that supports it, augments it, or argues against it is attached to the idea.
+
+## Start with people who are starting (Sandy, 2026-10-21)
+
+"It's hard to retrofit any company, easier if you start using this." The factory and everything built with it
+are for greenfield: PostHog-native from the first line, Postgres from day one, a brand's first tech pack rather
+than a migration of its hundredth. Converters run outward (our standard → the formats incumbents already use), so
+nobody on the other side has to change. The standard spreads because newcomers keep arriving with it.
 
 ## Positioning (Sandy, 2026-10-20)
 
