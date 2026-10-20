@@ -4,6 +4,16 @@ Working name. Brainstormed with Sandy, 2026-10-20, after deciding InDusk had
 grown more process than product. Draft: research in `research/` fills in the
 comps, the method and what to salvage.
 
+## What matters most (Sandy, 2026-10-20)
+
+1. **Agents produce PRs and the support for them.**
+2. **Telemetry drives the decisions and that support.**
+
+When someone asks "how do I know this will work?", the answer is never "trust me". It is: "This ran. Here's
+the loop it ran, and here are its telemetry results. It's all green, so you can launch production." After launch:
+"Still all green." Metrics keep coming in, and **every idea, the moment it arrives, is analysed against them** —
+the data that supports it, augments it, or argues against it is attached to the idea.
+
 ## What it is
 
 An entrepreneur machine. A person has many ideas; the machine tests them all
