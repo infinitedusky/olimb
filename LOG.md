@@ -289,6 +289,35 @@ unlocks itself.
   removal — parent locks that in Screen Time); fine for a demo and an
   honest 13-year-old, agents close it later.
 
+### The gate works on a real phone (2026-10-20)
+
+homework-gate PR #8: locked by default; unlock periods (default every day
+3–10 pm) set by the parent; inside a period it opens when he turns in
+tonight's homework and passes the quiz, or the parent opens it; at the end
+it locks no matter what. Locked = allowlist-only (Sandy: "only Google
+Classroom and us"): every top-level domain NextDNS supports is blocked
+(1,433 of IANA's 1,437; it rejects .kids .merck .music .web), the
+allowlist wins. The server re-checks every minute.
+**Tested by Sandy on Sandy's own iPhone (profile 483b54): "it works."**
+NextDNS logs showed the phone's lookups blocked after the lock, including
+iCloud Private Relay's `mask.apple-dns.net`.
+- Lessons: pages and DNS answers already on the phone survive the lock for
+  a minute or two (Sandy saw nytimes.com "work" — it was loaded before the
+  lock); the first live run caught a bug the fake tests couldn't (TLD file
+  header read as domains). Hammering the NextDNS API (~480 calls in
+  seconds) tripped its rate limit and left stray blocks — slow, one-time
+  sweeps only.
+- **DNS isn't instant** (Sandy: had to close and reopen Safari after
+  unlocking). Apps cache DNS answers — including failures — and keep open
+  connections, so unlock may need an app restart and lock leaks for open
+  apps (a video playing at 9:59 pm keeps going). Demo-acceptable; tell him
+  "close and reopen the app" in the unlock message. Real fix: the native
+  layer — iOS Screen Time shields are instant → raises the priority of the
+  $99 Apple Developer account and the Family Controls request.
+- Tedious: finding which TLDs NextDNS accepts (automated sweep). Judgement:
+  the lock model itself — took Sandy three rounds (overrides → two locks →
+  unlock periods) to land; the agent's first model was wrong.
+
 ### Ideas raised, not yet decided (2026-10-20)
 
 From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
@@ -356,6 +385,23 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
    typing always available. Remove the visible per-question countdown and
    auto-submit; keep time as a quiet parent-page signal. Explaining aloud
    also answers "prevent guessing" (7).
+9. **TVs and every screen — next after the phone loop** (Sandy: "the TV is
+   important… sooner than later"). Need: when the parent's at work, the TV
+   doesn't work until homework's done; brand-agnostic.
+   **Tamper rule (Sandy): if any part of the gate goes quiet, everything
+   locks** — unplug the TV gadget and phone + laptop lock; remove the
+   phone's profile and laptop + TV lock; parent alerted. Turns every weak
+   spot into a bad trade; makes cheap hardware good enough. Extends the
+   brief's "failure means locked" and NextDNS last-seen heartbeat.
+   Software *on* the TV is per-platform and mostly can't block other apps
+   (Google TV via Family Link the exception) → rejected. Brand-agnostic
+   software lives outside the TV: (1) home router → NextDNS, all DNS forced
+   (every app on every screen; unplugging the router costs his phone's
+   internet too); (2) an HDMI-CEC dongle (Pi-class, our software) for "won't
+   turn on at all", tamper rule makes unplugging pointless.
+   Recommended order: tamper rule + router next, dongle prototype after.
+   Waiting on: router admin access at the house (else a cheap second
+   router).
 5. **Bounties and a support circle** (parked). Parents post bounties for
    extra work; others in his life join in (an uncle reading with him 3 h a
    week; the parent offers a gift card to the helper) — framed as
