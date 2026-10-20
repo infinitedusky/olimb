@@ -270,6 +270,27 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
    compare recall weeks later — a real within-student experiment at N=1;
    follow-up rate after "I don't know"; gate pass rate and quiz time not
    worse.
+6. **Tutor directives: two layers** (Sandy, 2026-10-20). Universal (ranked
+   directives + hard rules no profile can override) and student-specific
+   (grows). The student layer starts with a **parent interview** and a
+   **short talk with the child**, then grows from evidence (dated, with the
+   evidence, visible and undoable). Proposed: profile has a private part
+   (parent only) and a shared part written for him; write "what helps",
+   not labels; expert review of the interview and format later. Same
+   elicitation pattern as the design references — a reusable factory step.
+   Proposed order: interview Sandy by hand in chat → directives + profile
+   into the tutor's instructions + private explanation per reply →
+   simulated students → child talk as an app screen.
+7. **Prevent guessing** (Sandy). Gap: the tutor confirms right answers, so
+   he can fish ("is it 5? 6? 9?"); multiple choice is 1-in-4 by luck.
+   Principle: don't ban guessing, make reasoning the only thing that pays
+   (picking the most likely is a skill — Sandy's earlier point). New hard
+   rule: **never confirm an answer he hasn't explained** (or turn it into a
+   self-check). Tutor notices rapid different answers and slows down,
+   kindly. Quiz: fewer pure multiple choice; choice + one-line why, credit
+   needs both; too-fast or flip-flopping answers recorded as signals for
+   parent/profile, never penalties on screen. Guessing often means tired /
+   too hard / anxious → profile ("guesses more after 9pm") → tutor adapts.
 5. **Bounties and a support circle** (parked). Parents post bounties for
    extra work; others in his life join in (an uncle reading with him 3 h a
    week; the parent offers a gift card to the helper) — framed as
