@@ -125,6 +125,23 @@ settings) waits until the log shows what the tool is. Lessons from InDusk:
   tokens pulled from `base.html`'s existing `:root` variables. Not React.
 - Factory lesson already: it must fit Storybook to the app's stack, not
   assume React.
+- **Done by hand: homework-gate PR #3** (open). Storybook server framework,
+  tokens moved to `tokens.css` (+ `data-theme` override for a theme
+  toolbar), dev-only `/_stories/<id>` route (`HG_STORIES=1`), 19 page-state
+  stories with labelled sample data, a design-system MDX page, and a test
+  that renders every story and checks Storybook lists the same set.
+  - Tedious (→ automate): installing and configuring Storybook; moving inline
+    CSS into token and style files; writing the stories route and CORS;
+    generating the `*.stories.json` from the Python list (I scripted it);
+    browser screenshots to check it rendered; README/CLAUDE.md updates.
+  - Judgement: which states are worth a story (the night's status banner
+    drives most of them); writing believable sample data (reused the science
+    worksheet and the squirrel exchange); fixtures as hand-written contexts
+    vs seeding a fake database and rendering real routes — chose contexts,
+    with a test guarding drift.
+  - For the design-system module's manifest: detect the stack → pick the
+    Storybook framework; a "stories" dev route; tokens file; sample label;
+    the drift test. A one-command "show me every state" is the payoff.
 
 ### Ideas raised, not yet decided (2026-10-20)
 
