@@ -177,6 +177,18 @@ Details and sources in `research/`.
   adapter code until a second provider for a role is real. Settings shows each
   role with its provider(s) — PostHog the only telemetry option for now.
 
+- **Foundational decisions are drawn out, not automated** (Sandy,
+  2026-10-20). Automating setup early takes decisions out of the person's
+  hands — easy, and useless. Setup decisions are mechanical (framework,
+  file layout, routes: automate) or foundational (look and feel, palette,
+  type, voice, density, audience: the person's). Foundational ones get an
+  elicitation process, not a question: references (sites/apps liked and
+  disliked, and why; who it's for) → the agent proposes 2–3 directions as
+  real stories of the app's own screens → the person reacts (pick, mix,
+  reject) → the choice is recorded with its why. Not a gate: the agent may
+  proceed on a default, but it is labelled provisional (agent-chosen) and
+  stays on the person's open list until decided.
+
 - **Tiny visual start, as mockups** (Sandy, 2026-10-20): the idea board
   (inbox, three lanes — build / testing / parked — and a card per idea) and
   a settings page, "Telemetry: PostHog" as the only option.

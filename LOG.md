@@ -139,6 +139,10 @@ settings) waits until the log shows what the tool is. Lessons from InDusk:
     worksheet and the squirrel exchange); fixtures as hand-written contexts
     vs seeding a fake database and rendering real routes — chose contexts,
     with a test guarding drift.
+  - **Correction (Sandy):** the look itself is *provisional, agent-chosen* —
+    the colours came from the POC session; nobody picked them. The
+    design-system decision is open, via the elicitation process in SHAPE.md
+    (references → 2–3 directions as stories → Sandy reacts → recorded).
   - For the design-system module's manifest: detect the stack → pick the
     Storybook framework; a "stories" dev route; tokens file; sample label;
     the drift test. A one-command "show me every state" is the payoff.
