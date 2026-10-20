@@ -356,18 +356,23 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
    typing always available. Remove the visible per-question countdown and
    auto-submit; keep time as a quiet parent-page signal. Explaining aloud
    also answers "prevent guessing" (7).
-9. **TVs and every screen** (parked, not building now). Need (Sandy): when
-   the parent's at work, the TV doesn't work until homework's done —
-   enforced. Must be **brand-agnostic** ("if it's dependent on the brand,
-   this isn't going to work"; "something you connect to the TV").
-   Routes: home router → NextDNS with DNS forced (every app on every
-   screen); a smart plug on the TV's power (any TV, ~$15–25; lockable
-   outlet cover against re-plugging); an HDMI-CEC dongle in a spare HDMI
-   port (CEC standby works across brands — Anynet+, SimpLink, Bravia Sync;
-   e.g. a Pi Zero on the TV's USB checks the gate each minute, puts the TV
-   back to sleep; heartbeat loss alerts the parent) — a possible
-   Homework Gate hardware piece. Vendor APIs (SmartThings, Roku) rejected
-   as brand-dependent.
+9. **TVs and every screen — next after the phone loop** (Sandy: "the TV is
+   important… sooner than later"). Need: when the parent's at work, the TV
+   doesn't work until homework's done; brand-agnostic.
+   **Tamper rule (Sandy): if any part of the gate goes quiet, everything
+   locks** — unplug the TV gadget and phone + laptop lock; remove the
+   phone's profile and laptop + TV lock; parent alerted. Turns every weak
+   spot into a bad trade; makes cheap hardware good enough. Extends the
+   brief's "failure means locked" and NextDNS last-seen heartbeat.
+   Software *on* the TV is per-platform and mostly can't block other apps
+   (Google TV via Family Link the exception) → rejected. Brand-agnostic
+   software lives outside the TV: (1) home router → NextDNS, all DNS forced
+   (every app on every screen; unplugging the router costs his phone's
+   internet too); (2) an HDMI-CEC dongle (Pi-class, our software) for "won't
+   turn on at all", tamper rule makes unplugging pointless.
+   Recommended order: tamper rule + router next, dongle prototype after.
+   Waiting on: router admin access at the house (else a cheap second
+   router).
 5. **Bounties and a support circle** (parked). Parents post bounties for
    extra work; others in his life join in (an uncle reading with him 3 h a
    week; the parent offers a gift card to the helper) — framed as
