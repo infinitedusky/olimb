@@ -14,6 +14,16 @@ the loop it ran, and here are its telemetry results. It's all green, so you can 
 "Still all green." Metrics keep coming in, and **every idea, the moment it arrives, is analysed against them** —
 the data that supports it, augments it, or argues against it is attached to the idea.
 
+## The goal: free and open source (Sandy, 2026-10-20)
+
+Not a pivot: this is still InDusk's successor. We learn as much as we can from Lightsprint (and InDusk), add our
+own ideas on top, and speed-run it — **not racing for venture money, but putting it out free for people to use and
+contribute to.** Success is people running it and contributing. Open-source neighbours turning tasks into agent PRs
+already exist (OpenHands, Open SWE, superplane, background-agents); ours is different by the loop — telemetry
+proposes, agents build with evidence, telemetry judges, PostHog-native. Open questions for Sandy: licence
+(recommended MIT, like PostHog's core) and the public repo's name. The current idea-factory repo stays private
+(the log and ideas describe a real family); the public project gets a fresh repo.
+
 ## Positioning (Sandy, 2026-10-20)
 
 Lightsprint reads as **an extension of Linear** (tickets in, code out), and Linear is its natural competitor.
@@ -25,6 +35,13 @@ Platform risk, and the defences: **telemetry-neutral** (PostHog *and* Datadog �
 that reads your Datadog); **deep where PostHog won't go** (PRs on any stack with their evidence, demos with
 labelled fake data, an agent that pushes back on whether an idea is worth building — their loop is a feature
 inside analytics, ours is the product); and the best extension of PostHog is also what PostHog would buy.
+Sandy, 2026-10-20: "just because they're doing the same thing we're doing, you can position your company slightly
+differently and win" — and the way to know the gap is to use them, so Homework Gate gets built with Lightsprint
+(LOG). **Strategy: start as a copy, then change a little.** Even with the same feature set, how far ours can beat
+theirs is unknowable before we're running; it is defensible to start from what Lightsprint does, copy the shape
+(patterns and ideas, never pixels, brand or code) and make a small change. The small change has to be one they
+can't match without rebuilding: the unit of work (an idea that outlives the merge, not a task that ends at it) and
+the buyer (a PostHog user, not a Linear user). A small change they *can* match is just a feature request to them.
 
 ## What it is
 
@@ -101,9 +118,12 @@ Details and sources in `research/`.
 - **Nobody does:** the idea as the unit of work — baseline, hypothesis,
   testability verdict, look-by date, verdict, re-check after shipping; an agent
   that pushes back on whether an idea is worth building; ideas proposed from
-  telemetry (not just bug fixes); demos on a seeded preview that label the fake
-  data and tie to the hypothesis. Seed data is the weak spot — the open tools
-  are stalled or gone, so we may own that layer.
+  telemetry (not just bug fixes); demos that label the fake data and tie to
+  the hypothesis. **A seeded preview itself is not ours** (corrected
+  2026-10-20): Lightsprint defaults every preview to sample data, undocumented
+  — `research/lightsprint.md`. Seed data is still the weak spot in the open
+  tools (stalled or gone), but the layer we'd own is narrower: data for *this
+  change's scenario*, with what's fake stated in the review.
 - **Closest threats:** PostHog (self-driving loop, June 2026: signals → agent
   → draft PR → checks the metric returned to baseline; MIT core) and Cursor
   (agents with demos). Building on PostHog may beat competing with it.
@@ -201,9 +221,12 @@ Details and sources in `research/`.
 
 - **Foundational decisions are drawn out, not automated** (Sandy,
   2026-10-20). Automating setup early takes decisions out of the person's
-  hands — easy, and useless. Setup decisions are mechanical (framework,
-  file layout, routes: automate) or foundational (look and feel, palette,
-  type, voice, density, audience: the person's). Foundational ones get an
+  hands — easy, and useless. Setup decisions are mechanical (file layout,
+  routes, config: automate) or foundational (**stack and framework**, look
+  and feel, palette, type, voice, density, audience: the person's).
+  Corrected 2026-10-20: framework was listed as mechanical; the Homework
+  Gate POC was built as Python-rendered UI without asking and had to move to
+  React a day later. The agent asks before building on a stack. Foundational ones get an
   elicitation process, not a question: references (sites/apps liked and
   disliked, and why; who it's for) → the agent proposes 2–3 directions as
   real stories of the app's own screens → the person reacts (pick, mix,
