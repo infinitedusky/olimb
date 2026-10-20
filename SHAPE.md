@@ -71,7 +71,7 @@ The person can follow every step as it happens, interrupt at any point, or ask
 
 Details and sources in `research/`.
 
-- **Rent, don't build:** parallel agents each opening a PR (Cursor, Devin,
+- **Rent, don't build** (superseded 2026-10-20 — see Decided: build the factory, fed by telemetry): parallel agents each opening a PR (Cursor, Devin,
   Codex, Jules, Copilot, Claude Code cloud, Factory); PRs with videos and
   screenshots (mainstream since Feb 2026); error-to-PR autofix (Sentry Seer,
   Datadog, PostHog); preview deployments and database branches (Vercel, Neon,
@@ -192,6 +192,21 @@ Details and sources in `research/`.
 - **Tiny visual start, as mockups** (Sandy, 2026-10-20): the idea board
   (inbox, three lanes — build / testing / parked — and a card per idea) and
   a settings page, "Telemetry: PostHog" as the only option.
+
+- **Build the factory, fed by telemetry** (Sandy, 2026-10-20; **replaces "rent
+  the factory"** below and in LOG decision 3). Lightsprint
+  (`research/comps-agent-factories.md`) "is exactly what we want to build" —
+  describe a change, an agent builds it in a sandbox, live preview, QA
+  recordings, merge checks, PR. We borrow its product thinking (UI patterns,
+  plans, automations, the idea-to-PR flow) to look good fast — patterns and
+  ideas, never its pixels, brand or code. The difference: **integrations
+  from day one are telemetry, not task trackers** — PostHog (what users do)
+  and Datadog (what services do), not Linear or Jira. The factory's input is
+  "the data says something changed", and the same data judges the result:
+  the telemetry-driven self-building loop. InDusk's session manager,
+  worktrees and screenshot tooling are the starting point for the middle.
+  Build order protects the edge: the telemetry loop first, the middle in
+  its simplest form, then thicken it.
 
 ## Open questions
 
