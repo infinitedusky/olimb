@@ -2,7 +2,7 @@
 
 Research for Idea Factory's first build, 2026-10-20. Sources: InDusk's unbuilt `run-the-graph` plan and its
 session/worktree/run-record code (read-only study), a public survey of open-source parallel agent runners and
-graph engines, and Lightsprint's public docs and open-source plugins (data model, section 5). Rule: borrow where
+graph engines, and Lightsprint's public docs, task-sync plugin and n8n node (data model, section 5). Rule: borrow where
 the licence allows; write only what nobody ships.
 
 ## 1. The short version
@@ -85,10 +85,169 @@ subscription credentials.
    program + start time), marks their tasks `interrupted`, and the scheduler picks up.
 6. **The VS Code view is a client**, reading the same stream as everyone else.
 
-## 5. Data model
+## 5. Data model (from Lightsprint's public docs, task-sync plugin and n8n node)
 
-*Pending: reconstruction of Lightsprint's entity model from its public docs and open-source task-sync plugin and
-n8n node, to design the Postgres schema against it before writing engine code. Filled in below when it lands.*
+**Sandy's hypothesis confirmed:** Lightsprint is a database-driven application working on repos. Every stateful
+thing is a row (their plugin's own design spec names the tables: `tasks`, `cc_sessions`, `cc_session_events`,
+`plans`, `githubPullRequests`); the repo receives only agent inputs and the PR. Two nuances: (a) GitHub is the
+*authority* for exactly one transition, PR merged → Done, which arrives by webhook and the DB mirrors; (b) two
+things cross into GitHub as **mirrors, never sources** — the branch name (`ls/<taskNumber>-<slug>-<id>`, which
+their auto-linker keys on) and PR comments (Verification, an "On it → Done" status comment edited in place).
+`plan-handoff.md` is a task *attachment*, not a commit; sandbox files are scratch ("a key the agent added to .env
+is gone next session"). **No status in git.** Git → DB only via webhooks and the branch convention.
+
+**Their entities** (fields as far as the sources show): workspace (plan, seats, credit pool, commit identity,
+egress mode) · user/membership (roles incl. `member_no_merge`; per-user BYO subscription) · **stack** = the app
+(member repos with base-branch override and writable flag; sandbox size; setup/test commands; services ≤15;
+env ≤500 keys → `/tmp/.env`; snapshot with stale flag; primary sandbox; per-task budget cap) · repo · project
+(cross-stack tag) · **task** (displayId `PREFIX-NNN`; status `backlog/todo/in_progress/in_review/done`;
+complexity, priority, size S–XL, `requiresSchemaChange`, todo list, related files, **dependencies as join rows**,
+`autoMerge` tri-state, branch; transitions: launch → in_progress, PR linked and idle → in_review, merge → done) ·
+comment/activity (one interleaved timeline) · cloud agent run (provider, model, baseRef; pill
+Starting/Working/Ready/Completed/Failed/Stopped; one active run per task per provider; ~2 h turn cap; budget cap)
+· session (transcript, tool rows, **shared ordered message queue**, "Send now" interrupts) · cc_session + events
+(external Claude Code sessions reporting in) · sandbox/preview (pause ~20 min idle, retire 7 days after Done;
+per-service unguessable URL; DB branch per task when needed) · **verification** (captures tagged Feature/Entry,
+*named, same name replaces*; mirrored to a PR comment) · pr/review hub (signals by category ci/review/deployment/
+bot/human; `readiness_score` 0–100 with section summaries, cached by signals hash; auto-merge at 100 with CI
+settled) · plan (methods; **decision cards** with lettered options and a Recommended one; outputs; handoff creates
+exactly one task; no approval step) · ask thread · automation (trigger, conditions, action, policy: run-as user,
+concurrency, max runs per window, per-run budget; **versioned**) · skill (stack skill, or read-only index of
+`.claude/skills/*/SKILL.md`; `design-md` = design system) · guardrail/connector · billing.
+
+**API shape:** REST+JSON, Bearer, `limit/offset` ≤100, SSE only for the review overlay and ask messages. **No
+outbound webhooks or subscribable task-event stream anywhere public.** The sync plugin is CC → LS only, last write
+wins, no etags. IDs: 21-char nanoids, prefixed (`ws_`, `stk_`); tokens `lsat_`/`lsrt_`.
+
+**What they don't model** (ours to add): idea, hypothesis, baseline, metric, experiment, flag, look-by, verdict,
+post-merge check, evidence attached to an idea, fake-data labelling in a demo, per-PR rollback plan or guard
+metric. Their unit of work ends at `done`. Automations have no telemetry trigger.
+
+### Draft Postgres schema for the engine
+
+Conventions: one engine process is the only writer; agents and hooks POST events; the engine updates the state row
+and appends to `event` in one transaction. Tags: `[LS]` Lightsprint-derived, `[ID]` InDusk run-the-graph, `[IF]`
+ours. Anything filtered, joined or shown on a card is a column; snapshots of external systems or shapes still
+moving are JSONB. Skills stay in the repo, indexed, not stored. Automations and billing deferred.
+
+```sql
+create table app (                       -- [LS] "stack"
+  id text primary key, name text not null, default_branch text not null default 'main',
+  setup jsonb not null default '{}',     -- [LS] setup_cmd, test_cmd, services[], env_ref, sandbox_size
+  created_at timestamptz not null default now());
+
+create table repo (id text primary key, app_id text references app, full_name text not null,
+  local_path text, writable bool not null default true, base_branch text);   -- [LS] member repos
+
+create table provider_connection (       -- [IF] modules and providers
+  id text primary key, app_id text references app,
+  role text not null check (role in ('telemetry','code_host','design_system','model','sandbox','traces')),
+  provider text not null, config jsonb not null default '{}', secret_ref text,
+  status text, checked_at timestamptz, unique (app_id, role, provider));
+
+create table "user" (id text primary key, name text, email text, github_login text,
+  role text not null default 'owner' check (role in ('owner','member','member_no_merge')));  -- [LS]
+
+create table idea (                      -- [IF] the unit of work that outlives the merge
+  id text primary key, app_id text references app, number int not null,   -- [LS] display "HG-12"
+  title text not null, body text,
+  source text not null check (source in ('person','agent','telemetry')), source_ref jsonb,
+  lane text not null default 'inbox'
+    check (lane in ('inbox','measuring','build','testing','shipped','parked','killed')),
+  hypothesis text, baseline jsonb,       -- {metric, value, window, captured_at, insight_id}
+  measures jsonb not null default '[]',  -- [{kind: insight|flag|experiment, provider_ref, target}]
+  testability jsonb, look_by date,       -- {verdict, reason, min_traffic}
+  decision text check (decision in ('yes','no','not_yet')), decided_at timestamptz,
+  created_by text references "user", created_at timestamptz not null default now(),
+  updated_at timestamptz, unique (app_id, number));
+
+create table evidence (                  -- [IF] append-only telemetry results
+  id bigserial primary key, idea_id text references idea, pr_id text,
+  kind text not null check (kind in ('baseline','finding','verdict','guard','post_ship')),
+  metric text, value numeric, baseline_value numeric, window tstzrange, provider text,
+  summary text, raw jsonb, captured_at timestamptz not null default now());
+
+create table plan (id text primary key, idea_id text references idea,     -- [LS] plan under an idea
+  status text not null default 'drafting' check (status in ('drafting','proposed','approved','superseded')),
+  spec text, chunks jsonb, created_at timestamptz not null default now());
+
+create table decision (                  -- [LS] decision card; [IF] provisional flag
+  id text primary key, idea_id text references idea, plan_id text references plan,
+  question text not null, options jsonb not null,   -- [{key:'A', text, tradeoff, recommended, story}]
+  chosen text, provisional bool not null default false,
+  decided_by text references "user", decided_at timestamptz, rationale text);
+
+create table question (                  -- [ID] questions with a cost
+  id text primary key, idea_id text, task_id text, run_id text, text text not null, options jsonb,
+  cost text, status text not null default 'open' check (status in ('open','answered','skipped','expired')),
+  answer text, answered_by text, answered_at timestamptz, asked_at timestamptz not null default now());
+
+create table task (                      -- [LS] fields; [ID] graph semantics
+  id text primary key, app_id text references app, idea_id text references idea, plan_id text references plan,
+  number int not null, title text not null, brief text,
+  status text not null default 'queued' check (status in
+    ('queued','ready','running','awaiting_answer','merging','testing','done','failed','cancelled')), -- [ID]
+  attempt int not null default 0, max_attempts int not null default 3,     -- [ID] three attempts
+  branch text, worktree_path text, base_sha text,                          -- [ID] worktree; [LS] branch naming
+  size text check (size in ('S','M','L','XL')), priority int,
+  requires_schema_change bool default false, auto_merge bool, position int, -- [LS]
+  assignee text references "user", created_by text, pr_id text,
+  created_at timestamptz not null default now(), updated_at timestamptz, unique (app_id, number));
+create table task_dependency (task_id text references task, depends_on_task_id text references task,
+  primary key (task_id, depends_on_task_id));                              -- [ID]/[LS]
+create table task_file_claim (task_id text references task, path_glob text,
+  primary key (task_id, path_glob));                                       -- [ID] file claims
+
+create table session (id text primary key, task_id text references task,  -- [LS] one shared conversation per task
+  status text not null default 'open' check (status in ('open','ended')),
+  created_by text, created_at timestamptz not null default now());
+create table session_message (           -- [LS] shared queue; "send now" = interrupt
+  id bigserial primary key, session_id text references session, author text not null, body text not null,
+  attachments jsonb, status text not null default 'queued'
+    check (status in ('queued','sent','interrupted','dropped')),
+  queued_at timestamptz not null default now(), sent_at timestamptz);
+
+create table run (                       -- [LS] agent run; [ID] attempt
+  id text primary key, task_id text references task, session_id text references session,
+  attempt int not null, kind text not null
+    check (kind in ('build','follow_up','verify','merge','setup','measure')),
+  agent text not null, model text, status text not null default 'starting'
+    check (status in ('starting','working','ready','completed','failed','stopped','interrupted')),
+  started_at timestamptz not null default now(), ended_at timestamptz,
+  cost_usd numeric, budget_cap_usd numeric, tokens jsonb, summary text, error text);
+
+create table event (                     -- [IF] append-only live stream; the graph view's feed
+  seq bigserial primary key, ts timestamptz not null default now(),
+  app_id text not null, idea_id text, task_id text, run_id text, session_id text,
+  actor text not null,                   -- engine | agent:<run_id> | user:<id> | github | posthog
+  type text not null,                    -- task.status, run.tool_call, run.message, pr.check, verification.captured, question.asked, evidence.captured
+  payload jsonb not null default '{}');
+create index on event (app_id, seq); create index on event (task_id, seq);
+
+create table pr (                        -- [LS] githubPullRequests + review hub; [IF] pitch
+  id text primary key, task_id text references task, repo_id text references repo,
+  number int, url text, head_branch text, base_branch text, head_sha text, merge_sha text,
+  status text not null check (status in ('draft','open','queued','merged','closed')),
+  additions int, deletions int, changed_files int,
+  readiness jsonb,  -- [LS] {light, score, label, section_summaries, callouts, actions, signals_hash, updated_at}
+  signals jsonb,    -- [LS] snapshot [{category, status, title, url, actor, updated_at}]
+  pitch jsonb,      -- [IF] {off_switch_flag, guard_metric, schema_impact, revertable_alone, fake_data}
+  opened_at timestamptz, merged_at timestamptz, unique (repo_id, number));
+
+create table verification (              -- [LS] Feature/Entry shots; [IF] demo kinds + fake-data notes
+  id text primary key, task_id text references task, pr_id text references pr, run_id text references run,
+  kind text not null check (kind in ('screenshot','video','flow_diff','expectation','story','numbers')),
+  label text check (label in ('feature','entry_point','before','after','failing_now_passing','data_effect')),
+  name text not null, route text, blob_url text, notes jsonb,   -- notes.fake_data: what and why
+  captured_at timestamptz not null default now(), unique (task_id, name));  -- [LS] same name replaces
+```
+
+**What the VS Code graph view subscribes to** (`LISTEN/NOTIFY` per app): `task` + `task_dependency` +
+`task_file_claim` (nodes, edges, colour by status), `run` (the live node), `pr` (readiness light), `question`
+(open = the node needs you), `event` (ticker and tool rows), `idea` (lane). Everything else loads on click.
+
+**Not shown by the sources:** their ORM or full table list; whether `plan-handoff.md` is ever committed (inferred
+not); the server-side run status enum; the DB-branch provider; webhook payload handling.
 
 ## 6. Build order (the loop first, the middle in its simplest form)
 
