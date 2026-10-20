@@ -33,6 +33,25 @@ visualization** of the graph running. If people already do this, borrow what we 
 `run-the-graph` plan, its session manager and worktrees; open-source parallel runners and graph engines —
 `research/parallel-engine.md` when written).
 
+## Founding rule of the engine: git holds code, the database holds state (Sandy, 2026-10-20)
+
+Why InDusk's graph runner failed when built: task status lived in versioned files (plan docs, `impl.md`
+sections and table rows), so every parallel agent that finished had to merge its status into the same document
+as every other agent — "two phases appending to one shared doc conflicted every time." The fix, a move of state
+to a database, stalled as a retrofit (`plan-state-is-a-database`). We get to do it from day one, with nothing to
+fix.
+- **Git holds code and authored inputs** (prose plans, skills, setup). **Postgres holds all state**: apps/stacks,
+  ideas, plans, tasks, dependencies, file claims, status, runs, sessions, events, questions, verifications, PRs,
+  evidence, verdicts. No status in a markdown file, a JSONL log in a repo, or a frontmatter field — including the
+  `ideas/` files (authored input only; evidence and verdicts are rows).
+- **One engine process is the single writer.** Agents, the CLI, the VS Code view and the UI talk to it. Agents
+  never write status; they emit events (or call a tool) and the engine records them. (Kills InDusk's other bug:
+  two processes each holding session state, launching a task twice.)
+- **Postgres from day one** (Sandy), with migrations from the first commit and an append-only event table the
+  graph view subscribes to. The application is database-driven, working on repos — like Lightsprint, whose data
+  model we're reconstructing from its public docs and open-source plugins to design ours properly before
+  writing engine code (`research/parallel-engine.md`).
+
 ## Positioning (Sandy, 2026-10-20)
 
 Lightsprint reads as **an extension of Linear** (tickets in, code out), and Linear is its natural competitor.
