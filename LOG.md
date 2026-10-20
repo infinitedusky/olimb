@@ -257,6 +257,28 @@ videos. Consequences:
   since 2020 → search links). Comp to study: Khanmigo (Khan's AI tutor).
   The kid-style "fun pass" was stopped when the audience became teens.
 
+### Next: a showable POC loop (Sandy, 2026-10-20)
+
+"Let's hold off [the interview], get a POC good enough to start showing
+people — we're in the weeds. The AI part is what I wanted to validate and I
+think I have. It will work." Build the server and the iPhone TestFlight app
+to show the loop: homework + quiz on the laptop → pass → his iPhone
+unlocks itself.
+- iPhone gating = Apple Screen Time API (FamilyControls / ManagedSettings).
+  Development entitlement works now on devices installed from Xcode;
+  **Family Controls (Distribution)** is needed for TestFlight — request on
+  day one, reported waits days to months, per bundle ID.
+- **Parent-managed** (Sandy): Family Sharing / child authorization, like
+  Bark — a parent approves on his phone; he can't turn it off. Apple
+  combines all apps' restrictions, so Bark/Downtime blocks still apply;
+  for the demo Homework Gate must be what blocks games/TikTok. Pitch:
+  Bark watches and blocks; Homework Gate unlocks when he's earned it.
+- Server: stays on this machine behind a tunnel (Cloudflare Tunnel or
+  Tailscale) so the model stays on Sandy's subscription, personal use.
+  Hosted + API key later, for real users.
+- Fallback demo if Apple stalls: web app + "free time unlocked" push.
+- Waiting on: Apple Developer Program account?
+
 ### Ideas raised, not yet decided (2026-10-20)
 
 From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
