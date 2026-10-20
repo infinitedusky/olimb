@@ -143,6 +143,67 @@ settings) waits until the log shows what the tool is. Lessons from InDusk:
     the colours came from the POC session; nobody picked them. The
     design-system decision is open, via the elicitation process in SHAPE.md
     (references → 2–3 directions as stories → Sandy reacts → recorded).
+  - **Design brief, elicitation step 1 (Sandy, 2026-10-20).** Reference:
+    https://tincan.kids/ (warm flat saturated blocks — yellow, green, cobalt,
+    orange, pink; chunky pills and cards with hard black offset shadows; one
+    idea per section; short playful copy; nostalgic, anti-anxious). Feeling:
+    designed for ADHD first — getting things done feels overwhelming. This
+    is the key to relaxing: through the gate I get to play, without the
+    feeling I've screwed up or blown it, no sick feeling going to sleep.
+    Hard, but on my side. Implications: one next step at a time; visible
+    progress toward the key/unlock; no red or failure language for the
+    student — "not yet" always with a concrete next step; parent page can
+    stay plain. Tension: Tin Can is daytime-bright, this is used at night —
+    borrow warmth/shapes/voice, dim and warm for evening.
+    Second reference: https://camp.com/ — warmth on dark grounds (deep navy,
+    chocolate brown, cream text, warm brights as accents: lime-yellow,
+    orange, teal, red), chunky soft-serif display + rounded sans, wavy
+    section edges, dots and plaid, enthusiastic copy. Shared taste:
+    retro-warm, chunky friendly type, physical, playful but confident, kid
+    without babyish. Resolves the night tension: dark warm grounds, brights
+    only for what matters. So A becomes "Camp at night".
+    Also looked at (Sandy's message cut off, meaning unclear): getbrick.com
+    (calm premium; "take back your time" — self-chosen limit, matches the
+    student's "I want to") and bark.us (generic; "parental controls" —
+    imposed, the opposite of the feeling).
+    **https://heronaiapp.com/ — Sandy: "LOVE", "closest to what I want".**
+    Drafting paper (warm off-white, grain, hairline frame, + crop marks,
+    monospace title-block labels), pencil/stipple ink drawing, heavy tight
+    uppercase sans headline, ONE orange-red accent used sparingly; intro
+    draws the building line by line with a % counter. Calm, precise,
+    grown-up. Fit: one accent = the eye always finds the next step; the
+    night's work as a drawing being built, finished drawing = unlock;
+    respects a 13-year-old; night = blueprint (deep blue paper, pale lines,
+    same accent). Open question: does Heron replace the Tin Can/Camp warmth
+    or keep some of it?
+    Directions (third revision): A Drafting table — Heron straight, paper by
+    day, blueprint by night (leading); B Drafting table, warmer — A plus
+    Camp's warm night palette, softer type, Tin Can's voice.
+    **Sandy: mix Heron's line drawings with 1890s natural-history books**
+    ("childer" unclear — ask). → Lead direction **Field notebook**: Heron's
+    paper, hairline frames, one accent (vermilion, like old plates' red
+    ink); engraved specimens with PLATE / Fig. captions (public-domain
+    scans: Haeckel's *Kunstformen der Natur*, Biodiversity Heritage
+    Library — real engravings, not imitations); old-style serif (Libre
+    Caslon / IM Fell) + mono labels; night = cyanotype (Anna Atkins'
+    1840s botanical cyanotypes — white lines on Prussian blue). Tonight's
+    homework = a plate that fills in as steps complete, finished plate =
+    unlock; the learning-skills notebook = his field journal.
+    **Sandy: "a field notebook for kids", mixed with Sprayground's
+    shark-mouth backpacks.** Built as mockups (homework-gate PR #4, stacked
+    on #3): tonight's plate = public-domain 1838 great-white lithograph that
+    draws in as steps complete; the gate = a shark mouth (vermilion lips,
+    interlocking white teeth) that opens on FREE TIME; one next step per
+    screen; no red/failure language ("Not yet… That's information, not a
+    verdict"); paper by day, cyanotype at night. Step 3 of elicitation
+    (Sandy reacts) is next.
+    - Tedious: finding a public-domain image (Wikimedia API needs a user
+      agent; most search hits were junk), converting it to ink, screenshot
+      checks. Judgement: reading the references into a brief, the
+      metaphors (plate draws in, jaw = gate), the copy.
+    Earlier directions (superseded): A Camp at night; B The key (calm, single focus,
+    key path fills as steps complete); C A+B (recommended). To build as real
+    screens in Storybook: home, a tutor moment, a not-passed result.
   - For the design-system module's manifest: detect the stack → pick the
     Storybook framework; a "stories" dev route; tokens file; sample label;
     the drift test. A one-command "show me every state" is the payoff.
