@@ -330,6 +330,17 @@ as an extension of Shopify, not PostHog — different buyer; crowded (Odoo, ERPN
 new part is agent wiring + Sandy's industry knowledge. Decision: capture, don't build before the engine exists
 (the engine builds it). Cheapest test, Sandy's: 3–5 clothing-brand owners, what they'd pay to stop doing by
 hand, kill line set first.
+**Sharpened (Sandy):** focus on manufacturing. The wedge is a **standardized tech pack**: manufacturers accept it
+(or we convert to standards that exist), then advertise on our site. Findings: no open tech-pack schema exists
+(Excel/Illustrator templates, PLM-vendor formats); nearby: ASTM/ISO sizing, GS1; the forcing function is the
+**EU Digital Product Passport for textiles** (ESPR; JRC proposal 49 data points / 4 categories at batch level;
+delegated act ~end 2027) — a DPP-ready tech pack is a standard with regulation behind it. Standards win by
+converter + network: "send any tech pack, get a complete, factory-ready one, missing fields flagged" (agent-shaped
+work); clean packs = fewer rounds for factories; listings bring RFQs; open schema + open converter fits the
+open-source thrust. Counterargument: marketplace graveyard (Zilingo, Fashinza) — trust, MOQs, sampling, payment
+are the hard parts, not formats; supply-side adoption is the risk. Cheapest test (Sandy's): 3–5 manufacturers —
+share of packs needing clarification, would they list free if packs came clean; then a fake door (upload a real
+tech pack). Engine first; the converter is a candidate first idea for the factory to run end to end.
 
 ### Ideas raised, not yet decided (2026-10-20)
 
