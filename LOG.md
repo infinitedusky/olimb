@@ -241,7 +241,8 @@ above (20–30 photographed pages).
 
 "This really is for teenagers. Young kids are not getting homework and their
 parents can control their devices more." The student is Sandy's **little
-brother**: plays Fortnite, watches TikTok sports videos. Consequences:
+brother**: **13, 8th grade**; plays Fortnite, watches TikTok sports
+videos. Consequences:
 - Nothing that feels like a kids' app (drop/limit handwritten cheer,
   mascots, Khan Kids tone). Heron's grown-up look, the Sprayground shark and
   Brick's self-chosen framing already fit.
