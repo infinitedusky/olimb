@@ -347,6 +347,15 @@ runs outward (our standard → each factory's existing format), so manufacturers
 cheapest test to the demand side: people starting a clothing line (Shopify communities, print-on-demand
 graduates, fashion-school grads); fake door "build your first tech pack, factory-ready"; a real sign-up is the
 behaviour that costs. Manufacturers second, once packs arrive.
+**Then (Sandy): all communication runs through the system and is recorded.** The communication is the data:
+every factory clarification question = a missing field in the standard (the loop applied to a standard; events:
+rounds per pack, fields questioned, time to first sample); the trust layer the graveyard lacked (what was
+specified, changed, agreed, when); DPP provenance by construction; possible because new brands have no channel
+yet. Counterargument: people route around channels (WhatsApp/WeChat/email; Upwork fights it; Alibaba keeps chat
+because payment runs through it) → communication stays where the *obligation* lives: RFQ, quote, PO, sample
+approval, change request, payment — make the actions happen in the system, let conversation attach, never a
+rule against outside chat. Open (Sandy's): **do payments run through the system?** Decides completeness of the
+record and the business model. Note: tech packs are IP; EU data → retention/consent from day one.
 
 ### Ideas raised, not yet decided (2026-10-20)
 
