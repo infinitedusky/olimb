@@ -277,7 +277,17 @@ unlocks itself.
   Tailscale) so the model stays on Sandy's subscription, personal use.
   Hosted + API key later, for real users.
 - Fallback demo if Apple stalls: web app + "free time unlocked" push.
-- Waiting on: Apple Developer Program account?
+- $99 Apple Developer Program is required: Family Controls isn't available
+  to free Personal Teams, even for development (Apple DTS on the forums).
+- **Proposed order (from `brief.md`):** NextDNS first — per-device profiles
+  rewritten through its API when the mode changes; gates the laptop *and*
+  the iPhone (configuration profile, no Apple account or approval); ~$20/yr.
+  One server switch unlocks both = the showable loop. Then hardening: the
+  Windows agent (standard account, service + Firewall + App Control,
+  browser secure-DNS off by policy — the corporate endpoint model) and the
+  iOS Screen Time app. Risk: DNS leaks (open apps, IP-direct, VPN, profile
+  removal — parent locks that in Screen Time); fine for a demo and an
+  honest 13-year-old, agents close it later.
 
 ### Ideas raised, not yet decided (2026-10-20)
 
