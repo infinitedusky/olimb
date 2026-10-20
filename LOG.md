@@ -307,6 +307,13 @@ iCloud Private Relay's `mask.apple-dns.net`.
   header read as domains). Hammering the NextDNS API (~480 calls in
   seconds) tripped its rate limit and left stray blocks — slow, one-time
   sweeps only.
+- **DNS isn't instant** (Sandy: had to close and reopen Safari after
+  unlocking). Apps cache DNS answers — including failures — and keep open
+  connections, so unlock may need an app restart and lock leaks for open
+  apps (a video playing at 9:59 pm keeps going). Demo-acceptable; tell him
+  "close and reopen the app" in the unlock message. Real fix: the native
+  layer — iOS Screen Time shields are instant → raises the priority of the
+  $99 Apple Developer account and the Family Controls request.
 - Tedious: finding which TLDs NextDNS accepts (automated sweep). Judgement:
   the lock model itself — took Sandy three rounds (overrides → two locks →
   unlock periods) to land; the agent's first model was wrong.
