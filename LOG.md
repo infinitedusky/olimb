@@ -356,6 +356,14 @@ because payment runs through it) → communication stays where the *obligation* 
 approval, change request, payment — make the actions happen in the system, let conversation attach, never a
 rule against outside chat. Open (Sandy's): **do payments run through the system?** Decides completeness of the
 record and the business model. Note: tech packs are IP; EU data → retention/consent from day one.
+**Answer (Sandy): payments eventually — the revenue play after adoption. Then factoring, storage, shipping:
+control fulfillment so you can pay against it.** The Faire playbook (marketplace → finance layer by controlling
+the transaction; also Shopify Capital, Alibaba Trade Assurance, Amazon FBA). Sequence: standard → record →
+adoption (free, open) → payments (money keeps communication in-system) → finance + fulfillment, underwritable
+only because the record exists (what was specified, agreed, accepted) and delivery is controlled. Counterargument:
+capital-heavy and regulated → after adoption, and rented (Stripe Treasury/Capital partners, 3PLs), the data is
+the edge — don't build a bank, be the data banks lend against. Open-source resolved the PostHog way: open
+platform code, the operating company is the business.
 
 ### Ideas raised, not yet decided (2026-10-20)
 
