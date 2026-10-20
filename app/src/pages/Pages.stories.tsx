@@ -15,6 +15,6 @@ const page = (el: React.ReactNode) => <Shell apps={['Homework Gate']}>{el}</Shel
 
 export const BoardToday: Story = { render: () => page(<Board ideas={ideas} />) }
 export const BoardEmpty: Story = { render: () => page(<Board ideas={[]} />) }
-export const IdeaWithEvidence: Story = { render: () => page(<IdeaPage idea={sampleIdea} />) }
+export const IdeaWithPRs: Story = { render: () => page(<IdeaPage idea={sampleIdea} />) }
 export const IdeaJustCaptured: Story = { render: () => page(<IdeaPage idea={bareIdea} />) }
 export const SettingsToday: Story = { render: () => page(<Settings modules={modules} />) }

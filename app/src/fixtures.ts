@@ -11,9 +11,6 @@ baseline: 61% completion over the last 30 days.
 look_by: 2026-11-30
 prs:
   - https://github.com/example/shop/pull/42
-evidence:
-  - "Sample: 38% of drop-offs happen on the shipping step (PostHog funnel)."
-  - "Sample: payment errors flat since last release (Datadog)."
 ---
 Made up for Storybook.`)
 

@@ -8,6 +8,8 @@ One file per idea. The fields at the top are what the factory's board shows:
 - `baseline`: what's true before.
 - `look_by`: when the evidence gets read.
 - `prs`: the PRs that build it.
-- `evidence`: what's been seen so far, for or against.
+
+These files are **authored input only**. Evidence, verdicts and telemetry results are machine-updated state and
+live in the factory's database, never here (SHAPE.md: git holds code, the database holds state).
 
 Changes go through PRs like everything else.

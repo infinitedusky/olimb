@@ -12,7 +12,6 @@ export interface Idea {
   baseline: string
   lookBy: string | null
   prs: string[]
-  evidence: string[]
   notes: string
 }
 
@@ -37,7 +36,6 @@ export function parseIdea(slug: string, raw: string): Idea {
     baseline: fields.baseline ?? '',
     lookBy: fields.look_by ? String(fields.look_by) : null,
     prs: fields.prs ?? [],
-    evidence: fields.evidence ?? [],
     notes: (match ? match[2] : raw).trim(),
   }
 }

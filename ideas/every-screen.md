@@ -7,6 +7,5 @@ measure: gate_changed per device; tamper alerts.
 baseline: The TV is ungated.
 look_by:
 prs: []
-evidence: []
 ---
 Next after the phone loop. Waiting on router access at the house.

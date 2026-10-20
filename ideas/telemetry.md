@@ -8,6 +8,5 @@ baseline: None — nothing measured before.
 look_by: 2026-11-03
 prs:
   - https://github.com/infinitedusky/homework-gate/pull/9
-evidence: []
 ---
 Waiting on the PostHog project token. A test fails if any event carries text from the night.

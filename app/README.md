@@ -1,7 +1,7 @@
 # Idea Factory app
 
 The minimal UI: the **ideas board** (building / testing / parked), an **idea page** (the bet, its telemetry, the loop
-it ran, the evidence so far), and **settings** (modules and their providers, telemetry first).
+it ran, its evidence — from the database, once connected), and **settings** (modules and their providers, telemetry first).
 
 Ideas are the files in `../ideas/` (one per idea, read at build time). Telemetry isn't connected yet; the idea page
 says so. The look is **provisional** (InDusk's palette and fonts in `src/tokens.css`), not yet chosen through Sandy's

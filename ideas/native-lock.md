@@ -7,6 +7,5 @@ measure: time from gate_changed to apps actually blocked.
 baseline: DNS — cached answers survive a minute or two.
 look_by:
 prs: []
-evidence: []
 ---
 Needs the $99 Apple Developer account; the distribution permission can take weeks.

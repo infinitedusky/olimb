@@ -7,6 +7,5 @@ measure: rapid different answers per problem; quiz answers changed back and fort
 baseline: The tutor confirms right answers ("Yes, D is right").
 look_by:
 prs: []
-evidence: []
 ---
 Never a penalty on screen — guessing usually means tired, too hard, or anxious.

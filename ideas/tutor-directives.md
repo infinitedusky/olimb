@@ -7,6 +7,5 @@ measure: hint level per concept over nights; unprompted self-checks; "just tell 
 baseline: Today's tutor prompt.
 look_by:
 prs: []
-evidence: []
 ---
 Waiting on Sandy's ranking and the parent interview (held off to get the POC showable).

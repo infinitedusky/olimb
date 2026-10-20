@@ -9,9 +9,6 @@ look_by: 2026-11-17
 prs:
   - https://github.com/infinitedusky/homework-gate/pull/7
   - https://github.com/infinitedusky/homework-gate/pull/8
-evidence:
-  - Locked and opened Sandy's iPhone through NextDNS on the schedule (2026-10-20, "it works").
-  - DNS isn't instant — apps cache answers; the native Screen Time layer closes it.
 ---
 Locked unless it's inside an unlock period (3–10 pm); inside, it opens when he turns in tonight's homework and passes
 the quiz, or a parent opens it. Allowlist-only: everything but Google Classroom is blocked while locked.

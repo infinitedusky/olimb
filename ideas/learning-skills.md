@@ -7,6 +7,5 @@ measure: named skills used later unprompted; "talk about at dinner" topics marke
 baseline: None.
 look_by:
 prs: []
-evidence: []
 ---
 Cap one or two a night; preachy is the risk.

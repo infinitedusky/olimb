@@ -6,7 +6,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Neutral: Story = {}
-export const Ok: Story = { args: { tone: 'ok', dot: true, children: '2 evidence' } }
+export const Ok: Story = { args: { tone: 'ok', dot: true, children: 'connected' } }
 export const Warn: Story = { args: { tone: 'warn', dot: true, children: 'pending' } }
 export const Bad: Story = { args: { tone: 'bad', dot: true, children: 'metric fell' } }
 export const Accent: Story = { args: { tone: 'accent', children: '2 PRs' } }

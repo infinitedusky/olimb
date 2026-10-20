@@ -45,9 +45,9 @@ export function IdeaPage({ idea }: { idea: Idea }) {
       </section>
 
       <section className="panel">
-        <h2>Evidence so far</h2>
-        {idea.evidence.length ? <ul className="list">{idea.evidence.map((e) => <li key={e}>{e}</li>)}</ul>
-          : <div className="empty">Nothing yet.</div>}
+        <h2>Evidence</h2>
+        <div className="empty">Evidence and verdicts are state, so they live in the factory's database, not in the idea file.
+          The database isn't connected yet.</div>
       </section>
 
       {idea.notes && <section className="panel"><h2>Notes</h2><p style={{ margin: 0 }}>{idea.notes}</p></section>}

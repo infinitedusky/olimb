@@ -7,6 +7,5 @@ measure: recall on reviewed vs held-back concepts (randomised by concept — a r
 baseline: Quizzes cover only tonight.
 look_by:
 prs: []
-evidence: []
 ---
 Scheduling with FSRS (py-fsrs), not built by hand.
