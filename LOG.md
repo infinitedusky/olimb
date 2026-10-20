@@ -237,6 +237,25 @@ above (20–30 photographed pages).
   system. Also: say which "answer key" — the app's own, or an outside one
   used only to grade the app — Sandy and the agent talked past each other.
 
+### Audience: teenagers (Sandy, 2026-10-20)
+
+"This really is for teenagers. Young kids are not getting homework and their
+parents can control their devices more." The student is Sandy's **little
+brother**: plays Fortnite, watches TikTok sports videos. Consequences:
+- Nothing that feels like a kids' app (drop/limit handwritten cheer,
+  mascots, Khan Kids tone). Heron's grown-up look, the Sprayground shark and
+  Brick's self-chosen framing already fit.
+- Borrow from Fortnite: homework steps as daily quests, mastery as tiers,
+  XP across nights, the gate opening as the win screen. From TikTok: help is
+  short and vertical (60-second explanations); tutor examples from sports.
+- Product: teens have their own phones, so the gate must be something they
+  accept — autonomy ("this is mine, it helps me") is the core, not the tone.
+- Open: who is "the parent" in the interview — Sandy, the parents, or both?
+- Sandy also asked to borrow from Khan Academy (mastery levels, colour by
+  subject) and link out to Khan and other resources (no public Khan API
+  since 2020 → search links). Comp to study: Khanmigo (Khan's AI tutor).
+  The kid-style "fun pass" was stopped when the audience became teens.
+
 ### Ideas raised, not yet decided (2026-10-20)
 
 From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
