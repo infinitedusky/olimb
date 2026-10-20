@@ -4,6 +4,14 @@ Working name. Brainstormed with Sandy, 2026-10-20, after deciding InDusk had
 grown more process than product. Draft: research in `research/` fills in the
 comps, the method and what to salvage.
 
+## The dream: company as code (Sandy, 2026-10-21 — "this has been a dream forever")
+
+A company whose logic lives in git (processes, standards, skills, integrations; changed by PR), whose state lives
+in a database (orders, messages, decisions, evidence; never in the code), that is changed on evidence by the
+factory (telemetry proposes, agents build, telemetry judges), and where people make the judgement calls and
+those calls are recorded as part of the company's record. Infrastructure as code took a decade to become the
+default; the tech-pack company (`LOG.md`) would be the first one written this way, from its first garment.
+
 ## What matters most (Sandy, 2026-10-20)
 
 1. **Agents produce PRs and the support for them.**
