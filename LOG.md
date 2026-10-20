@@ -25,7 +25,7 @@ the design, salvaging code only where it earns its place.
    result after shipping. The person is in control: guidance, never gates.
 2. **Built on PostHog.** Apps made this way are PostHog-native from their first
    line. Salvaged InDusk telemetry only for what PostHog doesn't cover.
-3. **Rent the factory.** Parallel agents opening PRs is commodity (Cursor,
+3. **Rent the factory.** *(Superseded 2026-10-20: build it, fed by telemetry — SHAPE.md.)* Parallel agents opening PRs is commodity (Cursor,
    Devin, Codex, Claude Code cloud). Our part is both ends: the idea and its
    evidence before, the demonstration and the measured outcome after.
 4. **First app: Homework Gate**, tutor side first. No users yet.
