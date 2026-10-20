@@ -211,6 +211,84 @@ settings) waits until the log shows what the tool is. Lessons from InDusk:
     Storybook framework; a "stories" dev route; tokens file; sample label;
     the drift test. A one-command "show me every state" is the payoff.
 
+### Merged (2026-10-20, Sandy: "you can do all the merges")
+
+idea-factory #1; homework-gate #3 (Storybook) and #5 (field-notebook
+direction + `design/references.md` with the brief and reference
+screenshots). **Mistake:** #4 was stacked on #3; merging #3 with
+`--delete-branch` deleted #4's base and GitHub closed #4. Reopened as #5
+against `main`. Factory lesson: with stacked PRs, retarget children to
+`main` before deleting a merged base (or don't delete it until they're
+retargeted). With many parallel PRs this is a real failure mode. Also: `gh`
+inside `idea-factory/homework-gate/` resolved the wrong repo once — pass
+`-R infinitedusky/homework-gate`.
+
+### Answer-key baseline: dropped for now (Sandy, 2026-10-20)
+
+"You are asking for an artifact that is too hard to get. Let's just trust it
+for now and then do tests when the system is working." The app's own key
+(solved by `assistant.py` from the uploaded sheet) is trusted; it was right
+on every clean worksheet so far. Measure later, from real use: a "this
+answer looks wrong" button on the parent page as an event, and maybe
+released state-test items with official keys. This replaces Next step 1–2
+above (20–30 photographed pages).
+- **Factory lesson:** a test that needs an artifact the person can't easily
+  produce won't happen. Ask for cheap evidence, or measure from the working
+  system. Also: say which "answer key" — the app's own, or an outside one
+  used only to grade the app — Sandy and the agent talked past each other.
+
+### Audience: teenagers (Sandy, 2026-10-20)
+
+"This really is for teenagers. Young kids are not getting homework and their
+parents can control their devices more." The student is Sandy's **little
+brother**: **13, 8th grade**; plays Fortnite, watches TikTok sports
+videos. Consequences:
+- Nothing that feels like a kids' app (drop/limit handwritten cheer,
+  mascots, Khan Kids tone). Heron's grown-up look, the Sprayground shark and
+  Brick's self-chosen framing already fit.
+- Borrow from Fortnite: homework steps as daily quests, mastery as tiers,
+  XP across nights, the gate opening as the win screen. From TikTok: help is
+  short and vertical (60-second explanations); tutor examples from sports.
+- Product: teens have their own phones, so the gate must be something they
+  accept — autonomy ("this is mine, it helps me") is the core, not the tone.
+- Open: who is "the parent" in the interview — Sandy, the parents, or both?
+- Sandy also asked to borrow from Khan Academy (mastery levels, colour by
+  subject) and link out to Khan and other resources (no public Khan API
+  since 2020 → search links). Comp to study: Khanmigo (Khan's AI tutor).
+  The kid-style "fun pass" was stopped when the audience became teens.
+
+### Next: a showable POC loop (Sandy, 2026-10-20)
+
+"Let's hold off [the interview], get a POC good enough to start showing
+people — we're in the weeds. The AI part is what I wanted to validate and I
+think I have. It will work." Build the server and the iPhone TestFlight app
+to show the loop: homework + quiz on the laptop → pass → his iPhone
+unlocks itself.
+- iPhone gating = Apple Screen Time API (FamilyControls / ManagedSettings).
+  Development entitlement works now on devices installed from Xcode;
+  **Family Controls (Distribution)** is needed for TestFlight — request on
+  day one, reported waits days to months, per bundle ID.
+- **Parent-managed** (Sandy): Family Sharing / child authorization, like
+  Bark — a parent approves on his phone; he can't turn it off. Apple
+  combines all apps' restrictions, so Bark/Downtime blocks still apply;
+  for the demo Homework Gate must be what blocks games/TikTok. Pitch:
+  Bark watches and blocks; Homework Gate unlocks when he's earned it.
+- Server: stays on this machine behind a tunnel (Cloudflare Tunnel or
+  Tailscale) so the model stays on Sandy's subscription, personal use.
+  Hosted + API key later, for real users.
+- Fallback demo if Apple stalls: web app + "free time unlocked" push.
+- $99 Apple Developer Program is required: Family Controls isn't available
+  to free Personal Teams, even for development (Apple DTS on the forums).
+- **Proposed order (from `brief.md`):** NextDNS first — per-device profiles
+  rewritten through its API when the mode changes; gates the laptop *and*
+  the iPhone (configuration profile, no Apple account or approval); ~$20/yr.
+  One server switch unlocks both = the showable loop. Then hardening: the
+  Windows agent (standard account, service + Firewall + App Control,
+  browser secure-DNS off by policy — the corporate endpoint model) and the
+  iOS Screen Time app. Risk: DNS leaks (open apps, IP-direct, VPN, profile
+  removal — parent locks that in Screen Time); fine for a demo and an
+  honest 13-year-old, agents close it later.
+
 ### Ideas raised, not yet decided (2026-10-20)
 
 From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
@@ -244,6 +322,40 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
    compare recall weeks later — a real within-student experiment at N=1;
    follow-up rate after "I don't know"; gate pass rate and quiz time not
    worse.
+6. **Tutor directives: two layers** (Sandy, 2026-10-20). Universal (ranked
+   directives + hard rules no profile can override) and student-specific
+   (grows). The student layer starts with a **parent interview** and a
+   **short talk with the child**, then grows from evidence (dated, with the
+   evidence, visible and undoable). Proposed: profile has a private part
+   (parent only) and a shared part written for him; write "what helps",
+   not labels; expert review of the interview and format later. Same
+   elicitation pattern as the design references — a reusable factory step.
+   Proposed order: interview Sandy by hand in chat → directives + profile
+   into the tutor's instructions + private explanation per reply →
+   simulated students → child talk as an app screen.
+7. **Prevent guessing** (Sandy). Gap: the tutor confirms right answers, so
+   he can fish ("is it 5? 6? 9?"); multiple choice is 1-in-4 by luck.
+   Principle: don't ban guessing, make reasoning the only thing that pays
+   (picking the most likely is a skill — Sandy's earlier point). New hard
+   rule: **never confirm an answer he hasn't explained** (or turn it into a
+   self-check). Tutor notices rapid different answers and slows down,
+   kindly. Quiz: fewer pure multiple choice; choice + one-line why, credit
+   needs both; too-fast or flip-flopping answers recorded as signals for
+   parent/profile, never penalties on screen. Guessing often means tired /
+   too hard / anxious → profile ("guesses more after 9pm") → tutor adapts.
+8. **Painless quiz: spoken or visual, like a game** (Sandy). Example item:
+   "Walk me through how you would divide fractions." Hold-to-talk answer,
+   one friendly follow-up for the why ("how many eighths fit in three
+   quarters?"), credit for steps + meaning; "I don't know" opens the tutor
+   (two-strikes rule). Plus visual items (drag fraction bars, pick the
+   picture, order the steps) and quick taps for early wins; the shark eats
+   a bit of the to-do list after each. Speech: browser Web Speech API first
+   (Chrome/Edge on his laptop), a transcription provider later. Grading:
+   model on the transcript against a short rubric, tolerant of messy maths
+   transcription. Risk: speaking aloud at night isn't always comfortable →
+   typing always available. Remove the visible per-question countdown and
+   auto-submit; keep time as a quiet parent-page signal. Explaining aloud
+   also answers "prevent guessing" (7).
 5. **Bounties and a support circle** (parked). Parents post bounties for
    extra work; others in his life join in (an uncle reading with him 3 h a
    week; the parent offers a gift card to the helper) — framed as
