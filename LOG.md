@@ -341,6 +341,12 @@ open-source thrust. Counterargument: marketplace graveyard (Zilingo, Fashinza) �
 are the hard parts, not formats; supply-side adoption is the risk. Cheapest test (Sandy's): 3–5 manufacturers —
 share of packs needing clarification, would they list free if packs came clean; then a fake door (upload a real
 tech pack). Engine first; the converter is a candidate first idea for the factory to run end to end.
+**Then (Sandy): "It's hard to retrofit any company, easier if you start using this."** Be the default for
+people *starting* a brand — no process to replace, the standard is theirs from the first garment; the converter
+runs outward (our standard → each factory's existing format), so manufacturers change nothing either. Flips the
+cheapest test to the demand side: people starting a clothing line (Shopify communities, print-on-demand
+graduates, fashion-school grads); fake door "build your first tech pack, factory-ready"; a real sign-up is the
+behaviour that costs. Manufacturers second, once packs arrive.
 
 ### Ideas raised, not yet decided (2026-10-20)
 

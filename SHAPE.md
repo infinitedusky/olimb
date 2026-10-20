@@ -55,6 +55,13 @@ fix.
   model we're reconstructing from its public docs and open-source plugins to design ours properly before
   writing engine code (`research/parallel-engine.md`).
 
+## Start with people who are starting (Sandy, 2026-10-21)
+
+"It's hard to retrofit any company, easier if you start using this." The factory and everything built with it
+are for greenfield: PostHog-native from the first line, Postgres from day one, a brand's first tech pack rather
+than a migration of its hundredth. Converters run outward (our standard → the formats incumbents already use), so
+nobody on the other side has to change. The standard spreads because newcomers keep arriving with it.
+
 ## Positioning (Sandy, 2026-10-20)
 
 Lightsprint reads as **an extension of Linear** (tickets in, code out), and Linear is its natural competitor.
