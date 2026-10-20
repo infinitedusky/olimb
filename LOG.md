@@ -223,6 +223,20 @@ retargeted). With many parallel PRs this is a real failure mode. Also: `gh`
 inside `idea-factory/homework-gate/` resolved the wrong repo once — pass
 `-R infinitedusky/homework-gate`.
 
+### Answer-key baseline: dropped for now (Sandy, 2026-10-20)
+
+"You are asking for an artifact that is too hard to get. Let's just trust it
+for now and then do tests when the system is working." The app's own key
+(solved by `assistant.py` from the uploaded sheet) is trusted; it was right
+on every clean worksheet so far. Measure later, from real use: a "this
+answer looks wrong" button on the parent page as an event, and maybe
+released state-test items with official keys. This replaces Next step 1–2
+above (20–30 photographed pages).
+- **Factory lesson:** a test that needs an artifact the person can't easily
+  produce won't happen. Ask for cheap evidence, or measure from the working
+  system. Also: say which "answer key" — the app's own, or an outside one
+  used only to grade the app — Sandy and the agent talked past each other.
+
 ### Ideas raised, not yet decided (2026-10-20)
 
 From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
