@@ -20,7 +20,7 @@ const inList = (name: string, col: any, values: readonly string[]) =>
 export const IDEA_LANES = ['inbox', 'measuring', 'build', 'testing', 'shipped', 'parked', 'killed'] as const
 export const PHASE_STATUSES = ['queued', 'ready', 'running', 'awaiting_answer', 'merging', 'testing', 'done', 'failed', 'cancelled'] as const
 export const RUN_STATUSES = ['starting', 'working', 'ready', 'completed', 'failed', 'stopped', 'interrupted'] as const
-export const RUN_KINDS = ['build', 'follow_up', 'verify', 'merge', 'setup', 'measure'] as const
+export const RUN_KINDS = ['plan', 'build', 'follow_up', 'verify', 'merge', 'setup', 'measure'] as const // plan: the planner on a task; the rest on a phase
 export const PR_STATUSES = ['draft', 'open', 'queued', 'merged', 'closed'] as const
 export const PROVIDER_ROLES = ['telemetry', 'code_host', 'design_system', 'model', 'sandbox', 'traces'] as const
 
@@ -91,6 +91,7 @@ export const plan = pgTable('plan', { // a group of tasks in order (an InDusk ma
 
 export const decision = pgTable('decision', { // [LS] decision card; [IF] provisional flag
   id: id(), ideaId: text('idea_id').references(() => idea.id), planId: text('plan_id').references(() => plan.id),
+  taskId: text('task_id'), runId: text('run_id'), // the planner's decisions belong to a task and the run that made them
   question: text('question').notNull(), options: jsonb('options').notNull(), // [{key:'A', text, tradeoff, recommended, story}]
   chosen: text('chosen'), provisional: boolean('provisional').notNull().default(false),
   decidedBy: text('decided_by').references(() => user.id), decidedAt: timestamp('decided_at', { withTimezone: true }),
@@ -149,7 +150,8 @@ export const sessionMessage = pgTable('session_message', { // [LS] shared queue;
 }, (t) => [inList('session_message_status', t.status, ['queued', 'sent', 'interrupted', 'dropped'])])
 
 export const run = pgTable('run', { // [LS] agent run; [ID] attempt
-  id: id(), phaseId: text('phase_id').notNull().references(() => phase.id), sessionId: text('session_id').references(() => session.id),
+  id: id(), phaseId: text('phase_id').references(() => phase.id), taskId: text('task_id').references(() => task.id), // a build run has a phase; a plan run has a task
+  sessionId: text('session_id').references(() => session.id),
   attempt: integer('attempt').notNull(), kind: text('kind').notNull(),
   agent: text('agent').notNull(), model: text('model'), status: text('status').notNull().default('starting'),
   agentSessionId: text('agent_session_id'), pid: integer('pid'), // for --resume and liveness
@@ -159,7 +161,8 @@ export const run = pgTable('run', { // [LS] agent run; [ID] attempt
 
 export const question = pgTable('question', { // [ID] questions with a cost
   id: id(), ideaId: text('idea_id'), planId: text('plan_id'), taskId: text('task_id'), phaseId: text('phase_id'), runId: text('run_id'),
-  text: text('text').notNull(), options: jsonb('options'), cost: text('cost'),
+  text: text('text').notNull(), options: jsonb('options'), reason: text('reason'), // options: [{label, description, changes[], recommended}]; reason: why that one
+  cost: text('cost'), // cheap | moderate | expensive — set by the server, never the agent
   status: text('status').notNull().default('open'), answer: text('answer'), answeredBy: text('answered_by'),
   answeredAt: timestamp('answered_at', { withTimezone: true }), askedAt: timestamp('asked_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [inList('question_status', t.status, ['open', 'answered', 'skipped', 'expired'])])

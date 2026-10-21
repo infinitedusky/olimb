@@ -6,7 +6,7 @@
  */
 import { asc, eq, inArray, sql } from 'drizzle-orm'
 import { db, type Tx } from './db/client.js'
-import { app, phase, phaseDependency, phaseFileClaim, plan, pr, run, step, task, type PhaseStatus } from './db/schema.js'
+import { app, decision, phase, phaseDependency, phaseFileClaim, plan, pr, question, run, step, task, type PhaseStatus } from './db/schema.js'
 import { appendEvent } from './events.js'
 import { newId } from './ids.js'
 import { claimsOverlap, findCycle, pickTasksToStart, type SchedTask } from './scheduler.js'
@@ -64,8 +64,8 @@ export async function createPlan(input: NewPlan) {
 }
 
 /** Add phases to an existing task (the planner's output, or a person's). Dependencies may name keys in this batch or existing phase ids. */
-export async function addPhases(taskId: string, phases: NewPhase[], actor = 'engine') {
-  return db.transaction(async (tx) => {
+export async function addPhases(taskId: string, phases: NewPhase[], actor = 'engine', outer?: Tx) {
+  const work = async (tx: Tx) => {
     const [t] = await tx.select().from(task).where(eq(task.id, taskId))
     if (!t) throw new PlanError(`no task ${taskId}`)
     const [a] = await tx.select().from(app).where(eq(app.id, t.appId))
@@ -89,7 +89,8 @@ export async function addPhases(taskId: string, phases: NewPhase[], actor = 'eng
     const base = { workspaceId: a.workspaceId, appId: a.id, planId: t.planId, taskId: t.id, actor }
     for (const r of rows) await appendEvent(tx, { ...base, phaseId: r.id, type: 'phase.created', payload: { number: r.number, title: r.title } })
     return rows
-  })
+  }
+  return outer ? work(outer) : db.transaction(work)
 }
 
 async function loadPlan(tx: Tx | typeof db, planId: string) {
@@ -104,8 +105,11 @@ async function loadPlan(tx: Tx | typeof db, planId: string) {
   const runs = ids.length ? await tx.select().from(run).where(inArray(run.phaseId, ids)) : []
   const steps = ids.length ? await tx.select().from(step).where(inArray(step.phaseId, ids)).orderBy(asc(step.position)) : []
   const [thePr] = await tx.select().from(pr).where(eq(pr.planId, planId))
+  const decisions = await tx.select().from(decision).where(eq(decision.planId, planId))
+  const questions = await tx.select().from(question).where(eq(question.planId, planId)).orderBy(asc(question.askedAt))
   return {
     plan: p, app: { id: a.id, name: a.name, defaultBranch: a.defaultBranch, workspaceId: a.workspaceId }, pr: thePr ?? null,
+    decisions, questions, // the planner's: what it settled (provisional until approved) and what it could not
     tasks: tasks.map((t) => ({ ...t, phaseIds: phases.filter((x) => x.taskId === t.id).map((x) => x.id) })),
     phases: phases.map((x) => {
       const last = runs.filter((r) => r.phaseId === x.id).sort((r, q) => q.attempt - r.attempt)[0] ?? null

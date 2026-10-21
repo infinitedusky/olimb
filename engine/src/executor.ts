@@ -103,7 +103,8 @@ export async function runTask(i: RunInput): Promise<RunOutput> {
   return out
 }
 
-async function handle(m: SDKMessage, emit: RunInput['onEvent'], setOut: (o: RunOutput) => void) {
+/** One SDK message → events (and, for the result, the run's outcome). Shared with the planner. */
+export async function handle(m: SDKMessage, emit: RunInput['onEvent'], setOut: (o: RunOutput) => void) {
   const a = m as any
   switch (m.type) {
     case 'system':

@@ -9,6 +9,7 @@ import { db, pool } from './db/client.js'
 import { app as appTable, PHASE_STATUSES, repo as repoTable, workspace, type PhaseStatus } from './db/schema.js'
 import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
+import { answerQuestion, finishPlanning, preparePlanning } from './planner.js'
 import { addPhases, appGraph, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
 import { runner } from './runner.js'
 
@@ -31,7 +32,9 @@ export function buildApp(bus: EventBus) {
       'GET /apps': 'all apps', 'GET /apps/:id/graph': 'the top-level graph: every phase of every plan in the app',
       'POST /plans': '{appId, title, spec?, tasks: [{title, brief?, phases?: [{key, title, brief?, dependsOn?, files?}]}]}',
       'GET /plans': 'all plans with counts', 'GET /plans/:id/graph': 'tasks in order, phases with edges, claims, held reasons, last run, steps, the PR',
-      'POST /tasks/:id/phases': '[{key, title, brief?, dependsOn?, files?}] — add phases to a task (the planner, or a person)',
+      'POST /tasks/:id/phases': '[{key, title, brief?, dependsOn?, files?}] — add phases to a task by hand',
+      'POST /tasks/:id/plan?wait=1': 'the planner: the task\'s brief → phases, decisions, questions (one read-only agent run); 202 at once, or wait',
+      'POST /questions/:id/answer': '{answer}',
       'POST /plans/:id/start': 'run it: worktrees, agent runs, landing, PR', 'POST /plans/:id/tick?room=N': 'one dispatch pass for a draft (no launching)',
       'POST /phases/:id/status': '{status} — by hand, for drafts',
       'GET /events?since=SEQ&app=&plan=&task=&phase=': 'SSE: replay from SEQ, then live',
@@ -82,6 +85,21 @@ export function buildApp(bus: EventBus) {
 
   api.post('/tasks/:id/phases', async (c) => {
     try { return c.json(await addPhases(c.req.param('id'), await c.req.json(), 'user'), 201) } catch (err) { return planError(c, err) }
+  })
+
+  // The planner takes minutes: by default the request returns at once and the outcome arrives on the event stream
+  // (task.planned or task.plan_failed, then the graph has the phases); ?wait=1 holds the request until it is done.
+  api.post('/tasks/:id/plan', async (c) => {
+    let ctx
+    try { ctx = await preparePlanning(c.req.param('id'), { actor: 'user' }) } catch (err) { return planError(c, err) }
+    if (c.req.query('wait') === '1') { const out = await finishPlanning(ctx); return c.json(out, out.status === 'completed' ? 200 : 500) }
+    void finishPlanning(ctx)
+    return c.json({ runId: ctx.runId }, 202)
+  })
+
+  api.post('/questions/:id/answer', async (c) => {
+    const { answer } = await c.req.json<{ answer: string }>()
+    try { return c.json(await answerQuestion(c.req.param('id'), answer, 'user')) } catch (err) { return planError(c, err, 404) }
   })
 
   // By-hand transitions: how a person drives a draft's graph. The executor owns running plans.

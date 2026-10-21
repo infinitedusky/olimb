@@ -83,6 +83,16 @@ task.command('phases').argument('<taskId>').requiredOption('-f, --file <file>', 
     const rows = await api<any[]>('POST', `/tasks/${taskId}/phases`, JSON.parse(await readFile(o.file, 'utf8')))
     for (const x of rows) console.log(`  phase ${x.id}  #${x.number}  ${x.title}`)
   })
+task.command('plan').argument('<taskId>').description("the planner: the task's brief → phases, decisions and questions (one read-only agent run; minutes)")
+  .action(async (taskId: string) => {
+    const out = await api<any>('POST', `/tasks/${taskId}/plan?wait=1`)
+    for (const x of out.phases) console.log(`  phase ${x.id}  #${x.number}  ${x.title}`)
+    for (const d of out.decisions) console.log(`  decided  ${d.question} → ${d.options[0]?.text}  (${d.rationale})`)
+    for (const q of out.questions) console.log(`  question ${q.id} [${q.cost}]  ${q.text}  (recommends ${q.options.find((o: any) => o.recommended)?.label})`)
+    console.log(`  run ${out.runId}  $${Number(out.costUsd ?? 0).toFixed(2)} est.`)
+  })
+program.command('question').command('answer').argument('<questionId>').argument('<answer>')
+  .action(async (questionId: string, answer: string) => { console.log(JSON.stringify(await api('POST', `/questions/${questionId}/answer`, { answer }))) })
 
 program.command('phase').command('status').argument('<phaseId>').argument('<status>').description('by hand, for drafts')
   .action(async (phaseId: string, status: string) => { console.log(JSON.stringify(await api('POST', `/phases/${phaseId}/status`, { status }))) })
