@@ -432,6 +432,22 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## Engine step 4, first half: the live graph in the web UI (2026-10-20, idea-factory PR #11)
+
+Sandy: "do we have a UI to look at?" and "we don't really have the planning setup yet to show the tasks."
+Half right: plans exist as rows (three real ones), but could only be made from a JSON file. So step 4's first
+half is the Plans pages in the web UI: the list, a plan's live graph (xyflow + dagre over `/plans/:id/graph`,
+refreshed from `/events` over SSE), the selected task's detail, the event ticker, the PR badge, and a New plan
+composer (tasks as rows) so plans can be made without the CLI. Verified live in a browser: a by-hand transition
+produced the event and the node changed with no reload. The same graph component is what the VS Code webview
+will host (second half). The planning *agent* (description → proposed tasks → edit → run) is the step after and
+fills the same composer.
+- Tedious: Vite/Storybook dependency churn restarting the dev server mid-check (twice mistaken for a bug);
+  another session reclaiming port 5173. Judgement: what a node should show (status, why held, last run's cost);
+  by-hand transitions only for drafts, never for running plans.
+- Also raised by Sandy, captured not chased: a dyslexia-friendly font toggle (retracted a moment later; noting
+  it anyway as cheap and worth doing in the design system).
+
 ## Engine step 3: parallel for real (2026-10-20, idea-factory PR #10)
 
 Several tasks under the cap, dependents only after their parents land, retries with the reason (from the log,
