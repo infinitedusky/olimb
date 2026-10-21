@@ -66,7 +66,7 @@ event as it happens, via Postgres `LISTEN/NOTIFY`. Several clients can watch one
 | `src/scheduler.ts` | Pure: given a plan's tasks and free slots, what to start and why everything else is held. One pick at a time, so two tasks freed together never claim the same file. |
 | `src/plans.ts` | The single writer's view of a plan: create (tasks, edges, file claims, in one transaction), graph, `tick` (one dispatch pass), manual status. |
 | `src/events.ts` | Append an event in the same transaction as the state change; `NOTIFY` carries only the seq; readers fetch rows by seq. |
-| `src/server.ts` | Hono: `/workspaces`, `/apps`, `/plans`, `/plans/:id/graph`, `/plans/:id/tick`, `/tasks/:id/status`, `/events` (SSE). |
+| `src/server.ts` | Hono: `/workspaces`, `/apps` (POST, GET), `/repos`, `/plans` (POST, GET), `/plans/:id/graph` (tasks, edges, claims, held reasons, last run per task, the plan's PR), `/plans/:id/start`, `/plans/:id/tick`, `/tasks/:id/status`, `/events` (SSE). |
 | `src/git.ts` | Worktrees, branches, merge, fast-forward by `update-ref` compare-and-swap, push. |
 | `src/executor.ts` | One Agent SDK run on one task; messages → events (trimmed); tools confined to the worktree. |
 | `src/landing.ts` | Merge → test → fast-forward, serialized per plan; refuses conflicts and failing tests. |

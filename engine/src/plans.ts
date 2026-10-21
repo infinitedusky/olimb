@@ -4,7 +4,7 @@
  */
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { db, type Tx } from './db/client.js'
-import { app, plan, run, task, taskDependency, taskFileClaim, type TaskStatus } from './db/schema.js'
+import { app, plan, pr, run, task, taskDependency, taskFileClaim, type TaskStatus } from './db/schema.js'
 import { appendEvent } from './events.js'
 import { newId } from './ids.js'
 import { findCycle, pickTasksToStart, type SchedTask } from './scheduler.js'
@@ -59,8 +59,10 @@ export async function planGraph(planId: string) {
   const deps = ids.length ? await db.select().from(taskDependency).where(inArray(taskDependency.taskId, ids)) : []
   const claims = ids.length ? await db.select().from(taskFileClaim).where(inArray(taskFileClaim.taskId, ids)) : []
   const runs = ids.length ? await db.select().from(run).where(inArray(run.taskId, ids)) : []
+  const prs = ids.length ? await db.select().from(pr).where(inArray(pr.taskId, ids)) : []
+  const [a] = await db.select().from(app).where(eq(app.id, p.appId))
   return {
-    plan: p,
+    plan: p, app: { id: a.id, name: a.name, defaultBranch: a.defaultBranch }, pr: prs[0] ?? null,
     tasks: tasks.map((t) => ({
       ...t,
       dependsOn: deps.filter((d) => d.taskId === t.id).map((d) => d.dependsOnTaskId),
@@ -131,3 +133,17 @@ async function graphIn(tx: Tx, planId: string) {
 }
 
 export const _internal = { and }
+
+
+/** Every plan, newest first, with its app and a count of tasks per status: the Plans page. */
+export async function listPlans(opts: { all?: boolean } = {}) {
+  const plans = (await db.select().from(plan).orderBy(sql`${plan.createdAt} desc`))
+    .filter((p) => opts.all || p.status !== 'superseded') // tests mark their plans superseded; hide them by default
+  const apps = await db.select().from(app)
+  const ids = plans.map((p) => p.id)
+  const tasks = ids.length ? await db.select({ planId: task.planId, status: task.status }).from(task).where(inArray(task.planId, ids)) : []
+  return plans.map((p) => ({
+    ...p, app: apps.find((a) => a.id === p.appId) ?? null,
+    tasks: tasks.filter((t) => t.planId === p.id).reduce<Record<string, number>>((acc, t) => ({ ...acc, [t.status]: (acc[t.status] ?? 0) + 1 }), {}),
+  }))
+}

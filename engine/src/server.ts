@@ -10,7 +10,7 @@ import { db, pool } from './db/client.js'
 import { app as appTable, repo as repoTable, TASK_STATUSES, workspace, type TaskStatus } from './db/schema.js'
 import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
-import { createPlan, PlanError, planGraph, setTaskStatus, tick } from './plans.js'
+import { createPlan, listPlans, PlanError, planGraph, setTaskStatus, tick } from './plans.js'
 import { runner } from './runner.js'
 
 export const SESSIONS_MAX = Number(process.env.SESSIONS_MAX ?? 4)
@@ -24,7 +24,8 @@ export function buildApp(bus: EventBus) {
       'GET /health': 'database reachable?',
       'POST /workspaces': '{name}', 'POST /apps': '{workspaceId, name, defaultBranch?}',
       'POST /plans': '{appId, title, tasks: [{key, title, brief?, dependsOn?, files?, priority?}]}',
-      'GET /plans/:id/graph': 'tasks, edges, claims, held reasons', 'POST /plans/:id/tick?room=N': 'one dispatch pass (no launching)',
+      'GET /apps': 'all apps', 'GET /plans': 'all plans with task counts',
+      'GET /plans/:id/graph': 'tasks, edges, claims, held reasons, last run per task, the plan PR', 'POST /plans/:id/tick?room=N': 'one dispatch pass (no launching)',
       'POST /repos': '{appId, fullName, localPath?, baseBranch?}', 'POST /plans/:id/start': 'run it: worktrees, agent runs, landing, PR',
       'POST /tasks/:id/status': '{status} — manual, until step 2 brings the executor',
       'GET /events?since=SEQ&plan=ID': 'SSE: replay from SEQ, then live',
@@ -77,6 +78,9 @@ export function buildApp(bus: EventBus) {
       throw err
     }
   })
+
+  api.get('/apps', async (c) => c.json(await db.select().from(appTable)))
+  api.get('/plans', async (c) => c.json(await listPlans({ all: c.req.query('all') === '1' })))
 
   api.get('/plans/:id/graph', async (c) => {
     const g = await planGraph(c.req.param('id'))

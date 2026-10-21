@@ -5,7 +5,7 @@
 import { asc, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { db, pool } from './db/client.js'
-import { app, event, workspace } from './db/schema.js'
+import { app, event, plan, workspace } from './db/schema.js'
 import { createPlan, PlanError, planGraph, setTaskStatus, tick } from './plans.js'
 import { newId } from './ids.js'
 
@@ -18,7 +18,10 @@ describe.skipIf(!reachable)('plans in Postgres', () => {
     await db.insert(workspace).values({ id: wsId, name: 'test' })
     await db.insert(app).values({ id: appId, workspaceId: wsId, name: 'test app' })
   })
-  afterAll(async () => { await pool.end() })
+  afterAll(async () => {
+    await db.update(plan).set({ status: 'superseded' }).where(eq(plan.appId, appId)) // keep test plans off the Plans page
+    await pool.end()
+  })
 
   it('creates a plan whose tasks, edges and claims are rows, and logs it', async () => {
     const { plan, tasks } = await createPlan({ appId, title: 'p', tasks: [
