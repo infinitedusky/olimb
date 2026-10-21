@@ -9,6 +9,9 @@ import { Shell } from './components/Shell'
 import { Board } from './pages/Board'
 import { IdeaPage } from './pages/IdeaPage'
 import { Settings } from './pages/Settings'
+import { Plans } from './pages/Plans'
+import { PlanPage } from './pages/PlanPage'
+import { NewPlan } from './pages/NewPlan'
 
 function IdeaRoute() {
   const idea = findIdea(useParams().slug ?? '')
@@ -24,6 +27,9 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/" element={<Board ideas={ideas} />} />
           <Route path="/ideas/:slug" element={<IdeaRoute />} />
+          <Route path="/plans" element={<Plans />} />
+          <Route path="/plans/new" element={<NewPlan />} />
+          <Route path="/plans/:id" element={<PlanPage />} />
           <Route path="/settings" element={<Settings modules={modules} />} />
         </Routes>
       </Shell>

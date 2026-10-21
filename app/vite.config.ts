@@ -10,11 +10,11 @@ const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(file
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
   plugins: [react()],
-  // The idea files live one level up, at the repo root.
   server: {
-    fs: {
-      allow: ['..']
-    }
+    // The idea files live one level up, at the repo root.
+    fs: { allow: ['..'] },
+    // The engine (engine/, `pnpm serve`) at /api; the UI never talks to the database.
+    proxy: { '/api': { target: process.env.ENGINE_URL ?? 'http://localhost:4000', changeOrigin: true, rewrite: (p) => p.replace(/^\/api/, '') } },
   },
   test: {
     projects: [{

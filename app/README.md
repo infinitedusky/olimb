@@ -1,7 +1,13 @@
 # Idea Factory app
 
 The minimal UI: the **ideas board** (building / testing / parked), an **idea page** (the bet, its telemetry, the loop
-it ran, its evidence — from the database, once connected), and **settings** (modules and their providers, telemetry first).
+it ran, its evidence — from the database, once connected), **plans** (every plan the engine knows; a plan's live
+graph of tasks with the selected task's detail, the event ticker and the plan's PR; a composer to make a new plan as
+rows of tasks), and **settings** (modules and their providers, telemetry first).
+
+The Plans pages talk to the engine (`../engine`, `pnpm serve`) through Vite's proxy at `/api`, and follow its event
+stream over SSE, so a running plan's graph updates as the engine logs events. The graph is `@xyflow/react` laid out
+by `@dagrejs/dagre`; layout re-runs only when the topology changes.
 
 Ideas are the files in `../ideas/` (one per idea, read at build time). Telemetry isn't connected yet; the idea page
 says so. The look is **provisional** (InDusk's palette and fonts in `src/tokens.css`), not yet chosen through Sandy's
