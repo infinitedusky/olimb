@@ -1,17 +1,18 @@
 /**
- * The top level: every step of every plan in an app, on one canvas. Dependencies as solid edges; unfinished steps
+ * The top level: every phase of every plan in an app, on one canvas. Dependencies as solid edges; unfinished phases
  * that share a file as dashed links (they will never run at once). Live over the app's event stream.
  */
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { Badge, type Tone } from '../components/Badge'
 import { PlanGraphView } from '../components/PlanGraphView'
-import { API, engine, type App, type GraphTask } from '../engine'
+import { API, engine, EVENT_TYPES, type App, type GraphPhase } from '../engine'
 
 interface AppGraphData {
   app: App
   plans: { id: string; title: string; status: string; pr: { number: number; url: string } | null }[]
-  tasks: (GraphTask & { planId: string })[]
+  tasks: { id: string; planId: string; number: number; position: number; title: string }[]
+  phases: GraphPhase[]
   conflicts: [string, string][]
 }
 const PLAN_TONE: Record<string, Tone> = { running: 'accent', landed: 'ok' }
@@ -41,21 +42,20 @@ export function AppGraph() {
     void refresh()
     const es = new EventSource(`${API}/events?app=${appId}&since=-1`)
     const bump = () => { window.clearTimeout(timer.current); timer.current = window.setTimeout(refresh, 200) }
-    for (const type of ['plan.created', 'plan.started', 'plan.landed', 'task.created', 'task.status', 'task.held', 'task.retry', 'task.failed', 'run.started', 'run.result', 'land.landed', 'pr.opened', 'pr.updated']) {
-      es.addEventListener(type, bump)
-    }
+    for (const type of EVENT_TYPES) if (!type.startsWith('run.tool') && type !== 'run.message') es.addEventListener(type, bump)
     es.onerror = () => setError('event stream disconnected; retrying'); es.onopen = () => setError(null)
     return () => { closed = true; es.close(); window.clearTimeout(timer.current) }
   }, [appId])
 
-  const selected = data?.tasks.find((t) => t.id === selectedId)
-  const planOf = (t: GraphTask & { planId: string }) => data?.plans.find((p) => p.id === t.planId)
+  const selected = data?.phases.find((p) => p.id === selectedId)
+  const taskOf = (p: GraphPhase) => data?.tasks.find((t) => t.id === p.taskId)
+  const planOf = (p: GraphPhase) => data?.plans.find((x) => x.id === p.planId)
   return (
     <>
       <div className="page-head">
         <div>
           <h1>Graph</h1>
-          <p className="muted" style={{ margin: '4px 0 0' }}>Every step of every plan. Anything open and unblocked runs; steps that share a file take turns.</p>
+          <p className="muted" style={{ margin: '4px 0 0' }}>Every phase of every plan. Anything open and unblocked runs; phases that share a file take turns; a plan's tasks go in order.</p>
         </div>
         {apps.length > 1 && <select value={appId} onChange={(e) => setAppId(e.target.value)}>{apps.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select>}
       </div>
@@ -68,16 +68,17 @@ export function AppGraph() {
             ))}
             {error && <Badge tone="warn" dot>{error}</Badge>}
           </div>
-          {data.tasks.length
-            ? <PlanGraphView tasks={data.tasks} labels={Object.fromEntries(data.tasks.map((t) => [t.id, short(planOf(t)?.title ?? '')]))} links={data.conflicts} selectedId={selectedId} onSelect={(t) => setSelectedId(t.id)} tall />
-            : <div className="empty">No plans in {data.app.name} yet.</div>}
+          {data.phases.length
+            ? <PlanGraphView phases={data.phases} labels={Object.fromEntries(data.phases.map((p) => [p.id, short(taskOf(p)?.title ?? planOf(p)?.title ?? '')]))} links={data.conflicts} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} tall />
+            : <div className="empty">No phases in {data.app.name} yet.</div>}
           {selected && (
             <section className="panel">
               <h2>#{selected.number} {selected.title} <Badge>{planOf(selected)?.title}</Badge></h2>
               <dl className="fields">
                 <dt>Status</dt><dd>{selected.status}{selected.heldReason ? ` — ${selected.heldReason}` : ''}</dd>
+                <dt>Task</dt><dd>{taskOf(selected) ? `#${taskOf(selected)!.number} ${taskOf(selected)!.title}` : '—'}</dd>
                 <dt>Files</dt><dd>{selected.files.length ? <span className="mono">{selected.files.join(', ')}</span> : <span className="faint">None declared: claims the whole app.</span>}</dd>
-                <dt>Shares files with</dt><dd>{data.conflicts.filter((c) => c.includes(selected.id)).map((c) => c.find((x) => x !== selected.id)).map((id) => data.tasks.find((t) => t.id === id)).filter(Boolean).map((t) => `#${t!.number} ${t!.title} (${planOf(t!)?.title})`).join('; ') || <span className="faint">Nothing open.</span>}</dd>
+                <dt>Shares files with</dt><dd>{data.conflicts.filter((c) => c.includes(selected.id)).map((c) => c.find((x) => x !== selected.id)).map((id) => data.phases.find((p) => p.id === id)).filter(Boolean).map((p) => `#${p!.number} ${p!.title} (${planOf(p!)?.title})`).join('; ') || <span className="faint">Nothing open.</span>}</dd>
                 <dt>Plan</dt><dd><Link to={`/plans/${selected.planId}`}>{planOf(selected)?.title}</Link></dd>
               </dl>
             </section>

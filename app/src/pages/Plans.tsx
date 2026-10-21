@@ -15,7 +15,7 @@ export function Plans() {
       <div className="page-head">
         <div>
           <h1>Plans</h1>
-          <p className="muted" style={{ margin: '4px 0 0' }}>Plans are made of tasks; tasks form the graph the engine runs.</p>
+          <p className="muted" style={{ margin: '4px 0 0' }}>A plan is tasks in order; each task becomes phases; the phases are the graph the engine runs.</p>
         </div>
         <Link to="/plans/new" className="btn">New plan</Link>
       </div>
@@ -24,13 +24,13 @@ export function Plans() {
       {plans && plans.length > 0 && (
         <ul className="list panel" style={{ padding: '4px 18px' }}>
           {plans.map((p) => {
-            const total = Object.values(p.tasks).reduce((a, b) => a + b, 0)
+            const total = Object.values(p.phases).reduce((a, b) => a + b, 0)
             return (
               <li key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center' }}>
                 <div>
                   <Link to={`/plans/${p.id}`} style={{ fontWeight: 600, textDecoration: 'none' }}>{p.title}</Link>
-                  <div className="faint" style={{ fontSize: 13 }}>{p.app?.name ?? 'no app'} · {total} task{total === 1 ? '' : 's'}
-                    {p.tasks.done ? ` · ${p.tasks.done} done` : ''}{p.tasks.failed ? ` · ${p.tasks.failed} failed` : ''} · <span className="mono">{p.id}</span></div>
+                  <div className="faint" style={{ fontSize: 13 }}>{p.app?.name ?? 'no app'} · {p.taskCount} task{p.taskCount === 1 ? '' : 's'} · {total} phase{total === 1 ? '' : 's'}
+                    {p.phases.done ? ` · ${p.phases.done} done` : ''}{p.phases.failed ? ` · ${p.phases.failed} failed` : ''} · <span className="mono">{p.id}</span></div>
                 </div>
                 <Badge tone={TONE[p.status] ?? 'neutral'} dot={p.status === 'running'}>{p.status}</Badge>
               </li>

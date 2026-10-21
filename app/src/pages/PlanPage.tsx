@@ -1,11 +1,12 @@
-/** One plan, live: the graph, the selected task's detail, the event ticker, and the plan's PR. */
+/** One plan, live: its tasks in order, the phase graph, the selected phase's detail and steps, the event ticker, the PR. */
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { Badge, type Tone } from '../components/Badge'
 import { PlanGraphView, STATUS_TONE } from '../components/PlanGraphView'
-import { engine, useLivePlan, type Event, type GraphTask } from '../engine'
+import { engine, useLivePlan, type Event, type GraphPhase, type GraphTask } from '../engine'
 
 const PLAN_TONE: Record<string, Tone> = { drafting: 'neutral', proposed: 'neutral', approved: 'neutral', running: 'accent', landed: 'ok', superseded: 'neutral' }
+const short = (t: string) => (t.length > 28 ? t.slice(0, 26).trimEnd() + '…' : t)
 
 export function PlanPage() {
   const { id } = useParams()
@@ -14,7 +15,8 @@ export function PlanPage() {
   const [busy, setBusy] = useState(false)
   if (error && !graph) return <p className="muted">{error}</p>
   if (!graph) return <p className="muted">Loading…</p>
-  const selected = graph.tasks.find((t) => t.id === selectedId) ?? null
+  const selected = graph.phases.find((p) => p.id === selectedId) ?? null
+  const taskOf = (p: GraphPhase) => graph.tasks.find((t) => t.id === p.taskId)
   const act = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn() } finally { setBusy(false) } }
   return (
     <>
@@ -31,48 +33,73 @@ export function PlanPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {['drafting', 'proposed', 'approved'].includes(graph.plan.status) && (
+          {['drafting', 'proposed', 'approved'].includes(graph.plan.status) && graph.phases.length > 0 && (
             <button className="btn" disabled={busy} onClick={() => act(() => engine.start(graph.plan.id))}>Run this plan</button>
           )}
         </div>
       </div>
 
-      <PlanGraphView tasks={graph.tasks} selectedId={selectedId} onSelect={(t) => setSelectedId(t.id)} />
+      <ol className="task-strip">
+        {graph.tasks.map((t) => <TaskChip key={t.id} task={t} phases={graph.phases.filter((p) => p.taskId === t.id)} />)}
+      </ol>
+
+      {graph.phases.length
+        ? <PlanGraphView phases={graph.phases} labels={Object.fromEntries(graph.phases.map((p) => [p.id, short(taskOf(p)?.title ?? '')]))} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} />
+        : <div className="empty">No phases yet. The planner turns each task's brief into phases; until it exists, add them with <code>pnpm if task phases</code>.</div>}
 
       <div className="plan-lower">
         <section className="panel">
-          {selected ? <TaskDetail task={selected} planStatus={graph.plan.status} busy={busy} act={act} /> : <p className="muted" style={{ margin: 0 }}>Click a task to see its brief, files, dependencies and last run.</p>}
+          {selected ? <PhaseDetail phase={selected} task={taskOf(selected)} planStatus={graph.plan.status} busy={busy} act={act} />
+            : <p className="muted" style={{ margin: 0 }}>Click a phase to see its brief, files, dependencies, steps and last run.</p>}
         </section>
         <section className="panel">
           <h2>Events</h2>
-          <Ticker events={events} tasks={graph.tasks} />
+          <Ticker events={events} phases={graph.phases} />
         </section>
       </div>
     </>
   )
 }
 
-function TaskDetail({ task, planStatus, busy, act }: { task: GraphTask; planStatus: string; busy: boolean; act: (fn: () => Promise<unknown>) => Promise<void> }) {
+function TaskChip({ task, phases }: { task: GraphTask; phases: GraphPhase[] }) {
+  const done = phases.filter((p) => p.status === 'done').length
+  const live = phases.some((p) => ['running', 'merging', 'testing'].includes(p.status))
+  const tone: Tone = phases.length && done === phases.length ? 'ok' : live ? 'accent' : 'neutral'
+  return (
+    <li className="task-chip" data-component="TaskChip">
+      <span className="mono faint">task #{task.number}</span>
+      <strong>{task.title}</strong>
+      <Badge tone={tone} dot={live}>{phases.length ? `${done}/${phases.length} phases` : 'no phases'}</Badge>
+    </li>
+  )
+}
+
+function PhaseDetail({ phase, task, planStatus, busy, act }: { phase: GraphPhase; task?: GraphTask; planStatus: string; busy: boolean; act: (fn: () => Promise<unknown>) => Promise<void> }) {
   const manual = planStatus !== 'running' // the executor owns running plans; by hand only for drafts and demos
+  const steps = phase.steps ?? []
   return (
     <>
-      <h2>#{task.number} {task.title} <Badge tone={STATUS_TONE[task.status]}>{task.status.replace('_', ' ')}</Badge></h2>
+      <h2>#{phase.number} {phase.title} <Badge tone={STATUS_TONE[phase.status]}>{phase.status.replace('_', ' ')}</Badge></h2>
       <dl className="fields">
-        <dt>Brief</dt><dd>{task.brief || <span className="faint">None.</span>}</dd>
-        <dt>Files</dt><dd>{task.files.length ? <span className="mono">{task.files.join(', ')}</span> : <span className="faint">None declared: shares with everyone.</span>}</dd>
-        <dt>Depends on</dt><dd>{task.dependsOn.length ? task.dependsOn.length + ' task' + (task.dependsOn.length > 1 ? 's' : '') : <span className="faint">Nothing.</span>}</dd>
-        <dt>Held</dt><dd>{task.heldReason ?? <span className="faint">Not held.</span>}</dd>
-        <dt>Branch</dt><dd>{task.branch ? <span className="mono">{task.branch}</span> : <span className="faint">Not started.</span>}</dd>
-        <dt>Attempts</dt><dd>{task.attempt} of {task.maxAttempts}</dd>
-        {task.lastRun && <><dt>Last run</dt><dd>{task.lastRun.status}{task.lastRun.model ? ` · ${task.lastRun.model}` : ''}{task.lastRun.costUsd ? ` · $${Number(task.lastRun.costUsd).toFixed(2)} est.` : ''}
-          {task.lastRun.summary && <div className="summary">{task.lastRun.summary}</div>}
-          {task.lastRun.error && <div className="summary bad">{task.lastRun.error}</div>}</dd></>}
+        <dt>Task</dt><dd>{task ? `#${task.number} ${task.title}` : '—'}</dd>
+        <dt>Brief</dt><dd>{phase.brief || <span className="faint">None.</span>}</dd>
+        <dt>Files</dt><dd>{phase.files.length ? <span className="mono">{phase.files.join(', ')}</span> : <span className="faint">None declared: claims the whole app.</span>}</dd>
+        <dt>Depends on</dt><dd>{phase.dependsOn.length ? `${phase.dependsOn.length} phase${phase.dependsOn.length > 1 ? 's' : ''}` : <span className="faint">Nothing explicit (task order still applies).</span>}</dd>
+        <dt>Held</dt><dd>{phase.heldReason ?? <span className="faint">Not held.</span>}</dd>
+        <dt>Branch</dt><dd>{phase.branch ? <span className="mono">{phase.branch}</span> : <span className="faint">Not started.</span>}</dd>
+        <dt>Attempts</dt><dd>{phase.attempt} of {phase.maxAttempts}</dd>
+        {steps.length > 0 && <><dt>Steps</dt><dd>
+          <ul className="steps">{steps.map((s) => <li key={s.id} className={s.status}><span className="mono">{s.status === 'completed' ? '✓' : s.status === 'in_progress' ? '●' : '○'}</span> {s.text}</li>)}</ul>
+        </dd></>}
+        {phase.lastRun && <><dt>Last run</dt><dd>{phase.lastRun.status}{phase.lastRun.model ? ` · ${phase.lastRun.model}` : ''}{phase.lastRun.costUsd ? ` · $${Number(phase.lastRun.costUsd).toFixed(2)} est.` : ''}
+          {phase.lastRun.summary && <div className="summary">{phase.lastRun.summary}</div>}
+          {phase.lastRun.error && <div className="summary bad">{phase.lastRun.error}</div>}</dd></>}
       </dl>
       {manual && (
         <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
           <span className="faint mono" style={{ alignSelf: 'center' }}>by hand:</span>
           {(['running', 'done', 'failed', 'queued'] as const).map((s) => (
-            <button key={s} className="btn quiet" disabled={busy || task.status === s} onClick={() => act(() => engine.setStatus(task.id, s))}>{s}</button>
+            <button key={s} className="btn quiet" disabled={busy || phase.status === s} onClick={() => act(() => engine.setStatus(phase.id, s))}>{s}</button>
           ))}
         </div>
       )}
@@ -80,8 +107,8 @@ function TaskDetail({ task, planStatus, busy, act }: { task: GraphTask; planStat
   )
 }
 
-function Ticker({ events, tasks }: { events: Event[]; tasks: GraphTask[] }) {
-  const num = (id: string | null) => { const t = tasks.find((x) => x.id === id); return t ? `#${t.number}` : '' }
+function Ticker({ events, phases }: { events: Event[]; phases: GraphPhase[] }) {
+  const num = (id: string | null) => { const p = phases.find((x) => x.id === id); return p ? `#${p.number}` : '' }
   const shown = events.filter((e) => !['run.tool_result', 'run.rate_limit'].includes(e.type)).slice(-40).reverse()
   if (!shown.length) return <p className="muted" style={{ margin: 0 }}>Nothing yet.</p>
   return (
@@ -89,7 +116,7 @@ function Ticker({ events, tasks }: { events: Event[]; tasks: GraphTask[] }) {
       {shown.map((e) => (
         <li key={e.seq}>
           <span className="mono faint">{e.ts.slice(11, 19)}</span>
-          <span className="mono">{num(e.taskId)}</span>
+          <span className="mono">{num(e.phaseId)}</span>
           <span className="mono">{e.type}</span>
           <span className="muted">{summarise(e)}</span>
         </li>
@@ -101,9 +128,10 @@ function Ticker({ events, tasks }: { events: Event[]; tasks: GraphTask[] }) {
 function summarise(e: Event): string {
   const p = e.payload as any
   switch (e.type) {
-    case 'task.status': return `${p.from} → ${p.to}${p.why ? ` (${p.why})` : ''}`
-    case 'task.held': return p.reason
-    case 'task.retry': return `attempt ${p.attempt} of ${p.max}: ${String(p.why).slice(0, 120)}`
+    case 'phase.status': return `${p.from} → ${p.to}${p.why ? ` (${p.why})` : ''}`
+    case 'phase.held': return p.reason
+    case 'phase.retry': return `attempt ${p.attempt} of ${p.max}: ${String(p.why).slice(0, 120)}`
+    case 'run.steps': return `${(p.steps ?? []).filter((s: any) => s.status === 'completed').length}/${(p.steps ?? []).length} steps`
     case 'run.tool_call': return `${p.tool} ${p.input?.command ?? p.input?.file ?? p.input?.pattern ?? ''}`.slice(0, 120)
     case 'run.message': return String(p.text).slice(0, 160)
     case 'run.result': return `${p.subtype} · ${p.turns} turns · $${Number(p.costUsd ?? 0).toFixed(2)} est.`

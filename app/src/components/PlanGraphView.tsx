@@ -1,38 +1,42 @@
 /**
- * The graph: one node per task, one edge per dependency, laid out left to right by dagre. Layout re-runs only when
- * the topology changes; status, held reasons and runs are props on the nodes, so live updates never jump.
+ * The graph: one node per phase, one edge per dependency, laid out left to right by dagre. Layout re-runs only when
+ * the topology changes; status, held reasons, runs and steps are props on the nodes, so live updates never jump.
  */
 import dagre from '@dagrejs/dagre'
 import { Background, Handle, type Node, type NodeProps, Position, ReactFlow, ReactFlowProvider, type Edge, MarkerType, useReactFlow } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useEffect, useMemo } from 'react'
-import type { GraphTask, TaskStatus } from '../engine'
+import type { GraphPhase, PhaseStatus } from '../engine'
 import { Badge, type Tone } from './Badge'
 
-export const STATUS_TONE: Record<TaskStatus, Tone> = {
+export const STATUS_TONE: Record<PhaseStatus, Tone> = {
   queued: 'neutral', ready: 'accent', running: 'accent', awaiting_answer: 'warn', merging: 'accent', testing: 'accent',
   done: 'ok', failed: 'bad', cancelled: 'neutral',
 }
-const LIVE: TaskStatus[] = ['running', 'merging', 'testing', 'awaiting_answer']
+const LIVE: PhaseStatus[] = ['running', 'merging', 'testing', 'awaiting_answer']
 
-type TaskNodeData = { task: GraphTask; label?: string }
+type PhaseNodeData = { phase: GraphPhase; label?: string }
 
-function TaskNode({ data }: NodeProps<Node<TaskNodeData>>) {
-  const { task } = data
-  const live = LIVE.includes(task.status)
+function PhaseNode({ data }: NodeProps<Node<PhaseNodeData>>) {
+  const { phase } = data
+  const live = LIVE.includes(phase.status)
+  const steps = phase.steps ?? []
+  const doneSteps = steps.filter((s) => s.status === 'completed').length
+  const current = steps.find((s) => s.status === 'in_progress')
   return (
-    <div className={`task-node ${live ? 'live' : ''} ${task.status}`} data-component="TaskNode">
+    <div className={`task-node ${live ? 'live' : ''} ${phase.status}`} data-component="PhaseNode">
       <Handle type="target" position={Position.Left} />
       <div className="task-node-head">
-        <span className="mono faint">#{task.number}{data.label ? <span className="task-node-plan"> · {data.label}</span> : null}</span>
-        <Badge tone={STATUS_TONE[task.status]} dot={live}>{task.status.replace('_', ' ')}</Badge>
+        <span className="mono faint">#{phase.number}{data.label ? <span className="task-node-plan"> · {data.label}</span> : null}</span>
+        <Badge tone={STATUS_TONE[phase.status]} dot={live}>{phase.status.replace('_', ' ')}</Badge>
       </div>
-      <div className="task-node-title">{task.title}</div>
-      {task.heldReason && task.status !== 'done' && <div className="task-node-note">{task.heldReason}</div>}
-      {task.lastRun && (
+      <div className="task-node-title">{phase.title}</div>
+      {phase.heldReason && phase.status !== 'done' && <div className="task-node-note">{phase.heldReason}</div>}
+      {live && current && <div className="task-node-note">→ {current.text}</div>}
+      {(phase.lastRun || steps.length > 0) && (
         <div className="task-node-run mono">
-          attempt {task.lastRun.attempt}{task.lastRun.model ? ` · ${task.lastRun.model.replace('claude-', '')}` : ''}
-          {task.lastRun.costUsd ? ` · $${Number(task.lastRun.costUsd).toFixed(2)}` : ''}
+          {phase.lastRun ? `attempt ${phase.lastRun.attempt}${phase.lastRun.model ? ` · ${phase.lastRun.model.replace('claude-', '')}` : ''}${phase.lastRun.costUsd ? ` · $${Number(phase.lastRun.costUsd).toFixed(2)}` : ''}` : ''}
+          {steps.length > 0 ? `${phase.lastRun ? ' · ' : ''}steps ${doneSteps}/${steps.length}` : ''}
         </div>
       )}
       <Handle type="source" position={Position.Right} />
@@ -40,37 +44,37 @@ function TaskNode({ data }: NodeProps<Node<TaskNodeData>>) {
   )
 }
 
-const nodeTypes = { task: TaskNode }
+const nodeTypes = { phase: PhaseNode }
 const W = 240, H = 132 // tall enough for a two-line title, a held reason and the run line
 
-function layout(tasks: GraphTask[]): Map<string, { x: number; y: number }> {
+function layout(phases: GraphPhase[]): Map<string, { x: number; y: number }> {
   const g = new dagre.graphlib.Graph()
   g.setGraph({ rankdir: 'LR', nodesep: 20, ranksep: 72, marginx: 16, marginy: 16 })
   g.setDefaultEdgeLabel(() => ({}))
-  for (const t of tasks) g.setNode(t.id, { width: W, height: H })
-  for (const t of tasks) for (const d of t.dependsOn) if (tasks.some((x) => x.id === d)) g.setEdge(d, t.id)
+  for (const p of phases) g.setNode(p.id, { width: W, height: H })
+  for (const p of phases) for (const d of p.dependsOn) if (phases.some((x) => x.id === d)) g.setEdge(d, p.id)
   dagre.layout(g)
-  return new Map(tasks.map((t) => { const n = g.node(t.id); return [t.id, { x: n.x - W / 2, y: n.y - H / 2 }] }))
+  return new Map(phases.map((p) => { const n = g.node(p.id); return [p.id, { x: n.x - W / 2, y: n.y - H / 2 }] }))
 }
 
 export interface PlanGraphViewProps {
-  tasks: GraphTask[]
-  onSelect?: (t: GraphTask) => void
+  phases: GraphPhase[]
+  onSelect?: (p: GraphPhase) => void
   selectedId?: string
-  labels?: Record<string, string> // e.g. the plan each step belongs to, on the top-level graph
+  labels?: Record<string, string> // e.g. the task (or plan · task) each phase belongs to
   links?: [string, string][] // pairs that share a file: dashed, no arrow
   tall?: boolean
 }
 
-export function PlanGraphView({ tasks, onSelect, selectedId, labels, links = [], tall }: PlanGraphViewProps) {
-  const topology = tasks.map((t) => `${t.id}:${t.dependsOn.join(',')}`).join('|') + '#' + links.map((l) => l.join('~')).join('|')
-  const positions = useMemo(() => layout(tasks), [topology]) // eslint-disable-line react-hooks/exhaustive-deps
-  const nodes: Node<TaskNodeData>[] = tasks.map((t) => ({
-    id: t.id, type: 'task', position: positions.get(t.id) ?? { x: 0, y: 0 }, data: { task: t, label: labels?.[t.id] }, selected: t.id === selectedId, draggable: false,
+export function PlanGraphView({ phases, onSelect, selectedId, labels, links = [], tall }: PlanGraphViewProps) {
+  const topology = phases.map((p) => `${p.id}:${p.dependsOn.join(',')}`).join('|') + '#' + links.map((l) => l.join('~')).join('|')
+  const positions = useMemo(() => layout(phases), [topology]) // eslint-disable-line react-hooks/exhaustive-deps
+  const nodes: Node<PhaseNodeData>[] = phases.map((p) => ({
+    id: p.id, type: 'phase', position: positions.get(p.id) ?? { x: 0, y: 0 }, data: { phase: p, label: labels?.[p.id] }, selected: p.id === selectedId, draggable: false,
   }))
   const edges: Edge[] = [
-    ...tasks.flatMap((t) => t.dependsOn.filter((d) => tasks.some((x) => x.id === d)).map((d) => ({
-      id: `${d}->${t.id}`, source: d, target: t.id, animated: LIVE.includes(t.status),
+    ...phases.flatMap((p) => p.dependsOn.filter((d) => phases.some((x) => x.id === d)).map((d) => ({
+      id: `${d}->${p.id}`, source: d, target: p.id, animated: LIVE.includes(p.status),
       markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: 'var(--ink-faint)' },
     }))),
     ...links.map(([a, b]) => ({ id: `${a}~${b}`, source: a, target: b, type: 'straight', style: { stroke: 'var(--warn)', strokeDasharray: '4 4' } })),
@@ -79,7 +83,7 @@ export function PlanGraphView({ tasks, onSelect, selectedId, labels, links = [],
     <div className={`graph-canvas ${tall ? 'tall' : ''}`} data-component="PlanGraphView">
       <ReactFlowProvider>
         <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
-          onNodeClick={(_, n) => onSelect?.((n.data as TaskNodeData).task)} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
+          onNodeClick={(_, n) => onSelect?.((n.data as PhaseNodeData).phase)} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
           <Background gap={20} color="var(--line)" />
           <FitOnChange topology={topology} />
         </ReactFlow>
