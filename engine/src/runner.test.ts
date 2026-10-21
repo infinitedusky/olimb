@@ -83,6 +83,28 @@ describe.skipIf(!reachable)('runner', () => {
     expect(types).toContain('plan.landed'); expect(types).toContain('plan.cleaned')
   })
 
+  it('runs steps from different plans at once, but never two that share a file, and lands both plans', async () => {
+    const A = await createPlan({ appId, title: 'plan A', tasks: [
+      { key: 'a1', title: 'A1', files: ['shared.txt'] }, { key: 'a2', title: 'A2', files: ['only-a.txt'] },
+    ] })
+    const B = await createPlan({ appId, title: 'plan B', tasks: [
+      { key: 'b1', title: 'B1', files: ['shared.txt'] }, { key: 'b2', title: 'B2', files: ['only-b.txt'] },
+    ] })
+    const live = new Set<string>(); const overlapsOnShared: string[][] = []; let maxLive = 0
+    const execute: Execute = async (i) => {
+      live.add(i.task.title); maxLive = Math.max(maxLive, live.size)
+      if (i.files.includes('shared.txt')) overlapsOnShared.push([...live].filter((x) => ['A1', 'B1'].includes(x)))
+      try { return await commits('x')(i) } finally { live.delete(i.task.title) }
+    }
+    const runner = new Runner({ execute, sessionsMax: 4 })
+    await runner.startPlan(A.plan.id); await runner.startPlan(B.plan.id)
+    await until(async () => (await planGraph(A.plan.id))!.plan.status === 'landed' && (await planGraph(B.plan.id))!.plan.status === 'landed')
+    expect(maxLive).toBeGreaterThanOrEqual(2) // steps from both plans overlapped
+    for (const snapshot of overlapsOnShared) expect(snapshot.length).toBe(1) // A1 and B1 never together
+    const held = (await db.select().from(event).where(inArray(event.planId, [A.plan.id, B.plan.id]))).filter((e) => e.type === 'task.held').map((e) => (e.payload as any).reason)
+    expect(held.some((r) => /shares files with \S+ \(another plan\)/.test(r))).toBe(true)
+  })
+
   it('retries a failed run with the reason, and gives up after max attempts', async () => {
     const { plan: p, tasks } = await createPlan({ appId, title: 'retries', tasks: [{ key: 'x', title: 'X', files: ['x.txt'] }] })
     const reasons: (string | undefined)[] = []

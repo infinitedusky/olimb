@@ -432,6 +432,22 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## The graph is at the step level, across all plans (2026-10-20, idea-factory PR #10 and #11)
+
+Sandy, restating the design (it's InDusk's, not new): **the step is the atomic unit of development** — one agent,
+one worktree, one commit — and the unit telemetry and tests point back to. Steps declare what they depend on and
+which files they touch; anything open and unblocked runs, whichever plan it belongs to; plans are grouping and
+the PR. The engine had it one plan at a time (`tick(planId)`), so two plans never ran together and shared files
+across plans were never checked. Now: one dispatch pass across every running plan, file claims namespaced by app
+(different repos never collide; no claims = the whole app), one global cap; an app-level graph endpoint and a
+top-level **Graph** page showing every step of every plan with dashed links between steps that share a file.
+Test: two plans at once — steps on different files overlap, two on the same file never do, both land.
+- Branching, confirmed with Sandy: a plan is a *branch* (no worktree), steps are worktrees cut from it at
+  dispatch and landing back into it; a dependent step starts seconds after its parent lands on the plan branch,
+  not when the plan's PR merges. Cross-plan dependencies aren't modelled yet (same plan, or stacked plans later).
+- A detour worth recording: I proposed a recursive task/parent model; Sandy hadn't asked for it and it wasn't
+  needed. The flat step graph with plan grouping is the design. Lesson for the agent: restate before redesigning.
+
 ## Engine step 4, first half: the live graph in the web UI (2026-10-20, idea-factory PR #11)
 
 Sandy: "do we have a UI to look at?" and "we don't really have the planning setup yet to show the tasks."

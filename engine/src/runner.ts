@@ -13,7 +13,7 @@ import { addWorktree, ensureBranch, git, headSha, removeWorktree } from './git.j
 import { newId } from './ids.js'
 import { land, withLock } from './landing.js'
 import { ensurePlanPr, prBody } from './pr.js'
-import { planGraph, PlanError, tick } from './plans.js'
+import { planGraph, PlanError, tickAll } from './plans.js'
 import { reapAgentProcesses } from './reap.js'
 
 export const SESSIONS_MAX = Number(process.env.SESSIONS_MAX ?? 4)
@@ -37,29 +37,36 @@ export class Runner {
     const sha = await ensureBranch(r.localPath!, p.integrationBranch!, a.defaultBranch)
     await db.update(plan).set({ status: 'running' }).where(eq(plan.id, planId))
     await this.emit({ ...ctx.base, type: 'plan.started', payload: { integrationBranch: p.integrationBranch, from: a.defaultBranch, sha } })
-    void this.dispatch(planId)
+    void this.dispatch()
     return { integrationBranch: p.integrationBranch, sha }
   }
 
-  /** One dispatch pass, serialized per plan: tick, launch what became ready, close the plan when all is landed. */
-  dispatch(planId: string): Promise<void> {
-    return withLock(`dispatch:${planId}`, async () => {
+  /**
+   * One dispatch pass across every running plan, serialized: one tick for all of them, launch whatever became
+   * ready wherever it is, and close any plan whose steps have all landed. Steps from different plans run at once;
+   * steps that share a file never do.
+   */
+  dispatch(): Promise<void> {
+    return withLock('dispatch', async () => {
       const room = Math.max(0, this.sessionsMax - this.active.size)
-      await tick(planId, room)
-      const g = (await planGraph(planId))!
-      for (const t of g.tasks) {
-        if (t.status === 'ready' && !this.active.has(t.id)) {
-          this.active.set(t.id, new AbortController())
-          this.launch(t.id, planId).catch(async (err) => {
-            this.active.delete(t.id)
-            await this.emit({ ...(await this.context(planId)).base, taskId: t.id, type: 'task.error', payload: { error: String(err?.message ?? err) } })
-          })
+      await tickAll(room)
+      const running = await db.select().from(plan).where(eq(plan.status, 'running'))
+      for (const p of running) {
+        const g = (await planGraph(p.id))!
+        for (const t of g.tasks) {
+          if (t.status === 'ready' && !this.active.has(t.id)) {
+            this.active.set(t.id, new AbortController())
+            this.launch(t.id, p.id).catch(async (err) => {
+              this.active.delete(t.id)
+              await this.emit({ ...(await this.context(p.id)).base, taskId: t.id, type: 'task.error', payload: { error: String(err?.message ?? err) } })
+            })
+          }
         }
-      }
-      if (g.tasks.length && g.tasks.every((t) => t.status === 'done') && g.plan.status === 'running') {
-        await db.update(plan).set({ status: 'landed' }).where(eq(plan.id, planId))
-        await this.emit({ ...(await this.context(planId)).base, type: 'plan.landed', payload: {} })
-        await this.cleanup(planId)
+        if (g.tasks.length && g.tasks.every((t) => t.status === 'done')) {
+          await db.update(plan).set({ status: 'landed' }).where(eq(plan.id, p.id))
+          await this.emit({ ...(await this.context(p.id)).base, type: 'plan.landed', payload: {} })
+          await this.cleanup(p.id)
+        }
       }
     })
   }
@@ -120,7 +127,7 @@ export class Runner {
     await this.emit({ ...tb, type: 'task.status', payload: { from: 'merging', to: 'done', sha: landed.sha } })
     await withLock(`land:${planId}`, () => this.updatePr(planId)).catch((err) => this.emit({ ...tb, type: 'pr.error', payload: { error: String(err?.message ?? err) } }))
     this.active.delete(taskId)
-    await this.dispatch(planId)
+    await this.dispatch()
   }
 
   private async failed(taskId: string, planId: string, attempt: number, max: number, why: string, tb: Omit<NewEvent, 'type'>) {
@@ -128,7 +135,7 @@ export class Runner {
     await db.update(task).set({ status: again ? 'queued' : 'failed', heldReason: again ? `attempt ${attempt} failed; will retry` : why.slice(0, 500), updatedAt: new Date() }).where(eq(task.id, taskId))
     await this.emit({ ...tb, type: again ? 'task.retry' : 'task.failed', payload: { attempt, max, why: why.slice(0, 2000) } })
     this.active.delete(taskId)
-    await this.dispatch(planId)
+    await this.dispatch()
   }
 
   /** The last failure reason comes from the log, so it survives a restart. (A landed task never retries again.) */
@@ -165,7 +172,7 @@ export class Runner {
       const { base } = await this.context(t.planId!)
       await this.emit({ ...base, taskId: t.id, type: 'task.interrupted', payload: { was: t.status, reaped: reaped.filter((x) => t.worktreePath && x.cwd.startsWith(t.worktreePath)).map((x) => x.pid) } })
     }
-    for (const p of running) void this.dispatch(p.id)
+    if (running.length) void this.dispatch()
     return { plans: running.length, tasks: stuck.length, reaped: reaped.length }
   }
 

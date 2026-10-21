@@ -10,7 +10,7 @@ import { db, pool } from './db/client.js'
 import { app as appTable, repo as repoTable, TASK_STATUSES, workspace, type TaskStatus } from './db/schema.js'
 import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
-import { createPlan, listPlans, PlanError, planGraph, setTaskStatus, tick } from './plans.js'
+import { appGraph, createPlan, listPlans, PlanError, planGraph, setTaskStatus, tick } from './plans.js'
 import { runner } from './runner.js'
 
 export const SESSIONS_MAX = Number(process.env.SESSIONS_MAX ?? 4)
@@ -24,7 +24,7 @@ export function buildApp(bus: EventBus) {
       'GET /health': 'database reachable?',
       'POST /workspaces': '{name}', 'POST /apps': '{workspaceId, name, defaultBranch?}',
       'POST /plans': '{appId, title, tasks: [{key, title, brief?, dependsOn?, files?, priority?}]}',
-      'GET /apps': 'all apps', 'GET /plans': 'all plans with task counts',
+      'GET /apps': 'all apps', 'GET /apps/:id/graph': 'the top-level graph: every step of every plan in the app', 'GET /plans': 'all plans with task counts',
       'GET /plans/:id/graph': 'tasks, edges, claims, held reasons, last run per task, the plan PR', 'POST /plans/:id/tick?room=N': 'one dispatch pass (no launching)',
       'POST /repos': '{appId, fullName, localPath?, baseBranch?}', 'POST /plans/:id/start': 'run it: worktrees, agent runs, landing, PR',
       'POST /tasks/:id/status': '{status} — manual, until step 2 brings the executor',
@@ -80,6 +80,11 @@ export function buildApp(bus: EventBus) {
   })
 
   api.get('/apps', async (c) => c.json(await db.select().from(appTable)))
+  // The top-level graph: every step of every plan in an app, with dependencies and shared-file links.
+  api.get('/apps/:id/graph', async (c) => {
+    const g = await appGraph(c.req.param('id'))
+    return g ? c.json(g) : c.json({ error: 'no such app' }, 404)
+  })
   api.get('/plans', async (c) => c.json(await listPlans({ all: c.req.query('all') === '1' })))
 
   api.get('/plans/:id/graph', async (c) => {
@@ -112,7 +117,7 @@ export function buildApp(bus: EventBus) {
   // The live feed: replay from ?since=<seq>, then stream as events are committed.
   api.get('/events', (c) => {
     const since = Number(c.req.query('since') ?? 0)
-    const filter = { workspaceId: c.req.query('workspace'), planId: c.req.query('plan'), taskId: c.req.query('task') }
+    const filter = { workspaceId: c.req.query('workspace'), appId: c.req.query('app'), planId: c.req.query('plan'), taskId: c.req.query('task') }
     return streamSSE(c, async (stream) => {
       let last = since
       let sending: Promise<void> = Promise.resolve()

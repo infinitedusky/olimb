@@ -49,7 +49,7 @@ branch via `gh`; later landings update it. When every task has landed, the task 
 are removed; the integration branch stays, it is the PR. Development runs on the operator's Claude Code login; a
 product deployment sets `ANTHROPIC_API_KEY`.
 
-Up to `SESSIONS_MAX` (default 4) tasks run at once across all plans. On startup the server recovers: runs left
+Up to `SESSIONS_MAX` (default 4) steps run at once **across all running plans**: one dispatch pass covers every running plan, file claims are checked across plans within an app (a step with no claims claims the whole app, never another app), and `GET /apps/:id/graph` is the top-level graph with dashed links between open steps that share a file. On startup the server recovers: runs left
 `working` are marked `interrupted`, their tasks re-queued (the next run resumes the agent's session in the same
 worktree), stray `claude` processes inside our worktree roots are stopped, and running plans are dispatched again.
 On SIGTERM, live runs are aborted so the agents stop.
