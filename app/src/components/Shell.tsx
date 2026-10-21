@@ -6,6 +6,7 @@ export function Shell({ apps, children }: { apps: string[]; children: React.Reac
       <nav className="nav">
         <Link to="/" className="brand">Idea Factory</Link>
         <NavLink to="/" end className={({ isActive }) => `link ${isActive ? 'active' : ''}`}>Ideas</NavLink>
+        <NavLink to="/graph" className={({ isActive }) => `link ${isActive ? 'active' : ''}`}>Graph</NavLink>
         <NavLink to="/plans" className={({ isActive }) => `link ${isActive ? 'active' : ''}`}>Plans</NavLink>
         <NavLink to="/settings" className={({ isActive }) => `link ${isActive ? 'active' : ''}`}>Settings</NavLink>
         <div className="apps">

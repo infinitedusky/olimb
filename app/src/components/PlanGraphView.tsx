@@ -15,7 +15,7 @@ export const STATUS_TONE: Record<TaskStatus, Tone> = {
 }
 const LIVE: TaskStatus[] = ['running', 'merging', 'testing', 'awaiting_answer']
 
-type TaskNodeData = { task: GraphTask; selected?: boolean }
+type TaskNodeData = { task: GraphTask; label?: string }
 
 function TaskNode({ data }: NodeProps<Node<TaskNodeData>>) {
   const { task } = data
@@ -24,7 +24,7 @@ function TaskNode({ data }: NodeProps<Node<TaskNodeData>>) {
     <div className={`task-node ${live ? 'live' : ''} ${task.status}`} data-component="TaskNode">
       <Handle type="target" position={Position.Left} />
       <div className="task-node-head">
-        <span className="mono faint">#{task.number}</span>
+        <span className="mono faint">#{task.number}{data.label ? <span className="task-node-plan"> · {data.label}</span> : null}</span>
         <Badge tone={STATUS_TONE[task.status]} dot={live}>{task.status.replace('_', ' ')}</Badge>
       </div>
       <div className="task-node-title">{task.title}</div>
@@ -53,18 +53,30 @@ function layout(tasks: GraphTask[]): Map<string, { x: number; y: number }> {
   return new Map(tasks.map((t) => { const n = g.node(t.id); return [t.id, { x: n.x - W / 2, y: n.y - H / 2 }] }))
 }
 
-export function PlanGraphView({ tasks, onSelect, selectedId }: { tasks: GraphTask[]; onSelect?: (t: GraphTask) => void; selectedId?: string }) {
-  const topology = tasks.map((t) => `${t.id}:${t.dependsOn.join(',')}`).join('|')
+export interface PlanGraphViewProps {
+  tasks: GraphTask[]
+  onSelect?: (t: GraphTask) => void
+  selectedId?: string
+  labels?: Record<string, string> // e.g. the plan each step belongs to, on the top-level graph
+  links?: [string, string][] // pairs that share a file: dashed, no arrow
+  tall?: boolean
+}
+
+export function PlanGraphView({ tasks, onSelect, selectedId, labels, links = [], tall }: PlanGraphViewProps) {
+  const topology = tasks.map((t) => `${t.id}:${t.dependsOn.join(',')}`).join('|') + '#' + links.map((l) => l.join('~')).join('|')
   const positions = useMemo(() => layout(tasks), [topology]) // eslint-disable-line react-hooks/exhaustive-deps
   const nodes: Node<TaskNodeData>[] = tasks.map((t) => ({
-    id: t.id, type: 'task', position: positions.get(t.id) ?? { x: 0, y: 0 }, data: { task: t }, selected: t.id === selectedId, draggable: false,
+    id: t.id, type: 'task', position: positions.get(t.id) ?? { x: 0, y: 0 }, data: { task: t, label: labels?.[t.id] }, selected: t.id === selectedId, draggable: false,
   }))
-  const edges: Edge[] = tasks.flatMap((t) => t.dependsOn.map((d) => ({
-    id: `${d}->${t.id}`, source: d, target: t.id, animated: LIVE.includes(t.status),
-    markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: 'var(--ink-faint)' },
-  })))
+  const edges: Edge[] = [
+    ...tasks.flatMap((t) => t.dependsOn.filter((d) => tasks.some((x) => x.id === d)).map((d) => ({
+      id: `${d}->${t.id}`, source: d, target: t.id, animated: LIVE.includes(t.status),
+      markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: 'var(--ink-faint)' },
+    }))),
+    ...links.map(([a, b]) => ({ id: `${a}~${b}`, source: a, target: b, type: 'straight', style: { stroke: 'var(--warn)', strokeDasharray: '4 4' } })),
+  ]
   return (
-    <div className="graph-canvas" data-component="PlanGraphView">
+    <div className={`graph-canvas ${tall ? 'tall' : ''}`} data-component="PlanGraphView">
       <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
         onNodeClick={(_, n) => onSelect?.((n.data as TaskNodeData).task)} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
         <Background gap={20} color="var(--line)" />

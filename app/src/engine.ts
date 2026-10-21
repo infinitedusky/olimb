@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 
 export const API = '/api'
 
+// since=-1 on /events means "only what happens from now" for pages that fetch their own state.
+
 export type TaskStatus = 'queued' | 'ready' | 'running' | 'awaiting_answer' | 'merging' | 'testing' | 'done' | 'failed' | 'cancelled'
 
 export interface Run { id: string; attempt: number; status: string; model: string | null; costUsd: string | null; summary: string | null; error: string | null; startedAt: string; endedAt: string | null }

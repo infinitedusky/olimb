@@ -80,3 +80,6 @@ label.inline { display: inline-flex; gap: 6px; align-items: center; font: 14px v
 .ticker li:first-child { border-top: 0; }
 .empty.bad { border-color: var(--bad); color: var(--bad); }
 a.badge { text-decoration: none; }
+
+.graph-canvas.tall { height: 560px; }
+.task-node-plan { color: var(--accent); }

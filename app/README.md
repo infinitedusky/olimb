@@ -1,9 +1,9 @@
 # Idea Factory app
 
 The minimal UI: the **ideas board** (building / testing / parked), an **idea page** (the bet, its telemetry, the loop
-it ran, its evidence — from the database, once connected), **plans** (every plan the engine knows; a plan's live
-graph of tasks with the selected task's detail, the event ticker and the plan's PR; a composer to make a new plan as
-rows of tasks), and **settings** (modules and their providers, telemetry first).
+it ran, its evidence — from the database, once connected), **graph** (the top level: every step of every plan in an app on one canvas, dependencies as edges, dashed
+links between open steps that share a file, live), **plans** (every plan the engine knows; a plan's live graph with the
+selected task's detail, the event ticker and the plan's PR; a composer to make a new plan as rows of tasks), and **settings** (modules and their providers, telemetry first).
 
 The Plans pages talk to the engine (`../engine`, `pnpm serve`) through Vite's proxy at `/api`, and follow its event
 stream over SSE, so a running plan's graph updates as the engine logs events. The graph is `@xyflow/react` laid out
