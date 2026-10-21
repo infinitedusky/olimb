@@ -27,8 +27,20 @@ program.command('workspace').argument('<name>').description('create a workspace'
 })
 
 program.command('app').argument('<name>').requiredOption('-w, --workspace <id>').option('-b, --branch <name>', 'default branch', 'main')
-  .description('register an app (a stack of repos)').action(async (name: string, o: { workspace: string; branch: string }) => {
-    console.log(JSON.stringify(await api('POST', '/apps', { workspaceId: o.workspace, name, defaultBranch: o.branch })))
+  .option('--test-cmd <cmd>', 'how to run the tests in a worktree').option('--model <model>', 'model for task runs')
+  .option('--max-budget-usd <n>').option('--max-turns <n>')
+  .description('register an app (a stack of repos)').action(async (name: string, o: { workspace: string; branch: string; testCmd?: string; model?: string; maxBudgetUsd?: string; maxTurns?: string }) => {
+    const setup: Record<string, unknown> = {}
+    if (o.testCmd) setup.test_cmd = o.testCmd
+    if (o.model) setup.model = o.model
+    if (o.maxBudgetUsd) setup.max_budget_usd = Number(o.maxBudgetUsd)
+    if (o.maxTurns) setup.max_turns = Number(o.maxTurns)
+    console.log(JSON.stringify(await api('POST', '/apps', { workspaceId: o.workspace, name, defaultBranch: o.branch, setup })))
+  })
+
+program.command('repo').argument('<fullName>', 'owner/name on GitHub').requiredOption('-a, --app <id>').requiredOption('-p, --path <dir>', 'local main checkout; worktrees go in <dir>-worktrees/')
+  .description("register an app's repo").action(async (fullName: string, o: { app: string; path: string }) => {
+    console.log(JSON.stringify(await api('POST', '/repos', { appId: o.app, fullName, localPath: o.path })))
   })
 
 const plan = program.command('plan').description('plans are made of tasks')
@@ -50,6 +62,9 @@ plan.command('graph').argument('<planId>').action(async (planId: string) => {
     console.log(`  ${t.status.padEnd(15)} ${t.id}  #${t.number} ${t.title}${deps}${held}`)
   }
 })
+
+plan.command('start').argument('<planId>').description('run the plan: worktrees, agent runs, landing, PR')
+  .action(async (planId: string) => { console.log(JSON.stringify(await api('POST', `/plans/${planId}/start`))) })
 
 plan.command('tick').argument('<planId>').option('-r, --room <n>', 'free session slots').description('one dispatch pass')
   .action(async (planId: string, o: { room?: string }) => {

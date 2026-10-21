@@ -7,10 +7,11 @@ import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { db, pool } from './db/client.js'
-import { app as appTable, TASK_STATUSES, workspace, type TaskStatus } from './db/schema.js'
+import { app as appTable, repo as repoTable, TASK_STATUSES, workspace, type TaskStatus } from './db/schema.js'
 import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
 import { createPlan, PlanError, planGraph, setTaskStatus, tick } from './plans.js'
+import { runner } from './runner.js'
 
 export const SESSIONS_MAX = Number(process.env.SESSIONS_MAX ?? 4)
 
@@ -18,12 +19,13 @@ export function buildApp(bus: EventBus) {
   const api = new Hono()
 
   api.get('/', (c) => c.json({
-    engine: 'Idea Factory', step: '1 of 4: schema, server, event stream, scheduler (no executor yet)',
+    engine: 'Idea Factory', step: '2 of 4: one task end to end (worktree, agent run, landing, PR)',
     routes: {
       'GET /health': 'database reachable?',
       'POST /workspaces': '{name}', 'POST /apps': '{workspaceId, name, defaultBranch?}',
       'POST /plans': '{appId, title, tasks: [{key, title, brief?, dependsOn?, files?, priority?}]}',
-      'GET /plans/:id/graph': 'tasks, edges, claims, held reasons', 'POST /plans/:id/tick?room=N': 'one dispatch pass',
+      'GET /plans/:id/graph': 'tasks, edges, claims, held reasons', 'POST /plans/:id/tick?room=N': 'one dispatch pass (no launching)',
+      'POST /repos': '{appId, fullName, localPath?, baseBranch?}', 'POST /plans/:id/start': 'run it: worktrees, agent runs, landing, PR',
       'POST /tasks/:id/status': '{status} — manual, until step 2 brings the executor',
       'GET /events?since=SEQ&plan=ID': 'SSE: replay from SEQ, then live',
     },
@@ -42,11 +44,29 @@ export function buildApp(bus: EventBus) {
   })
 
   api.post('/apps', async (c) => {
-    const body = await c.req.json<{ workspaceId: string; name: string; defaultBranch?: string }>()
+    const body = await c.req.json<{ workspaceId: string; name: string; defaultBranch?: string; setup?: Record<string, unknown> }>()
     const [row] = await db.insert(appTable).values({
-      id: newId('app'), workspaceId: body.workspaceId, name: body.name, defaultBranch: body.defaultBranch ?? 'main',
+      id: newId('app'), workspaceId: body.workspaceId, name: body.name, defaultBranch: body.defaultBranch ?? 'main', setup: body.setup ?? {},
     }).returning()
     return c.json(row, 201)
+  })
+
+  api.post('/repos', async (c) => {
+    const body = await c.req.json<{ appId: string; fullName: string; localPath?: string; baseBranch?: string }>()
+    const [row] = await db.insert(repoTable).values({
+      id: newId('repo'), appId: body.appId, fullName: body.fullName, localPath: body.localPath ?? null, baseBranch: body.baseBranch ?? null,
+    }).returning()
+    return c.json(row, 201)
+  })
+
+  // Start running a plan: integration branch, then dispatch ready tasks into worktrees and agent runs.
+  api.post('/plans/:id/start', async (c) => {
+    try {
+      return c.json(await runner.startPlan(c.req.param('id')))
+    } catch (err) {
+      if (err instanceof PlanError) return c.json({ error: err.message }, 400)
+      throw err
+    }
   })
 
   api.post('/plans', async (c) => {

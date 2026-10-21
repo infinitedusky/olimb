@@ -427,6 +427,18 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## Engine steps 1 and 2 (2026-10-20, idea-factory PR #10)
+
+Step 1: schema as migrations, Hono server as single writer, `event` log over SSE via `LISTEN/NOTIFY`, pure
+scheduler with tests, `if` CLI. Step 2: one task end to end on Homework Gate — the engine cut `plan/<id>` from
+main, a worktree per task, ran Claude Code through the Agent SDK on Sandy's login (7 turns, 27 s), merged, ran
+the suite on the merged commit (22 passed), fast-forwarded by compare-and-swap, pushed, and **opened
+homework-gate PR #13 itself** ("Health endpoint for the POC"). First engine-made PR.
+- Bugs found only by running: CHECK constraints rendered as `$1…` placeholders (parameterised literals in DDL);
+  an edit script that silently matched nothing. Both caught before commit.
+- Tedious (→ the engine does it now): worktree, branch, merge, test, push, PR. Judgement: the task brief and
+  file claims; reading the agent's diff. Left behind on purpose until step 3: the task worktree and branches.
+
 ## InDusk, paused
 
 Nothing is running. Left as it stands, nothing archived:
