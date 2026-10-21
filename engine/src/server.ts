@@ -17,6 +17,19 @@ export const SESSIONS_MAX = Number(process.env.SESSIONS_MAX ?? 4)
 export function buildApp(bus: EventBus) {
   const api = new Hono()
 
+  api.get('/', (c) => c.json({
+    engine: 'Idea Factory', step: '1 of 4: schema, server, event stream, scheduler (no executor yet)',
+    routes: {
+      'GET /health': 'database reachable?',
+      'POST /workspaces': '{name}', 'POST /apps': '{workspaceId, name, defaultBranch?}',
+      'POST /plans': '{appId, title, tasks: [{key, title, brief?, dependsOn?, files?, priority?}]}',
+      'GET /plans/:id/graph': 'tasks, edges, claims, held reasons', 'POST /plans/:id/tick?room=N': 'one dispatch pass',
+      'POST /tasks/:id/status': '{status} — manual, until step 2 brings the executor',
+      'GET /events?since=SEQ&plan=ID': 'SSE: replay from SEQ, then live',
+    },
+    cli: 'pnpm if --help  (engine/README.md)',
+  }))
+
   api.get('/health', async (c) => {
     await db.execute('select 1')
     return c.json({ ok: true })
