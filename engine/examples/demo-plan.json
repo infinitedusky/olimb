@@ -1,0 +1,7 @@
+[
+  { "key": "schema", "title": "Add the settings table", "files": ["poc/hg/db.py"], "priority": 1 },
+  { "key": "locks", "title": "Unlock periods the parent sets", "files": ["poc/hg/locks.py", "poc/hg/templates/parent.html"] },
+  { "key": "gate", "title": "Allowlist-only locking in NextDNS", "files": ["poc/hg/gate.py"] },
+  { "key": "parent", "title": "Parent page shows the lock state", "files": ["poc/hg/templates/parent.html"], "dependsOn": ["locks"] },
+  { "key": "docs", "title": "README: the gate and the schedule", "files": ["poc/README.md"], "dependsOn": ["locks", "gate"] }
+]

@@ -1,0 +1,34 @@
+{
+  "name": "@idea-factory/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "if": "./bin/if.js"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "serve": "tsx src/server.ts",
+    "if": "tsx src/cli/if.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "commander": "^15.0.0",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.13",
+    "nanoid": "^6.0.2",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

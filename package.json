@@ -1,0 +1,8 @@
+{
+  "name": "idea-factory",
+  "private": true,
+  "scripts": {
+    "engine": "pnpm --filter @idea-factory/engine",
+    "app": "pnpm --filter app"
+  }
+}
