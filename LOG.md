@@ -432,6 +432,25 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## The planner (2026-10-21, idea-factory PR #10; UI on PR #11)
+
+InDusk's planning approach on the new foundation, as `engine/src/planner.ts`. `POST /tasks/:id/plan` runs one
+Claude Code session read-only in the app's checkout (Read/Glob/Grep/LS, read-only git/ls/cat; everything else
+denied) with the task's brief, the plan's why, the earlier tasks and the test command, and gets back **one object
+the SDK validates against a JSON schema**: phases (summary for a stranger to the plan, steps with technical notes,
+behavioural checks, done-when, files, depends-on), decisions (chosen, rejected, reason), questions (options with
+what each changes, a recommendation, a cost), notes. One self-review pass inside the same run, no hash-chained
+review. Rows: phases through the same `addPhases` a person uses (brief composed from the proposal), `decision`
+provisional until approved, `question` open; a `run` of kind `plan` on the task carries cost and session. **The
+server sets the cost**: any option that changes what was agreed makes the question expensive, whatever the agent
+said (InDusk's rule, kept). Events: `task.planning`, the run's messages, `question.asked`, `task.planned` /
+`task.plan_failed`; the request returns 202 at once (`?wait=1` to hold). Tests with a fake proposer; 27 passing.
+- Kept out on purpose: the plan-level conversation (say the brief back before planning), approval of decisions,
+  late answers opening follow-ons, re-planning a task that has phases (remove them first). Next after this: the
+  UI shows the planner's questions and decisions on the plan page and plans a task with one click.
+- The UI moved to the vocabulary too (PR #11): phases are the nodes, labelled with their task; tasks in order
+  above the graph; steps live on the node; the composer authors tasks with optional phases.
+
 ## Vocabulary and promises (Sandy, 2026-10-21)
 
 - **idea → plan → task → phase → step.** An idea is one task or a plan of several. A plan is tasks *in order*

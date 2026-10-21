@@ -29,7 +29,9 @@ pnpm if plan tick plan_… -r 2               # one dispatch pass with 2 free sl
 pnpm if plan graph plan_…                   # tasks, phases, edges, why each held phase waits, steps
 pnpm if phase status ph_… done              # drive a draft by hand, or:
 pnpm if watch -p plan_…                     # replay the plan's events, then follow live
-pnpm if task phases task_… -f phases.json   # add phases to a task (what the planner will do)
+pnpm if task plan task_…                    # the planner: brief → phases, decisions, questions (minutes; read-only on the repo)
+pnpm if task phases task_… -f phases.json   # or write a task's phases by hand
+pnpm if question answer q_… "Yes"           # answer one of the planner's questions
 ```
 
 A plan file is `[{title, brief?, phases?: [{key, title, brief?, dependsOn?, files?}]}]`: tasks in order.
@@ -68,8 +70,9 @@ event as it happens, via Postgres `LISTEN/NOTIFY`. Several clients can watch one
 | `drizzle/` | Migrations, generated with `pnpm db:generate` after a schema change. |
 | `src/scheduler.ts` | Pure: given a plan's tasks and free slots, what to start and why everything else is held. One pick at a time, so two tasks freed together never claim the same file. |
 | `src/plans.ts` | Plans, tasks, phases: create in one transaction, add phases to a task, graphs (plan and app), `tickAll` (one dispatch pass across running plans, task order as implied edges), manual status. |
+| `src/planner.ts` | The planner: one read-only Agent SDK run on the repo with the task's brief, ending in one structured proposal (`outputFormat: json_schema`) → phases (brief composed from summary, steps, checks, done-when; files; depends-on), provisional decisions with rejected alternatives, open questions. The server sets each question's cost: an option that changes what was agreed is expensive. |
 | `src/events.ts` | Append an event in the same transaction as the state change; `NOTIFY` carries only the seq; readers fetch rows by seq. |
-| `src/server.ts` | Hono: `/workspaces`, `/apps`, `/apps/:id/graph`, `/repos`, `/plans`, `/plans/:id/graph`, `/plans/:id/start`, `/plans/:id/tick`, `/tasks/:id/phases`, `/phases/:id/status`, `/events` (SSE). `GET /` lists them. |
+| `src/server.ts` | Hono: `/workspaces`, `/apps`, `/apps/:id/graph`, `/repos`, `/plans`, `/plans/:id/graph`, `/plans/:id/start`, `/plans/:id/tick`, `/tasks/:id/plan`, `/tasks/:id/phases`, `/phases/:id/status`, `/questions/:id/answer`, `/events` (SSE). `GET /` lists them. |
 | `src/git.ts` | Worktrees, branches, merge, fast-forward by `update-ref` compare-and-swap, push. |
 | `src/executor.ts` | One Agent SDK run on one phase; messages → events (trimmed); the builder's todo list → steps; tools confined to the worktree. |
 | `src/landing.ts` | Merge → test → fast-forward, serialized per plan; refuses conflicts and failing tests. |
@@ -79,12 +82,23 @@ event as it happens, via Postgres `LISTEN/NOTIFY`. Several clients can watch one
 | `src/cli/if.ts` | The `if` CLI. A client; only `migrate` touches the database. |
 
 `pnpm test` runs the scheduler and landing tests anywhere (landing uses a throwaway git repo) and, when Postgres
-is up, the plan and runner tests (a fake executor on a throwaway repo: the cap, dependents after parents, two plans
-at once, retries with the reason, recovery, cleanup) against **their own database**, `ideafactory_test`, which the
-global setup creates and migrates (`DATABASE_URL_TEST` to override). The server's database is never touched.
+is up, the plan, planner and runner tests (a fake proposer; a fake executor on a throwaway repo: the cap, dependents
+after parents, two plans at once, retries with the reason, recovery, cleanup) against **their own database**,
+`ideafactory_test`, which the global setup creates and migrates (`DATABASE_URL_TEST` to override). The server's
+database is never touched.
+
+## Planning
+
+`POST /tasks/:id/plan` (or `pnpm if task plan`) runs the planner on a task that has no phases yet. It reads the
+repo at the app's local checkout (nothing is written), gets the task's brief, the plan's title and why, the earlier
+tasks (already implied dependencies), and the test command; it returns one object the SDK validates against
+`PROPOSAL_SCHEMA`, after one self-review pass in the same run. What it settled is a `decision` (provisional until a
+person approves) with the rejected alternatives; what it could not settle is a `question` with options, a
+recommendation and what each option changes; the phases go in through `addPhases` like hand-written ones. Progress
+is on the event stream (`task.planning`, the run's messages, `question.asked`, `task.planned` or
+`task.plan_failed`); the run row of kind `plan` carries cost and the session id. Design: `research/planning-from-indusk.md`.
 
 ## Next
 
-The planner: a task's brief → proposed phases (files, dependencies, steps, checks), decisions and questions, as one
-validated object (`research/planning-from-indusk.md`). Then promises as OpenTelemetry: clauses (true/false spans) and
-sensors (measurements).
+Promises as OpenTelemetry: clauses (true/false spans) and sensors (measurements), referenced by evidence and checks.
+Then the plan-level conversation (the brief, said back) in the UI.
