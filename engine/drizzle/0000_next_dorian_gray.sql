@@ -28,6 +28,7 @@ CREATE TABLE "event" (
 	"idea_id" text,
 	"plan_id" text,
 	"task_id" text,
+	"phase_id" text,
 	"run_id" text,
 	"session_id" text,
 	"actor" text NOT NULL,
@@ -76,6 +77,45 @@ CREATE TABLE "idea" (
 	CONSTRAINT "idea_decision" CHECK ("idea"."decision" is null or "idea"."decision" in ('yes', 'no', 'not_yet'))
 );
 --> statement-breakpoint
+CREATE TABLE "phase" (
+	"id" text PRIMARY KEY NOT NULL,
+	"app_id" text NOT NULL,
+	"plan_id" text NOT NULL,
+	"task_id" text NOT NULL,
+	"number" integer NOT NULL,
+	"title" text NOT NULL,
+	"brief" text,
+	"status" text DEFAULT 'queued' NOT NULL,
+	"attempt" integer DEFAULT 0 NOT NULL,
+	"max_attempts" integer DEFAULT 3 NOT NULL,
+	"branch" text,
+	"worktree_path" text,
+	"base_sha" text,
+	"size" text,
+	"priority" integer DEFAULT 0 NOT NULL,
+	"position" integer DEFAULT 0 NOT NULL,
+	"requires_schema_change" boolean DEFAULT false NOT NULL,
+	"held_reason" text,
+	"created_by" text,
+	"pr_id" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone,
+	CONSTRAINT "phase_status" CHECK ("phase"."status" in ('queued', 'ready', 'running', 'awaiting_answer', 'merging', 'testing', 'done', 'failed', 'cancelled')),
+	CONSTRAINT "phase_size" CHECK ("phase"."size" is null or "phase"."size" in ('S', 'M', 'L', 'XL'))
+);
+--> statement-breakpoint
+CREATE TABLE "phase_dependency" (
+	"phase_id" text NOT NULL,
+	"depends_on_phase_id" text NOT NULL,
+	CONSTRAINT "phase_dependency_phase_id_depends_on_phase_id_pk" PRIMARY KEY("phase_id","depends_on_phase_id")
+);
+--> statement-breakpoint
+CREATE TABLE "phase_file_claim" (
+	"phase_id" text NOT NULL,
+	"path" text NOT NULL,
+	CONSTRAINT "phase_file_claim_phase_id_path_pk" PRIMARY KEY("phase_id","path")
+);
+--> statement-breakpoint
 CREATE TABLE "plan" (
 	"id" text PRIMARY KEY NOT NULL,
 	"app_id" text NOT NULL,
@@ -90,7 +130,7 @@ CREATE TABLE "plan" (
 --> statement-breakpoint
 CREATE TABLE "pr" (
 	"id" text PRIMARY KEY NOT NULL,
-	"task_id" text NOT NULL,
+	"plan_id" text NOT NULL,
 	"repo_id" text,
 	"number" integer,
 	"url" text,
@@ -125,7 +165,9 @@ CREATE TABLE "provider_connection" (
 CREATE TABLE "question" (
 	"id" text PRIMARY KEY NOT NULL,
 	"idea_id" text,
+	"plan_id" text,
 	"task_id" text,
+	"phase_id" text,
 	"run_id" text,
 	"text" text NOT NULL,
 	"options" jsonb,
@@ -149,7 +191,7 @@ CREATE TABLE "repo" (
 --> statement-breakpoint
 CREATE TABLE "run" (
 	"id" text PRIMARY KEY NOT NULL,
-	"task_id" text NOT NULL,
+	"phase_id" text NOT NULL,
 	"session_id" text,
 	"attempt" integer NOT NULL,
 	"kind" text NOT NULL,
@@ -171,7 +213,7 @@ CREATE TABLE "run" (
 --> statement-breakpoint
 CREATE TABLE "session" (
 	"id" text PRIMARY KEY NOT NULL,
-	"task_id" text NOT NULL,
+	"phase_id" text NOT NULL,
 	"status" text DEFAULT 'open' NOT NULL,
 	"created_by" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -190,45 +232,29 @@ CREATE TABLE "session_message" (
 	CONSTRAINT "session_message_status" CHECK ("session_message"."status" in ('queued', 'sent', 'interrupted', 'dropped'))
 );
 --> statement-breakpoint
+CREATE TABLE "step" (
+	"id" bigserial PRIMARY KEY NOT NULL,
+	"phase_id" text NOT NULL,
+	"run_id" text,
+	"position" integer NOT NULL,
+	"text" text NOT NULL,
+	"status" text DEFAULT 'pending' NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "step_status" CHECK ("step"."status" in ('pending', 'in_progress', 'completed'))
+);
+--> statement-breakpoint
 CREATE TABLE "task" (
 	"id" text PRIMARY KEY NOT NULL,
 	"app_id" text NOT NULL,
-	"plan_id" text,
+	"plan_id" text NOT NULL,
 	"idea_id" text,
 	"number" integer NOT NULL,
+	"position" integer DEFAULT 0 NOT NULL,
 	"title" text NOT NULL,
 	"brief" text,
-	"status" text DEFAULT 'queued' NOT NULL,
-	"attempt" integer DEFAULT 0 NOT NULL,
-	"max_attempts" integer DEFAULT 3 NOT NULL,
-	"branch" text,
-	"worktree_path" text,
-	"base_sha" text,
-	"size" text,
-	"priority" integer DEFAULT 0 NOT NULL,
-	"position" integer DEFAULT 0 NOT NULL,
-	"requires_schema_change" boolean DEFAULT false NOT NULL,
-	"auto_merge" boolean,
-	"held_reason" text,
-	"assignee" text,
 	"created_by" text,
-	"pr_id" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone,
-	CONSTRAINT "task_status" CHECK ("task"."status" in ('queued', 'ready', 'running', 'awaiting_answer', 'merging', 'testing', 'done', 'failed', 'cancelled')),
-	CONSTRAINT "task_size" CHECK ("task"."size" is null or "task"."size" in ('S', 'M', 'L', 'XL'))
-);
---> statement-breakpoint
-CREATE TABLE "task_dependency" (
-	"task_id" text NOT NULL,
-	"depends_on_task_id" text NOT NULL,
-	CONSTRAINT "task_dependency_task_id_depends_on_task_id_pk" PRIMARY KEY("task_id","depends_on_task_id")
-);
---> statement-breakpoint
-CREATE TABLE "task_file_claim" (
-	"task_id" text NOT NULL,
-	"path" text NOT NULL,
-	CONSTRAINT "task_file_claim_task_id_path_pk" PRIMARY KEY("task_id","path")
+	"updated_at" timestamp with time zone
 );
 --> statement-breakpoint
 CREATE TABLE "user" (
@@ -244,7 +270,7 @@ CREATE TABLE "user" (
 --> statement-breakpoint
 CREATE TABLE "verification" (
 	"id" text PRIMARY KEY NOT NULL,
-	"task_id" text NOT NULL,
+	"phase_id" text NOT NULL,
 	"pr_id" text,
 	"run_id" text,
 	"kind" text NOT NULL,
@@ -271,34 +297,42 @@ ALTER TABLE "decision" ADD CONSTRAINT "decision_decided_by_user_id_fk" FOREIGN K
 ALTER TABLE "evidence" ADD CONSTRAINT "evidence_idea_id_idea_id_fk" FOREIGN KEY ("idea_id") REFERENCES "public"."idea"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "idea" ADD CONSTRAINT "idea_app_id_app_id_fk" FOREIGN KEY ("app_id") REFERENCES "public"."app"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "idea" ADD CONSTRAINT "idea_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "phase" ADD CONSTRAINT "phase_app_id_app_id_fk" FOREIGN KEY ("app_id") REFERENCES "public"."app"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "phase" ADD CONSTRAINT "phase_plan_id_plan_id_fk" FOREIGN KEY ("plan_id") REFERENCES "public"."plan"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "phase" ADD CONSTRAINT "phase_task_id_task_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."task"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "phase_dependency" ADD CONSTRAINT "phase_dependency_phase_id_phase_id_fk" FOREIGN KEY ("phase_id") REFERENCES "public"."phase"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "phase_dependency" ADD CONSTRAINT "phase_dependency_depends_on_phase_id_phase_id_fk" FOREIGN KEY ("depends_on_phase_id") REFERENCES "public"."phase"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "phase_file_claim" ADD CONSTRAINT "phase_file_claim_phase_id_phase_id_fk" FOREIGN KEY ("phase_id") REFERENCES "public"."phase"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "plan" ADD CONSTRAINT "plan_app_id_app_id_fk" FOREIGN KEY ("app_id") REFERENCES "public"."app"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "plan" ADD CONSTRAINT "plan_idea_id_idea_id_fk" FOREIGN KEY ("idea_id") REFERENCES "public"."idea"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "pr" ADD CONSTRAINT "pr_task_id_task_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."task"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "pr" ADD CONSTRAINT "pr_plan_id_plan_id_fk" FOREIGN KEY ("plan_id") REFERENCES "public"."plan"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pr" ADD CONSTRAINT "pr_repo_id_repo_id_fk" FOREIGN KEY ("repo_id") REFERENCES "public"."repo"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "provider_connection" ADD CONSTRAINT "provider_connection_app_id_app_id_fk" FOREIGN KEY ("app_id") REFERENCES "public"."app"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "repo" ADD CONSTRAINT "repo_app_id_app_id_fk" FOREIGN KEY ("app_id") REFERENCES "public"."app"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "run" ADD CONSTRAINT "run_task_id_task_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."task"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "run" ADD CONSTRAINT "run_phase_id_phase_id_fk" FOREIGN KEY ("phase_id") REFERENCES "public"."phase"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "run" ADD CONSTRAINT "run_session_id_session_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."session"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "session" ADD CONSTRAINT "session_task_id_task_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."task"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "session" ADD CONSTRAINT "session_phase_id_phase_id_fk" FOREIGN KEY ("phase_id") REFERENCES "public"."phase"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session_message" ADD CONSTRAINT "session_message_session_id_session_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."session"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "step" ADD CONSTRAINT "step_phase_id_phase_id_fk" FOREIGN KEY ("phase_id") REFERENCES "public"."phase"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "task" ADD CONSTRAINT "task_app_id_app_id_fk" FOREIGN KEY ("app_id") REFERENCES "public"."app"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "task" ADD CONSTRAINT "task_plan_id_plan_id_fk" FOREIGN KEY ("plan_id") REFERENCES "public"."plan"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "task" ADD CONSTRAINT "task_idea_id_idea_id_fk" FOREIGN KEY ("idea_id") REFERENCES "public"."idea"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "task" ADD CONSTRAINT "task_assignee_user_id_fk" FOREIGN KEY ("assignee") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "task_dependency" ADD CONSTRAINT "task_dependency_task_id_task_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."task"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "task_dependency" ADD CONSTRAINT "task_dependency_depends_on_task_id_task_id_fk" FOREIGN KEY ("depends_on_task_id") REFERENCES "public"."task"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "task_file_claim" ADD CONSTRAINT "task_file_claim_task_id_task_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."task"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user" ADD CONSTRAINT "user_workspace_id_workspace_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspace"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "verification" ADD CONSTRAINT "verification_task_id_task_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."task"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "verification" ADD CONSTRAINT "verification_phase_id_phase_id_fk" FOREIGN KEY ("phase_id") REFERENCES "public"."phase"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "verification" ADD CONSTRAINT "verification_pr_id_pr_id_fk" FOREIGN KEY ("pr_id") REFERENCES "public"."pr"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "verification" ADD CONSTRAINT "verification_run_id_run_id_fk" FOREIGN KEY ("run_id") REFERENCES "public"."run"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "event_workspace_seq" ON "event" USING btree ("workspace_id","seq");--> statement-breakpoint
-CREATE INDEX "event_task_seq" ON "event" USING btree ("task_id","seq");--> statement-breakpoint
+CREATE INDEX "event_phase_seq" ON "event" USING btree ("phase_id","seq");--> statement-breakpoint
 CREATE INDEX "event_plan_seq" ON "event" USING btree ("plan_id","seq");--> statement-breakpoint
+CREATE INDEX "event_app_seq" ON "event" USING btree ("app_id","seq");--> statement-breakpoint
 CREATE UNIQUE INDEX "idea_app_number" ON "idea" USING btree ("app_id","number");--> statement-breakpoint
+CREATE UNIQUE INDEX "phase_app_number" ON "phase" USING btree ("app_id","number");--> statement-breakpoint
+CREATE INDEX "phase_plan" ON "phase" USING btree ("plan_id");--> statement-breakpoint
+CREATE INDEX "phase_task" ON "phase" USING btree ("task_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "pr_repo_number" ON "pr" USING btree ("repo_id","number");--> statement-breakpoint
 CREATE UNIQUE INDEX "provider_connection_role_provider" ON "provider_connection" USING btree ("app_id","role","provider");--> statement-breakpoint
-CREATE INDEX "run_task" ON "run" USING btree ("task_id");--> statement-breakpoint
+CREATE INDEX "run_phase" ON "run" USING btree ("phase_id");--> statement-breakpoint
+CREATE INDEX "step_phase" ON "step" USING btree ("phase_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "task_app_number" ON "task" USING btree ("app_id","number");--> statement-breakpoint
 CREATE INDEX "task_plan" ON "task" USING btree ("plan_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "verification_task_name" ON "verification" USING btree ("task_id","name");
+CREATE UNIQUE INDEX "verification_phase_name" ON "verification" USING btree ("phase_id","name");

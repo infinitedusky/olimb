@@ -1,8 +1,14 @@
 [
   {
-    "key": "health",
-    "title": "Add a GET /health endpoint to the POC",
-    "brief": "Add `GET /health` to the FastAPI app in poc/hg/app.py. It returns JSON: {\"ok\": true, \"gate\": <gate.enabled()>, \"stories\": <config.STORIES>}. No database access, no model call; it must answer in milliseconds so a tunnel or uptime check can use it. Add poc/tests/test_health.py that asserts the status code, the keys and that `ok` is true (use the fake model like the other tests). Don't touch anything else.",
-    "files": ["poc/hg/app.py", "poc/tests/test_health.py"]
+    "title": "A health endpoint for the POC",
+    "brief": "Tunnels and uptime checks need something cheap to hit. One phase.",
+    "phases": [
+      {
+        "key": "health",
+        "title": "Add a GET /health endpoint to the POC",
+        "brief": "Add `GET /health` to the FastAPI app in poc/hg/app.py. It returns JSON: {\"ok\": true, \"gate\": <gate.enabled()>, \"stories\": <config.STORIES>}. No database access, no model call; it must answer in milliseconds so a tunnel or uptime check can use it. Add poc/tests/test_health.py that asserts the status code, the keys and that `ok` is true (use the fake model like the other tests). Don't touch anything else.",
+        "files": ["poc/hg/app.py", "poc/tests/test_health.py"]
+      }
+    ]
   }
 ]

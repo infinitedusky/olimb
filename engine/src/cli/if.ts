@@ -16,18 +16,16 @@ async function api<T>(method: string, path: string, body?: unknown): Promise<T> 
   return JSON.parse(text) as T
 }
 
-const program = new Command('if').description('Idea Factory engine')
+const program = new Command('if').description('Idea Factory engine: idea → plan (tasks in order) → task → phase → step')
 
-program.command('migrate').description('apply database migrations').action(async () => {
-  await import('../db/migrate.js')
-})
+program.command('migrate').description('apply database migrations').action(async () => { await import('../db/migrate.js') })
 
 program.command('workspace').argument('<name>').description('create a workspace').action(async (name: string) => {
   console.log(JSON.stringify(await api('POST', '/workspaces', { name })))
 })
 
 program.command('app').argument('<name>').requiredOption('-w, --workspace <id>').option('-b, --branch <name>', 'default branch', 'main')
-  .option('--test-cmd <cmd>', 'how to run the tests in a worktree').option('--model <model>', 'model for task runs')
+  .option('--test-cmd <cmd>', 'how to run the tests in a worktree').option('--model <model>', 'model for phase runs')
   .option('--max-budget-usd <n>').option('--max-turns <n>')
   .description('register an app (a stack of repos)').action(async (name: string, o: { workspace: string; branch: string; testCmd?: string; model?: string; maxBudgetUsd?: string; maxTurns?: string }) => {
     const setup: Record<string, unknown> = {}
@@ -43,44 +41,57 @@ program.command('repo').argument('<fullName>', 'owner/name on GitHub').requiredO
     console.log(JSON.stringify(await api('POST', '/repos', { appId: o.app, fullName, localPath: o.path })))
   })
 
-const plan = program.command('plan').description('plans are made of tasks')
+const plan = program.command('plan').description('plans are tasks in order; tasks are made of phases')
 
-plan.command('create').requiredOption('-a, --app <id>').requiredOption('-t, --title <title>').requiredOption('-f, --tasks <file>', 'JSON: [{key, title, brief?, dependsOn?, files?}]')
-  .action(async (o: { app: string; title: string; tasks: string }) => {
+plan.command('create').requiredOption('-a, --app <id>').requiredOption('-t, --title <title>').option('-s, --spec <text>', 'why: the idea behind it')
+  .requiredOption('-f, --tasks <file>', 'JSON: [{title, brief?, phases?: [{key, title, brief?, dependsOn?, files?}]}]')
+  .action(async (o: { app: string; title: string; spec?: string; tasks: string }) => {
     const tasks = JSON.parse(await readFile(o.tasks, 'utf8'))
-    const out = await api<{ plan: { id: string }; tasks: { id: string; number: number; title: string }[] }>('POST', '/plans', { appId: o.app, title: o.title, tasks })
+    const out = await api<{ plan: { id: string }; tasks: { id: string; number: number; title: string }[]; phases: { id: string; number: number; title: string; taskId: string }[] }>('POST', '/plans', { appId: o.app, title: o.title, spec: o.spec, tasks })
     console.log(`plan ${out.plan.id}`)
-    for (const t of out.tasks) console.log(`  ${t.id}  #${t.number}  ${t.title}`)
+    for (const t of out.tasks) {
+      console.log(`  task ${t.id}  #${t.number}  ${t.title}`)
+      for (const x of out.phases.filter((q) => q.taskId === t.id)) console.log(`    phase ${x.id}  #${x.number}  ${x.title}`)
+    }
   })
 
 plan.command('graph').argument('<planId>').action(async (planId: string) => {
-  const g = await api<{ plan: { title: string; integrationBranch: string }; tasks: any[] }>('GET', `/plans/${planId}/graph`)
-  console.log(`${g.plan.title}  (${g.plan.integrationBranch})`)
+  const g = await api<{ plan: { title: string; status: string; integrationBranch: string }; pr: { number: number; url: string } | null; tasks: any[]; phases: any[] }>('GET', `/plans/${planId}/graph`)
+  console.log(`${g.plan.title}  [${g.plan.status}]  (${g.plan.integrationBranch})${g.pr ? `  PR #${g.pr.number}` : ''}`)
   for (const t of g.tasks) {
-    const deps = t.dependsOn.length ? `  ← ${t.dependsOn.join(', ')}` : ''
-    const held = t.heldReason ? `  [held: ${t.heldReason}]` : ''
-    console.log(`  ${t.status.padEnd(15)} ${t.id}  #${t.number} ${t.title}${deps}${held}`)
+    console.log(`  task #${t.number} ${t.title}`)
+    for (const x of g.phases.filter((q) => q.taskId === t.id)) {
+      const deps = x.dependsOn.length ? `  ← ${x.dependsOn.map((d: string) => '#' + (g.phases.find((q) => q.id === d)?.number ?? d)).join(', ')}` : ''
+      const held = x.heldReason ? `  [held: ${x.heldReason}]` : ''
+      console.log(`    ${x.status.padEnd(15)} ${x.id}  #${x.number} ${x.title}${deps}${held}`)
+      for (const s of x.steps ?? []) console.log(`      ${s.status === 'completed' ? '✓' : s.status === 'in_progress' ? '●' : '○'} ${s.text}`)
+    }
   }
 })
 
 plan.command('start').argument('<planId>').description('run the plan: worktrees, agent runs, landing, PR')
   .action(async (planId: string) => { console.log(JSON.stringify(await api('POST', `/plans/${planId}/start`))) })
 
-plan.command('tick').argument('<planId>').option('-r, --room <n>', 'free session slots').description('one dispatch pass')
+plan.command('tick').argument('<planId>').option('-r, --room <n>', 'free session slots').description('one dispatch pass (drafts)')
   .action(async (planId: string, o: { room?: string }) => {
-    const q = o.room ? `?room=${o.room}` : ''
-    console.log(JSON.stringify(await api('POST', `/plans/${planId}/tick${q}`), null, 2))
+    console.log(JSON.stringify(await api('POST', `/plans/${planId}/tick${o.room ? `?room=${o.room}` : ''}`), null, 2))
   })
 
-program.command('task').command('status').argument('<taskId>').argument('<status>').description('manual transition (no executor yet)')
-  .action(async (taskId: string, status: string) => {
-    console.log(JSON.stringify(await api('POST', `/tasks/${taskId}/status`, { status })))
+const task = program.command('task').description('tasks are authored; the planner (or you) adds their phases')
+task.command('phases').argument('<taskId>').requiredOption('-f, --file <file>', 'JSON: [{key, title, brief?, dependsOn?, files?}]')
+  .description('add phases to a task').action(async (taskId: string, o: { file: string }) => {
+    const rows = await api<any[]>('POST', `/tasks/${taskId}/phases`, JSON.parse(await readFile(o.file, 'utf8')))
+    for (const x of rows) console.log(`  phase ${x.id}  #${x.number}  ${x.title}`)
   })
 
-program.command('watch').option('-s, --since <seq>', 'replay from this sequence number', '0').option('-p, --plan <id>').option('-w, --workspace <id>')
-  .description('follow the event log').action(async (o: { since: string; plan?: string; workspace?: string }) => {
+program.command('phase').command('status').argument('<phaseId>').argument('<status>').description('by hand, for drafts')
+  .action(async (phaseId: string, status: string) => { console.log(JSON.stringify(await api('POST', `/phases/${phaseId}/status`, { status }))) })
+
+program.command('watch').option('-s, --since <seq>', 'replay from this sequence number', '0').option('-p, --plan <id>').option('-a, --app <id>').option('-w, --workspace <id>')
+  .description('follow the event log').action(async (o: { since: string; plan?: string; app?: string; workspace?: string }) => {
     const q = new URLSearchParams({ since: o.since })
     if (o.plan) q.set('plan', o.plan)
+    if (o.app) q.set('app', o.app)
     if (o.workspace) q.set('workspace', o.workspace)
     const res = await fetch(`${ENGINE_URL}/events?${q}`)
     if (!res.ok || !res.body) throw new Error(`watch: ${res.status}`)
@@ -97,8 +108,8 @@ program.command('watch').option('-s, --since <seq>', 'replay from this sequence 
         const type = frame.split('\n').find((l) => l.startsWith('event:'))?.slice(6).trim()
         if (type === 'ping' || !data) continue
         const e = JSON.parse(data)
-        const who = e.taskId ?? e.planId ?? e.appId ?? ''
-        console.log(`${String(e.seq).padStart(6)}  ${e.ts.slice(11, 19)}  ${e.type.padEnd(14)} ${who}  ${JSON.stringify(e.payload)}`)
+        const who = e.phaseId ?? e.taskId ?? e.planId ?? e.appId ?? ''
+        console.log(`${String(e.seq).padStart(6)}  ${e.ts.slice(11, 19)}  ${e.type.padEnd(16)} ${who}  ${JSON.stringify(e.payload)}`)
       }
     }
   })

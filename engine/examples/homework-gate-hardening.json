@@ -1,27 +1,38 @@
 [
   {
-    "key": "config",
-    "title": "Validate numeric settings at startup",
-    "brief": "In poc/hg/config.py the numeric settings (HG_QUIZ_SIZE, HG_PASS_FRACTION, HG_COOLDOWN_MINUTES, HG_MAX_ATTEMPTS, HG_SECONDS_PER_QUESTION, HG_GATE_SYNC_SECONDS) are parsed with int()/float() and never checked, so HG_PASS_FRACTION=1.5 or HG_QUIZ_SIZE=0 only fails later, confusingly. Validate them where they are read: QUIZ_SIZE >= 1, 0 < PASS_FRACTION <= 1, COOLDOWN_MINUTES >= 0, MAX_ATTEMPTS >= 1, SECONDS_PER_QUESTION >= 10, GATE_SYNC_SECONDS >= 5. On a bad value raise SystemExit with a one-line message naming the variable, the value and the allowed range. Keep the module importable and reloadable (tests call importlib.reload(hg.config)). Add poc/tests/test_config.py covering one good reload and two bad values (use monkeypatch.setenv and pytest.raises(SystemExit)). Keep the existing style: short, few comments.",
-    "files": ["poc/hg/config.py", "poc/tests/test_config.py"]
+    "title": "Harden the POC",
+    "brief": "Three independent hardening changes that can run at once.",
+    "phases": [
+      {
+        "key": "config",
+        "title": "Validate numeric settings at startup",
+        "brief": "In poc/hg/config.py the numeric settings (HG_QUIZ_SIZE, HG_PASS_FRACTION, HG_COOLDOWN_MINUTES, HG_MAX_ATTEMPTS, HG_SECONDS_PER_QUESTION, HG_GATE_SYNC_SECONDS) are parsed with int()/float() and never checked. Validate them where they are read: QUIZ_SIZE >= 1, 0 < PASS_FRACTION <= 1, COOLDOWN_MINUTES >= 0, MAX_ATTEMPTS >= 1, SECONDS_PER_QUESTION >= 10, GATE_SYNC_SECONDS >= 5. On a bad value raise SystemExit with a one-line message naming the variable, the value and the allowed range. Keep the module importable and reloadable. Add poc/tests/test_config.py covering one good reload and two bad values.",
+        "files": ["poc/hg/config.py", "poc/tests/test_config.py"]
+      },
+      {
+        "key": "ci-cache",
+        "title": "Cache pip in the CI workflow",
+        "brief": "In .github/workflows/tests.yml, add `cache: pip` and `cache-dependency-path: poc/requirements.txt` to the actions/setup-python@v5 step. Change nothing else.",
+        "files": [".github/workflows/tests.yml"]
+      },
+      {
+        "key": "db-indexes",
+        "title": "Index the tables the parent page reads by night",
+        "brief": "poc/hg/db.py creates the SQLite tables in SCHEMA but no indexes. Add `CREATE INDEX IF NOT EXISTS` statements for events(night), quizzes(night), assignments(night), tutor_messages(assignment_id), guard_events(assignment_id). Add poc/tests/test_db.py asserting those five indexes exist in sqlite_master. Don't change any table.",
+        "files": ["poc/hg/db.py", "poc/tests/test_db.py"]
+      }
+    ]
   },
   {
-    "key": "ci-cache",
-    "title": "Cache pip in the CI workflow",
-    "brief": "In .github/workflows/tests.yml, actions/setup-python@v5 installs requirements from scratch on every run. Enable its built-in pip cache: add `cache: pip` and `cache-dependency-path: poc/requirements.txt` to the setup-python step. Change nothing else in the workflow. There is no test for this; confirm the YAML still parses (python -c \"import yaml\" may not be available; a careful read is enough) and that `pytest -q` still passes locally.",
-    "files": [".github/workflows/tests.yml"]
-  },
-  {
-    "key": "db-indexes",
-    "title": "Index the tables the parent page reads by night",
-    "brief": "poc/hg/db.py creates the SQLite tables in SCHEMA but no indexes; the parent page and night_state() query events, quizzes and assignments by `night`, and tutor_messages and guard_events by `assignment_id`. Add `CREATE INDEX IF NOT EXISTS` statements to SCHEMA for: events(night), quizzes(night), assignments(night), tutor_messages(assignment_id), guard_events(assignment_id). Add poc/tests/test_db.py that connects (with HG_DATA_DIR pointed at tmp_path, reload hg.config first like the other tests) and asserts those five indexes exist in sqlite_master. Don't change any table.",
-    "files": ["poc/hg/db.py", "poc/tests/test_db.py"]
-  },
-  {
-    "key": "readme",
-    "title": "README: settings are validated; CI caches pip",
-    "brief": "poc/README.md documents the settings in a table under '## Settings (environment variables)'. Add one sentence right under that heading saying the numeric settings are validated at startup and the server exits with a clear message on a bad value (this was added in config.py by another task on this branch; read it to describe it accurately). In the same file, wherever CI is mentioned (search for 'tests.yml' or 'CI'), add that the workflow caches pip. Touch nothing else.",
-    "files": ["poc/README.md"],
-    "dependsOn": ["config", "ci-cache"]
+    "title": "Document the hardening",
+    "brief": "After the hardening task lands: one sentence in the README.",
+    "phases": [
+      {
+        "key": "readme",
+        "title": "README: settings are validated at startup",
+        "brief": "poc/README.md documents the settings in a table under '## Settings (environment variables)'. Add one sentence right under that heading saying the numeric settings are validated at startup and the server exits with a clear message on a bad value (read config.py on this branch to describe it accurately). Touch nothing else.",
+        "files": ["poc/README.md"]
+      }
+    ]
   }
 ]

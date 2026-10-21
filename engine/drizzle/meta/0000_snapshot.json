@@ -1,5 +1,5 @@
 {
-  "id": "c741385e-3abf-4bbf-8c4f-7c99c2a0780c",
+  "id": "1f4fd55d-9ec7-46db-a23f-857abbea6fe8",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -231,6 +231,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "phase_id": {
+          "name": "phase_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "run_id": {
           "name": "run_id",
           "type": "text",
@@ -285,11 +291,11 @@
           "method": "btree",
           "with": {}
         },
-        "event_task_seq": {
-          "name": "event_task_seq",
+        "event_phase_seq": {
+          "name": "event_phase_seq",
           "columns": [
             {
-              "expression": "task_id",
+              "expression": "phase_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -311,6 +317,27 @@
           "columns": [
             {
               "expression": "plan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "seq",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_app_seq": {
+          "name": "event_app_seq",
+          "columns": [
+            {
+              "expression": "app_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -632,6 +659,366 @@
       },
       "isRLSEnabled": false
     },
+    "public.phase": {
+      "name": "phase",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "app_id": {
+          "name": "app_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_id": {
+          "name": "plan_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "brief": {
+          "name": "brief",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'queued'"
+        },
+        "attempt": {
+          "name": "attempt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "max_attempts": {
+          "name": "max_attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 3
+        },
+        "branch": {
+          "name": "branch",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "worktree_path": {
+          "name": "worktree_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "base_sha": {
+          "name": "base_sha",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "size": {
+          "name": "size",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "priority": {
+          "name": "priority",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "requires_schema_change": {
+          "name": "requires_schema_change",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "held_reason": {
+          "name": "held_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pr_id": {
+          "name": "pr_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "phase_app_number": {
+          "name": "phase_app_number",
+          "columns": [
+            {
+              "expression": "app_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "phase_plan": {
+          "name": "phase_plan",
+          "columns": [
+            {
+              "expression": "plan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "phase_task": {
+          "name": "phase_task",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "phase_app_id_app_id_fk": {
+          "name": "phase_app_id_app_id_fk",
+          "tableFrom": "phase",
+          "tableTo": "app",
+          "columnsFrom": [
+            "app_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "phase_plan_id_plan_id_fk": {
+          "name": "phase_plan_id_plan_id_fk",
+          "tableFrom": "phase",
+          "tableTo": "plan",
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "phase_task_id_task_id_fk": {
+          "name": "phase_task_id_task_id_fk",
+          "tableFrom": "phase",
+          "tableTo": "task",
+          "columnsFrom": [
+            "task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "phase_status": {
+          "name": "phase_status",
+          "value": "\"phase\".\"status\" in ('queued', 'ready', 'running', 'awaiting_answer', 'merging', 'testing', 'done', 'failed', 'cancelled')"
+        },
+        "phase_size": {
+          "name": "phase_size",
+          "value": "\"phase\".\"size\" is null or \"phase\".\"size\" in ('S', 'M', 'L', 'XL')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.phase_dependency": {
+      "name": "phase_dependency",
+      "schema": "",
+      "columns": {
+        "phase_id": {
+          "name": "phase_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "depends_on_phase_id": {
+          "name": "depends_on_phase_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "phase_dependency_phase_id_phase_id_fk": {
+          "name": "phase_dependency_phase_id_phase_id_fk",
+          "tableFrom": "phase_dependency",
+          "tableTo": "phase",
+          "columnsFrom": [
+            "phase_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "phase_dependency_depends_on_phase_id_phase_id_fk": {
+          "name": "phase_dependency_depends_on_phase_id_phase_id_fk",
+          "tableFrom": "phase_dependency",
+          "tableTo": "phase",
+          "columnsFrom": [
+            "depends_on_phase_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "phase_dependency_phase_id_depends_on_phase_id_pk": {
+          "name": "phase_dependency_phase_id_depends_on_phase_id_pk",
+          "columns": [
+            "phase_id",
+            "depends_on_phase_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.phase_file_claim": {
+      "name": "phase_file_claim",
+      "schema": "",
+      "columns": {
+        "phase_id": {
+          "name": "phase_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "path": {
+          "name": "path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "phase_file_claim_phase_id_phase_id_fk": {
+          "name": "phase_file_claim_phase_id_phase_id_fk",
+          "tableFrom": "phase_file_claim",
+          "tableTo": "phase",
+          "columnsFrom": [
+            "phase_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "phase_file_claim_phase_id_path_pk": {
+          "name": "phase_file_claim_phase_id_path_pk",
+          "columns": [
+            "phase_id",
+            "path"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.plan": {
       "name": "plan",
       "schema": "",
@@ -737,8 +1124,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "task_id": {
-          "name": "task_id",
+        "plan_id": {
+          "name": "plan_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -864,12 +1251,12 @@
         }
       },
       "foreignKeys": {
-        "pr_task_id_task_id_fk": {
-          "name": "pr_task_id_task_id_fk",
+        "pr_plan_id_plan_id_fk": {
+          "name": "pr_plan_id_plan_id_fk",
           "tableFrom": "pr",
-          "tableTo": "task",
+          "tableTo": "plan",
           "columnsFrom": [
-            "task_id"
+            "plan_id"
           ],
           "columnsTo": [
             "id"
@@ -1027,8 +1414,20 @@
           "primaryKey": false,
           "notNull": false
         },
+        "plan_id": {
+          "name": "plan_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "task_id": {
           "name": "task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phase_id": {
+          "name": "phase_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1177,8 +1576,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "task_id": {
-          "name": "task_id",
+        "phase_id": {
+          "name": "phase_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -1277,11 +1676,11 @@
         }
       },
       "indexes": {
-        "run_task": {
-          "name": "run_task",
+        "run_phase": {
+          "name": "run_phase",
           "columns": [
             {
-              "expression": "task_id",
+              "expression": "phase_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1294,12 +1693,12 @@
         }
       },
       "foreignKeys": {
-        "run_task_id_task_id_fk": {
-          "name": "run_task_id_task_id_fk",
+        "run_phase_id_phase_id_fk": {
+          "name": "run_phase_id_phase_id_fk",
           "tableFrom": "run",
-          "tableTo": "task",
+          "tableTo": "phase",
           "columnsFrom": [
-            "task_id"
+            "phase_id"
           ],
           "columnsTo": [
             "id"
@@ -1346,8 +1745,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "task_id": {
-          "name": "task_id",
+        "phase_id": {
+          "name": "phase_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -1375,12 +1774,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "session_task_id_task_id_fk": {
-          "name": "session_task_id_task_id_fk",
+        "session_phase_id_phase_id_fk": {
+          "name": "session_phase_id_phase_id_fk",
           "tableFrom": "session",
-          "tableTo": "task",
+          "tableTo": "phase",
           "columnsFrom": [
-            "task_id"
+            "phase_id"
           ],
           "columnsTo": [
             "id"
@@ -1482,6 +1881,98 @@
       },
       "isRLSEnabled": false
     },
+    "public.step": {
+      "name": "step",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "phase_id": {
+          "name": "phase_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "step_phase": {
+          "name": "step_phase",
+          "columns": [
+            {
+              "expression": "phase_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "step_phase_id_phase_id_fk": {
+          "name": "step_phase_id_phase_id_fk",
+          "tableFrom": "step",
+          "tableTo": "phase",
+          "columnsFrom": [
+            "phase_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "step_status": {
+          "name": "step_status",
+          "value": "\"step\".\"status\" in ('pending', 'in_progress', 'completed')"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.task": {
       "name": "task",
       "schema": "",
@@ -1502,7 +1993,7 @@
           "name": "plan_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "idea_id": {
           "name": "idea_id",
@@ -1516,6 +2007,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "title": {
           "name": "title",
           "type": "text",
@@ -1528,98 +2026,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'queued'"
-        },
-        "attempt": {
-          "name": "attempt",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "max_attempts": {
-          "name": "max_attempts",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 3
-        },
-        "branch": {
-          "name": "branch",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "worktree_path": {
-          "name": "worktree_path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "base_sha": {
-          "name": "base_sha",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "size": {
-          "name": "size",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "priority": {
-          "name": "priority",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "position": {
-          "name": "position",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "requires_schema_change": {
-          "name": "requires_schema_change",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "auto_merge": {
-          "name": "auto_merge",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "held_reason": {
-          "name": "held_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "assignee": {
-          "name": "assignee",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_by": {
           "name": "created_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "pr_id": {
-          "name": "pr_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1715,138 +2123,9 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "task_assignee_user_id_fk": {
-          "name": "task_assignee_user_id_fk",
-          "tableFrom": "task",
-          "tableTo": "user",
-          "columnsFrom": [
-            "assignee"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "task_status": {
-          "name": "task_status",
-          "value": "\"task\".\"status\" in ('queued', 'ready', 'running', 'awaiting_answer', 'merging', 'testing', 'done', 'failed', 'cancelled')"
-        },
-        "task_size": {
-          "name": "task_size",
-          "value": "\"task\".\"size\" is null or \"task\".\"size\" in ('S', 'M', 'L', 'XL')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.task_dependency": {
-      "name": "task_dependency",
-      "schema": "",
-      "columns": {
-        "task_id": {
-          "name": "task_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "depends_on_task_id": {
-          "name": "depends_on_task_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "task_dependency_task_id_task_id_fk": {
-          "name": "task_dependency_task_id_task_id_fk",
-          "tableFrom": "task_dependency",
-          "tableTo": "task",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "task_dependency_depends_on_task_id_task_id_fk": {
-          "name": "task_dependency_depends_on_task_id_task_id_fk",
-          "tableFrom": "task_dependency",
-          "tableTo": "task",
-          "columnsFrom": [
-            "depends_on_task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "task_dependency_task_id_depends_on_task_id_pk": {
-          "name": "task_dependency_task_id_depends_on_task_id_pk",
-          "columns": [
-            "task_id",
-            "depends_on_task_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.task_file_claim": {
-      "name": "task_file_claim",
-      "schema": "",
-      "columns": {
-        "task_id": {
-          "name": "task_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "path": {
-          "name": "path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "task_file_claim_task_id_task_id_fk": {
-          "name": "task_file_claim_task_id_task_id_fk",
-          "tableFrom": "task_file_claim",
-          "tableTo": "task",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "task_file_claim_task_id_path_pk": {
-          "name": "task_file_claim_task_id_path_pk",
-          "columns": [
-            "task_id",
-            "path"
-          ]
-        }
-      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -1938,8 +2217,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "task_id": {
-          "name": "task_id",
+        "phase_id": {
+          "name": "phase_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -2001,11 +2280,11 @@
         }
       },
       "indexes": {
-        "verification_task_name": {
-          "name": "verification_task_name",
+        "verification_phase_name": {
+          "name": "verification_phase_name",
           "columns": [
             {
-              "expression": "task_id",
+              "expression": "phase_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2024,12 +2303,12 @@
         }
       },
       "foreignKeys": {
-        "verification_task_id_task_id_fk": {
-          "name": "verification_task_id_task_id_fk",
+        "verification_phase_id_phase_id_fk": {
+          "name": "verification_phase_id_phase_id_fk",
           "tableFrom": "verification",
-          "tableTo": "task",
+          "tableTo": "phase",
           "columnsFrom": [
-            "task_id"
+            "phase_id"
           ],
           "columnsTo": [
             "id"
