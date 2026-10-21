@@ -432,6 +432,27 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## The thesis: decide fast on something real, then let the machine hold the line (Sandy, 2026-10-21)
+
+Sandy, questioning whether PRs are the right unit: the goal is speed, and the expensive mistake in the usual way
+of working is deciding *after* building (sunk cost). So:
+1. **Decide fast, on something real.** Pre-plan proofs of concept and mock-ups — a Storybook story, a clickable
+   prototype behind a flag, two variants side by side, a measurement for plumbing. Agreement is on the thing, not
+   on a description of it. The brief and the planner's decision cards were a document standing in for this.
+2. **The decision becomes the checks.** Every behaviour in the agreed POC turns into something the machine holds:
+   a story, a test, a clause the running app asserts. The build is verified against the decision and keeps being
+   verified. Regression by promise, not by suite: only what someone agreed to is ever tested.
+3. **Telemetry catches the rest; recovery is the metric.** No attempt at full coverage; accept problems in
+   production that get fixed very quickly. The signal arrives with enough context to revert the PR or open a fix
+   task on its own. Optimise time-to-fix, not time-between-failures.
+Consequences: the PR stays the delivery and rollback unit but stops being what anyone watches; the UI leads with
+the POC before a plan and the signal after a merge; the planner's first phase for a task is the POC phase, landing
+as stories; telemetry is the floor, not a later feature (Homework Gate: the PostHog token and PR #9 are next). The
+cross-plan / lazy-planning engine work (entry below) is paused as premature until this is tested by hand: the
+spaced-repetition POC in Storybook (quiz with a returning question unmarked, result page saying why 4-of-5
+failed, the parent's "coming back" card, the two open questions as variants), agreed, then re-planned from it.
+SHAPE.md should open with this once PR #6 lands.
+
 ## Plans know about each other (Sandy, 2026-10-21)
 
 The model, in Sandy's words: a **rough plan** — tasks with briefs, in order; some tasks run in parallel, others are
