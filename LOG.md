@@ -432,6 +432,38 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## Plans know about each other (Sandy, 2026-10-21)
+
+The model, in Sandy's words: a **rough plan** — tasks with briefs, in order; some tasks run in parallel, others are
+*planned* only after what they depend on has landed, so the planner reads the result instead of predicting it.
+**Plans know what other plans are doing**: plan B can say "wait for phase 3 of plan A to land before we plan our
+phase 3; but phases 1 and 2 are plumbing we need regardless, so they go now, in sequence; and our phase 3 depends
+on their phase 4." In engine terms, three missing pieces on top of what runs today (global scheduling across
+plans, file claims, planning per task on a click):
+1. **Dependencies cross plans** — a phase may depend on a phase in another plan (`addPhases` currently refuses).
+   Crossing a plan means crossing a PR boundary, so the dependent phase's base must include the other plan's
+   landed code: **stacked** (merge `plan/A` into B's branch when B.3 starts; B's PR marked "stacked on A", can't
+   merge first) rather than waiting for A to reach `main`, which would park B behind A's review. Decision pending
+   Sandy's yes on stacked.
+2. **Lazy planning as a rule** — a task declares what it plans after (the task before it; a phase of another
+   plan); when that lands the engine plans it, or marks it ready to plan when a person wants to read the result
+   first.
+3. **The planner sees the app graph** — other plans' tasks, phases, files and status in its prompt, so it can
+   declare cross-plan dependencies and keep off files another plan is mid-way through.
+**Edges imply a planning step** (Sandy). At every level: an edge into a task means "plan this task when that has
+landed" (the planner runs then, reading the result); an edge into a phase means "build this when that has
+landed" (the builder starts then, reads the real code, writes its own steps). A plan is the rough shape — tasks
+and the edges between them, inside the plan or into other plans' phases; phases are what planning a task
+produces; steps are what building a phase produces.
+**Files are not a concept anyone designs.** They come out of planning: the planner just read the code and
+declares what each phase touches; the scheduler uses the claims like locks. The order between two phases that
+share a file is never anyone's decision, so it is not structure in the graph: show it only when it bites — the
+held reason on the waiting phase, and the file list on a selected phase. The per-file dashed areas (tried today;
+unreadable when one phase touches eight files) come out. Graph = edges only, every edge "planned after".
+Also: a dependency means "built on the other's *landed code*"; no human decision sits between phases — the
+coarser unit for "look at the result first" is the task. Idea captured, not chased: the whole graph isometric,
+in layers like a circuit board.
+
 ## The planner (2026-10-21, idea-factory PR #10; UI on PR #11)
 
 InDusk's planning approach on the new foundation, as `engine/src/planner.ts`. `POST /tasks/:id/plan` runs one
