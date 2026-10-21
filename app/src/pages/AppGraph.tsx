@@ -15,6 +15,7 @@ interface AppGraphData {
   conflicts: [string, string][]
 }
 const PLAN_TONE: Record<string, Tone> = { running: 'accent', landed: 'ok' }
+const short = (t: string) => (t.length > 28 ? t.slice(0, 26).trimEnd() + '…' : t)
 
 async function fetchAppGraph(appId: string): Promise<AppGraphData> {
   const res = await fetch(`${API}/apps/${appId}/graph`)
@@ -68,7 +69,7 @@ export function AppGraph() {
             {error && <Badge tone="warn" dot>{error}</Badge>}
           </div>
           {data.tasks.length
-            ? <PlanGraphView tasks={data.tasks} labels={Object.fromEntries(data.tasks.map((t) => [t.id, planOf(t)?.title ?? '']))} links={data.conflicts} selectedId={selectedId} onSelect={(t) => setSelectedId(t.id)} tall />
+            ? <PlanGraphView tasks={data.tasks} labels={Object.fromEntries(data.tasks.map((t) => [t.id, short(planOf(t)?.title ?? '')]))} links={data.conflicts} selectedId={selectedId} onSelect={(t) => setSelectedId(t.id)} tall />
             : <div className="empty">No plans in {data.app.name} yet.</div>}
           {selected && (
             <section className="panel">

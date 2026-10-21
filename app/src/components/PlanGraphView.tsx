@@ -3,9 +3,9 @@
  * the topology changes; status, held reasons and runs are props on the nodes, so live updates never jump.
  */
 import dagre from '@dagrejs/dagre'
-import { Background, Handle, type Node, type NodeProps, Position, ReactFlow, type Edge, MarkerType } from '@xyflow/react'
+import { Background, Handle, type Node, type NodeProps, Position, ReactFlow, ReactFlowProvider, type Edge, MarkerType, useReactFlow } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import type { GraphTask, TaskStatus } from '../engine'
 import { Badge, type Tone } from './Badge'
 
@@ -41,11 +41,11 @@ function TaskNode({ data }: NodeProps<Node<TaskNodeData>>) {
 }
 
 const nodeTypes = { task: TaskNode }
-const W = 240, H = 104
+const W = 240, H = 132 // tall enough for a two-line title, a held reason and the run line
 
 function layout(tasks: GraphTask[]): Map<string, { x: number; y: number }> {
   const g = new dagre.graphlib.Graph()
-  g.setGraph({ rankdir: 'LR', nodesep: 24, ranksep: 64, marginx: 16, marginy: 16 })
+  g.setGraph({ rankdir: 'LR', nodesep: 20, ranksep: 72, marginx: 16, marginy: 16 })
   g.setDefaultEdgeLabel(() => ({}))
   for (const t of tasks) g.setNode(t.id, { width: W, height: H })
   for (const t of tasks) for (const d of t.dependsOn) if (tasks.some((x) => x.id === d)) g.setEdge(d, t.id)
@@ -77,10 +77,23 @@ export function PlanGraphView({ tasks, onSelect, selectedId, labels, links = [],
   ]
   return (
     <div className={`graph-canvas ${tall ? 'tall' : ''}`} data-component="PlanGraphView">
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
-        onNodeClick={(_, n) => onSelect?.((n.data as TaskNodeData).task)} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
-        <Background gap={20} color="var(--line)" />
-      </ReactFlow>
+      <ReactFlowProvider>
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
+          onNodeClick={(_, n) => onSelect?.((n.data as TaskNodeData).task)} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
+          <Background gap={20} color="var(--line)" />
+          <FitOnChange topology={topology} />
+        </ReactFlow>
+      </ReactFlowProvider>
     </div>
   )
+}
+
+/** Re-fit the view when the set of nodes or edges changes (and once after the first measurement). */
+function FitOnChange({ topology }: { topology: string }) {
+  const { fitView } = useReactFlow()
+  useEffect(() => {
+    const id = window.setTimeout(() => void fitView({ padding: 0.2, maxZoom: 1, duration: 200 }), 50)
+    return () => window.clearTimeout(id)
+  }, [topology, fitView])
+  return null
 }
