@@ -432,6 +432,18 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## Planning: InDusk's approach on the new foundation (2026-10-21)
+
+Sandy: Lightsprint's plan/task ≈ InDusk's master plan/plan; under plans InDusk had **phases**, which the agent
+creates from the plan's brief — the person never writes them. "Here is where InDusk had it correct." The approach
+was right; the file-based process ("how to work with AI to develop") turned into an app is what made it slow. Port
+the approach, not the process: the brief is a row, the planner is an agent run, phases/decisions/questions are
+rows, the graph runs the phases. Mapping: idea ≈ master plan; plan = title + brief (authored); phase = generated,
+one agent / one worktree / one commit, declares files and depends-on. The hand-written composer rows from PR #11
+were a stopgap: the real flow is brief in → proposed phases out → edit → run. A read-out of InDusk's planner
+(`research/planning-from-indusk.md` when written) comes first; vocabulary rename task → phase pending Sandy's
+yes.
+
 ## The graph is at the step level, across all plans (2026-10-20, idea-factory PR #10 and #11)
 
 Sandy, restating the design (it's InDusk's, not new): **the step is the atomic unit of development** — one agent,
