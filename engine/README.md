@@ -75,9 +75,10 @@ event as it happens, via Postgres `LISTEN/NOTIFY`. Several clients can watch one
 | `src/reap.ts` | Find and stop agent processes working inside our worktree roots (orphans after a crash). |
 | `src/cli/if.ts` | The `if` CLI. A client; only `migrate` touches the database. |
 
-`pnpm test` runs the scheduler and landing tests anywhere (landing uses a throwaway git repo) and, when the
-database is up, the plan tests and the runner tests (a fake executor on a throwaway repo: the cap, dependents after
-parents, retries with the reason, recovery, cleanup). The tests write to the same database the server uses.
+`pnpm test` runs the scheduler and landing tests anywhere (landing uses a throwaway git repo) and, when Postgres
+is up, the plan and runner tests (a fake executor on a throwaway repo: the cap, dependents after parents, two plans
+at once, retries with the reason, recovery, cleanup) against **their own database**, `ideafactory_test`, which the
+global setup creates and migrates (`DATABASE_URL_TEST` to override). The server's database is never touched.
 
 ## Next (step 4)
 
