@@ -4,7 +4,7 @@
  */
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { db, type Tx } from './db/client.js'
-import { app, plan, task, taskDependency, taskFileClaim, type TaskStatus } from './db/schema.js'
+import { app, plan, run, task, taskDependency, taskFileClaim, type TaskStatus } from './db/schema.js'
 import { appendEvent } from './events.js'
 import { newId } from './ids.js'
 import { findCycle, pickTasksToStart, type SchedTask } from './scheduler.js'
@@ -58,12 +58,14 @@ export async function planGraph(planId: string) {
   const ids = tasks.map((t) => t.id)
   const deps = ids.length ? await db.select().from(taskDependency).where(inArray(taskDependency.taskId, ids)) : []
   const claims = ids.length ? await db.select().from(taskFileClaim).where(inArray(taskFileClaim.taskId, ids)) : []
+  const runs = ids.length ? await db.select().from(run).where(inArray(run.taskId, ids)) : []
   return {
     plan: p,
     tasks: tasks.map((t) => ({
       ...t,
       dependsOn: deps.filter((d) => d.taskId === t.id).map((d) => d.dependsOnTaskId),
       files: claims.filter((c) => c.taskId === t.id).map((c) => c.path),
+      lastRun: runs.filter((r) => r.taskId === t.id).sort((a, b) => b.attempt - a.attempt)[0] ?? null,
     })),
   }
 }

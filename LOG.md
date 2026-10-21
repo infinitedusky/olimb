@@ -402,6 +402,11 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
    Recommended order: tamper rule + router next, dongle prototype after.
    Waiting on: router admin access at the house (else a cheap second
    router).
+10. **Tutor as a side panel that can point** (Sandy, 2026-10-20, raised while
+    step 3 ran). The tutor is a floating section on the right that you open;
+    it pushes the page left, and it can move the page and highlight parts of
+    it ("look at this"). Fits the explain-out-loud quiz and the field-notebook
+    tutor screen. Captured, not chased.
 5. **Bounties and a support circle** (parked). Parents post bounties for
    extra work; others in his life join in (an uncle reading with him 3 h a
    week; the parent offers a gift card to the helper) — framed as
@@ -426,6 +431,25 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
   marked talked-about. N=1: trends, not proof.
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
+
+## Engine step 3: parallel for real (2026-10-20, idea-factory PR #10)
+
+Several tasks under the cap, dependents only after their parents land, retries with the reason (from the log,
+so it survives a restart), recovery on boot (interrupted runs marked, tasks re-queued, the agent session
+resumed, stray `claude` processes in our worktrees reaped), clean shutdown (live runs aborted), worktree cleanup
+once a plan lands. Live on Homework Gate: four tasks (three independent + a README task depending on two of
+them) → **PR #15 in 66 seconds**: three agents at once, landings serial (suite 21 → 22 → 27 passing on the
+merged commits), the README task started only after its parents landed, PR opened at the first landing and
+updated after each, four worktrees removed at the end. Runner tests with a fake executor cover the cap, the
+ordering, retries, recovery and cleanup (19 tests in all).
+- Found by the tests: on macOS, git reports worktree paths with symlinks resolved (`/private/var/…`), so a retry
+  tried to re-create an existing worktree; and an error while preparing a worktree left the task stuck at
+  `ready`. Both fixed (realpath comparison; preparation errors count as a failed attempt).
+- Brief quality is the new bottleneck: the README brief claimed the file mentions CI; it doesn't, and the agent
+  said so rather than inventing a section. Good behaviour; bad brief. A plan step that checks briefs against the
+  repo before dispatch belongs in step 5+.
+- Not exercised live yet: the restart path (covered by a test). Skipped the kill-mid-run drill to keep PR #15
+  clean; worth doing once before step 4 ships.
 
 ## Engine steps 1 and 2 (2026-10-20, idea-factory PR #10)
 

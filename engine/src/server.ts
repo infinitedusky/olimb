@@ -19,7 +19,7 @@ export function buildApp(bus: EventBus) {
   const api = new Hono()
 
   api.get('/', (c) => c.json({
-    engine: 'Idea Factory', step: '2 of 4: one task end to end (worktree, agent run, landing, PR)',
+    engine: 'Idea Factory', step: '3 of 4: parallel under the cap, dependents after landing, restart recovery, cleanup',
     routes: {
       'GET /health': 'database reachable?',
       'POST /workspaces': '{name}', 'POST /apps': '{workspaceId, name, defaultBranch?}',
@@ -135,9 +135,11 @@ export function buildApp(bus: EventBus) {
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()!)) {
   const bus = new EventBus()
   await bus.start()
+  const recovered = await runner.recover()
+  if (recovered.plans || recovered.tasks || recovered.reaped) console.log('recovered:', JSON.stringify(recovered))
   const port = Number(process.env.PORT ?? 4000)
   serve({ fetch: buildApp(bus).fetch, port }, (info) => console.log(`engine listening on http://localhost:${info.port}`))
-  const shutdown = async () => { await bus.stop(); await pool.end(); process.exit(0) }
+  const shutdown = async () => { await runner.shutdown(); await bus.stop(); await pool.end(); process.exit(0) }
   process.on('SIGINT', shutdown)
   process.on('SIGTERM', shutdown)
 }

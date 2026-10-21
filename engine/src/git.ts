@@ -1,5 +1,6 @@
 /** Git, as the engine uses it: one worktree per task, an integration branch per plan, fast-forward landings. */
 import { execFile } from 'node:child_process'
+import { realpath } from 'node:fs/promises'
 import { promisify } from 'node:util'
 
 const execFileP = promisify(execFile)
@@ -28,10 +29,19 @@ export async function ensureBranch(repo: string, name: string, from: string): Pr
   return headSha(repo, name)
 }
 
-/** A worktree at `path` on `branch`, creating the branch at `startPoint` if needed. */
+const real = (p: string) => realpath(p).catch(() => p) // git reports resolved paths (/private/var/… for /var/…)
+
+export async function worktreeExists(repo: string, path: string): Promise<boolean> {
+  const listed = (await git(repo, ['worktree', 'list', '--porcelain'])).stdout.split('\n')
+    .filter((l) => l.startsWith('worktree ')).map((l) => l.slice('worktree '.length))
+  const target = await real(path)
+  for (const l of listed) if ((await real(l)) === target) return true
+  return false
+}
+
+/** A worktree at `path` on `branch`, creating the branch at `startPoint` if needed. Idempotent. */
 export async function addWorktree(repo: string, path: string, branch: string, startPoint: string): Promise<void> {
-  const existing = (await git(repo, ['worktree', 'list', '--porcelain'])).stdout
-  if (existing.split('\n').includes(`worktree ${path}`)) return
+  if (await worktreeExists(repo, path)) return
   if (await branchExists(repo, branch)) await git(repo, ['worktree', 'add', path, branch])
   else await git(repo, ['worktree', 'add', '-b', branch, path, startPoint])
 }

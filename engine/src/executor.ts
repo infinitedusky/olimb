@@ -16,8 +16,12 @@ export interface RunInput {
   model?: string
   maxTurns?: number
   maxBudgetUsd?: number
+  resumeSessionId?: string // continue an interrupted run's conversation in the same worktree
+  abort?: AbortController
   onEvent: (type: string, payload: Record<string, unknown>) => Promise<void>
 }
+
+export type Execute = (i: RunInput) => Promise<RunOutput>
 
 export interface RunOutput {
   status: 'completed' | 'failed'
@@ -45,6 +49,7 @@ function prompt(i: RunInput): string {
     '- Commit your work with a clear message when it is done (git add -A && git commit). Leave nothing uncommitted.',
     '- Finish with a short summary for the reviewer: what changed, why, how you verified it, and anything you were unsure of.',
     i.previousFailure ? `\nYour previous attempt did not land. The reason:\n${i.previousFailure}\nFix that first.` : '',
+    i.resumeSessionId ? '\nThe engine restarted while you were working; your earlier conversation is resumed. Check the worktree state (git status, git log) before continuing.' : '',
   ].join('\n')
 }
 
@@ -59,6 +64,8 @@ export async function runTask(i: RunInput): Promise<RunOutput> {
       prompt: prompt(i),
       options: {
         cwd: i.worktreePath,
+        resume: i.resumeSessionId,
+        abortController: i.abort,
         model: i.model,
         maxTurns: i.maxTurns ?? 60,
         maxBudgetUsd: i.maxBudgetUsd,

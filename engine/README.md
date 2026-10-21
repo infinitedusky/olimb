@@ -1,9 +1,11 @@
 # Idea Factory engine
 
 The core: **plans are made of tasks; tasks form a dependency graph; the engine runs every task whose dependencies
-are done, in parallel, each agent on its own branch.** Steps 1 and 2 of four (`research/parallel-engine.md` §6)
-are here: the schema, the server, the event stream and the scheduler (1); one task end to end — a worktree from
-the plan's integration branch, a Claude Code run through the Agent SDK, the serial landing step, one PR per plan (2).
+are done, in parallel, each agent on its own branch.** Steps 1–3 of four (`research/parallel-engine.md` §6) are
+here: the schema, the server, the event stream and the scheduler (1); one task end to end — a worktree from the
+plan's integration branch, a Claude Code run through the Agent SDK, the serial landing step, one PR per plan (2);
+parallel for real — several tasks under the cap, dependents after their parents land, retries, recovery after a
+restart, cleanup once a plan lands (3).
 
 Founding rule (SHAPE.md): **git holds code, Postgres holds state, this server is the single writer.** The CLI, the
 UI and the VS Code view are clients; agents report events, they never write status.
@@ -43,8 +45,14 @@ the default branch). The agent works there with tools confined to the worktree (
 commits, and summarises. Landing is serialized per plan: merge the integration branch in → run the test command on
 the merged commit → fast-forward `plan/<plan>` by compare-and-swap. A failed run or landing re-queues the task with
 the reason, up to three attempts. The first landing pushes `plan/<plan>` and opens the plan's PR against the default
-branch via `gh`; later landings update it. Development runs on the operator's Claude Code login; a product
-deployment sets `ANTHROPIC_API_KEY`.
+branch via `gh`; later landings update it. When every task has landed, the task worktrees and local task branches
+are removed; the integration branch stays, it is the PR. Development runs on the operator's Claude Code login; a
+product deployment sets `ANTHROPIC_API_KEY`.
+
+Up to `SESSIONS_MAX` (default 4) tasks run at once across all plans. On startup the server recovers: runs left
+`working` are marked `interrupted`, their tasks re-queued (the next run resumes the agent's session in the same
+worktree), stray `claude` processes inside our worktree roots are stopped, and running plans are dispatched again.
+On SIGTERM, live runs are aborted so the agents stop.
 
 `GET /events?since=<seq>&plan=…` is the live feed (SSE): replay from a sequence number, then every committed
 event as it happens, via Postgres `LISTEN/NOTIFY`. Several clients can watch one run.
@@ -63,14 +71,15 @@ event as it happens, via Postgres `LISTEN/NOTIFY`. Several clients can watch one
 | `src/executor.ts` | One Agent SDK run on one task; messages → events (trimmed); tools confined to the worktree. |
 | `src/landing.ts` | Merge → test → fast-forward, serialized per plan; refuses conflicts and failing tests. |
 | `src/pr.ts` | One PR per plan via `gh`, opened at the first landing, updated after each. |
-| `src/runner.ts` | Start a plan, dispatch ready tasks, launch, land, retry, keep the PR current. |
+| `src/runner.ts` | Start a plan, dispatch ready tasks under the cap, launch, land, retry, keep the PR current, clean up, recover. |
+| `src/reap.ts` | Find and stop agent processes working inside our worktree roots (orphans after a crash). |
 | `src/cli/if.ts` | The `if` CLI. A client; only `migrate` touches the database. |
 
-`pnpm test` runs the scheduler and landing tests anywhere (landing uses a throwaway git repo) and the
-Postgres-backed plan tests when the database is up.
+`pnpm test` runs the scheduler and landing tests anywhere (landing uses a throwaway git repo) and, when the
+database is up, the plan tests and the runner tests (a fake executor on a throwaway repo: the cap, dependents after
+parents, retries with the reason, recovery, cleanup). The tests write to the same database the server uses.
 
-## Next (step 3)
+## Next (step 4)
 
-Parallel for real: several tasks at once under the cap, dependents dispatched after their parents land, orphan
-reaping and resume after a restart, worktree cleanup once a plan lands. Then step 4, the VS Code graph view over
-`/events`.
+The VS Code graph view over `/events`: nodes from `task`, edges from `task_dependency`, colour by status, the live
+run on each node, the plan's PR readiness.
