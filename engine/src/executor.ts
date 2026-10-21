@@ -5,7 +5,7 @@
  * Development runs on the operator's own Claude Code login; a product deployment sets ANTHROPIC_API_KEY.
  */
 import { query, type SDKMessage } from '@anthropic-ai/claude-agent-sdk'
-import { resolve, sep } from 'node:path'
+import { builderGuard, guardOptions } from './guard.js'
 
 export interface RunInput {
   phase: { id: string; number: number; title: string; brief: string | null }
@@ -58,13 +58,10 @@ function prompt(i: RunInput): string {
   ].join('\n')
 }
 
-const DENIED_BASH = /\b(git\s+(push|checkout|switch|rebase|reset\s+--hard|worktree)|gh\s+pr)\b/
 const READ_TOOLS = ['Read', 'Glob', 'Grep', 'LS', 'TodoWrite']
 const EDIT_TOOLS = ['Edit', 'Write', 'MultiEdit']
 
 export async function runTask(i: RunInput): Promise<RunOutput> {
-  const root = resolve(i.worktreePath) + sep
-  const inside = (p: unknown) => typeof p === 'string' && (resolve(i.worktreePath, p) + sep).startsWith(root)
   let out: RunOutput = { status: 'failed', error: 'no result message' }
   try {
     for await (const m of query({
@@ -77,21 +74,10 @@ export async function runTask(i: RunInput): Promise<RunOutput> {
         maxTurns: i.maxTurns ?? 60,
         maxBudgetUsd: i.maxBudgetUsd,
         settingSources: ['project'], // the repo's CLAUDE.md, not the operator's personal settings
-        allowedTools: [...READ_TOOLS, ...EDIT_TOOLS, 'Bash'],
+        tools: [...READ_TOOLS, ...EDIT_TOOLS, 'Bash'], // the whole tool set
+        allowedTools: READ_TOOLS, // auto-approved; the guard decides the rest (see guard.ts for why both hook and callback)
         permissionMode: 'default',
-        canUseTool: async (tool, input) => {
-          if (READ_TOOLS.includes(tool)) return { behavior: 'allow', updatedInput: input }
-          if (EDIT_TOOLS.includes(tool)) {
-            return inside((input as any).file_path) ? { behavior: 'allow', updatedInput: input }
-              : { behavior: 'deny', message: `Only files inside ${i.worktreePath} may be changed.` }
-          }
-          if (tool === 'Bash') {
-            const cmd = String((input as any).command ?? '')
-            return DENIED_BASH.test(cmd) ? { behavior: 'deny', message: 'The engine handles branches, pushes and pull requests.' }
-              : { behavior: 'allow', updatedInput: input }
-          }
-          return { behavior: 'deny', message: `${tool} is not available in a phase run.` }
-        },
+        ...guardOptions(builderGuard(i.worktreePath, READ_TOOLS, EDIT_TOOLS)),
       },
     })) {
       await handle(m, i.onEvent, (o) => { out = o })

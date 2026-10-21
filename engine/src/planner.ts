@@ -11,6 +11,7 @@ import { db } from './db/client.js'
 import { app, decision, question, repo, run, task } from './db/schema.js'
 import { appendEvent, type NewEvent } from './events.js'
 import { handle } from './executor.js'
+import { guardOptions, readerGuard } from './guard.js'
 import { newId } from './ids.js'
 import { addPhases, PlanError, planGraph, type NewPhase } from './plans.js'
 
@@ -101,7 +102,6 @@ function prompt(i: ProposeInput): string {
 }
 
 const READ_TOOLS = ['Read', 'Glob', 'Grep', 'LS']
-const READ_ONLY_BASH = /^\s*(git\s+(log|ls-files|show|blame|status|diff)|ls|cat|head|tail|wc|find|tree)\b[^|;&>`$]*$/
 
 /** The real planner: one Claude Code run, read-only in the repo, ending in a structured proposal. */
 export const proposeWithAgent: Propose = async (i) => {
@@ -117,14 +117,11 @@ export const proposeWithAgent: Propose = async (i) => {
         maxTurns: i.maxTurns ?? 40,
         maxBudgetUsd: i.maxBudgetUsd,
         settingSources: ['project'],
-        allowedTools: [...READ_TOOLS, 'Bash'],
+        tools: [...READ_TOOLS, 'Bash'], // the whole tool set
+        allowedTools: READ_TOOLS, // auto-approved; the guard decides Bash (see guard.ts)
         permissionMode: 'default',
         outputFormat: { type: 'json_schema', schema: PROPOSAL_SCHEMA },
-        canUseTool: async (tool, input) => {
-          if (READ_TOOLS.includes(tool)) return { behavior: 'allow', updatedInput: input }
-          if (tool === 'Bash' && READ_ONLY_BASH.test(String((input as any).command ?? ''))) return { behavior: 'allow', updatedInput: input }
-          return { behavior: 'deny', message: 'The planner reads; it changes nothing. Use Read, Glob, Grep, or a read-only git, ls, cat, head, tail, wc, find or tree command.' }
-        },
+        ...guardOptions(readerGuard(READ_TOOLS)),
       },
     })) {
       if (m.type === 'result') structured = (m as any).structured_output
@@ -264,6 +261,19 @@ export async function finishPlanning(ctx: PlanningContext, opts: { propose?: Pro
 /** The whole thing, for the CLI and tests. */
 export async function planTask(taskId: string, opts: { propose?: Propose; actor?: string } = {}) {
   return finishPlanning(await preparePlanning(taskId, opts), opts)
+}
+
+/** After a restart: a planner run that was working is gone; say so, and the task can be planned again. */
+export async function recoverPlanning() {
+  const stranded = await db.select().from(run).where(and(eq(run.kind, 'plan'), eq(run.status, 'working')))
+  for (const r of stranded) {
+    await db.update(run).set({ status: 'interrupted', endedAt: new Date(), error: 'engine restarted' }).where(eq(run.id, r.id))
+    const [t] = r.taskId ? await db.select().from(task).where(eq(task.id, r.taskId)) : []
+    if (!t) continue
+    const [a] = await db.select().from(app).where(eq(app.id, t.appId))
+    await emit({ workspaceId: a.workspaceId, appId: a.id, planId: t.planId, taskId: t.id, runId: r.id, actor: 'engine', type: 'task.plan_failed', payload: { attempt: r.attempt, error: 'engine restarted while planning' } })
+  }
+  return stranded.length
 }
 
 /** A person answers a question. (A late answer that disagrees with what was built opens a follow-on; that comes with follow-ups.) */

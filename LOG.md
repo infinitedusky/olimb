@@ -445,9 +445,26 @@ provisional until approved, `question` open; a `run` of kind `plan` on the task 
 server sets the cost**: any option that changes what was agreed makes the question expensive, whatever the agent
 said (InDusk's rule, kept). Events: `task.planning`, the run's messages, `question.asked`, `task.planned` /
 `task.plan_failed`; the request returns 202 at once (`?wait=1` to hold). Tests with a fake proposer; 27 passing.
+- **First live run** (plan `plan_s7LcjyCmlBFn`, one authored task, "Spaced repetition on missed questions", brief
+  in Sandy's words): Opus, 10 turns, 220 s, $1.16 est. Three phases in a chain (memory + due logic → wired into
+  the quiz and the gate rule → parent page), each with files, steps with technical notes, checks and done-when;
+  **seven decisions** each with rejected alternatives and a reason (kept the 4-of-5 threshold; returns from the
+  next night, never a same-night retry; returning questions take slots inside the five, unmarked; plugs in only
+  through `quizzes.passed`; a `review_items` table); **two questions**, both raised to expensive by the server
+  because an option declares what it changes ("same question or a new version of it?", "done after one right
+  answer?"); notes with its assumptions. It read as a plan I would approve. Started from the UI's Plan button;
+  the page updated live.
+- **Found while watching it: every agent guard so far was inert.** The SDK auto-approves bare names in
+  `allowedTools` before `canUseTool` is consulted, and allow rules from settings files shadow the callback too
+  (Sandy's own settings allow `Bash(git push:*)`). So "no push / no checkout / no gh pr", "edits only inside the
+  worktree" and the planner's read-only rule never fired; nothing went wrong only because the agents did as told.
+  Fixed in `engine/src/guard.ts`: the guard is a **PreToolUse hook** (consulted for every call, before any allow
+  rule) and `canUseTool` as the fallback; `tools` restricts the set, `allowedTools` holds only the read tools.
+  Verified live with `settingSources: ['user', 'project']`: `git push --dry-run` and a piped `git log | head`
+  denied by the hook, `git status` through. Lesson for the log: a guard that has never been seen to refuse
+  something has not been tested.
 - Kept out on purpose: the plan-level conversation (say the brief back before planning), approval of decisions,
-  late answers opening follow-ons, re-planning a task that has phases (remove them first). Next after this: the
-  UI shows the planner's questions and decisions on the plan page and plans a task with one click.
+  late answers opening follow-ons, re-planning a task that has phases (remove them first).
 - The UI moved to the vocabulary too (PR #11): phases are the nodes, labelled with their task; tasks in order
   above the graph; steps live on the node; the composer authors tasks with optional phases.
 

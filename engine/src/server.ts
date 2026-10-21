@@ -9,7 +9,7 @@ import { db, pool } from './db/client.js'
 import { app as appTable, PHASE_STATUSES, repo as repoTable, workspace, type PhaseStatus } from './db/schema.js'
 import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
-import { answerQuestion, finishPlanning, preparePlanning } from './planner.js'
+import { answerQuestion, finishPlanning, preparePlanning, recoverPlanning } from './planner.js'
 import { addPhases, appGraph, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
 import { runner } from './runner.js'
 
@@ -140,6 +140,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()
   const bus = new EventBus()
   await bus.start()
   const recovered = await runner.recover()
+  const stranded = await recoverPlanning()
+  if (stranded) console.log(`[engine] ${stranded} planner run(s) interrupted by the restart; plan those tasks again`)
   if (recovered.plans || recovered.phases || recovered.reaped) console.log('recovered:', JSON.stringify(recovered))
   const port = Number(process.env.PORT ?? 4000)
   serve({ fetch: buildApp(bus).fetch, port }, (info) => console.log(`engine listening on http://localhost:${info.port}`))
