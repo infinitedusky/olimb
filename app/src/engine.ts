@@ -11,7 +11,8 @@ export interface Step { id: number; position: number; text: string; status: 'pen
 export interface GraphPhase {
   id: string; number: number; title: string; brief: string | null; status: PhaseStatus; attempt: number; maxAttempts: number
   planId: string; taskId: string; branch: string | null; heldReason: string | null
-  dependsOn: string[]; files: string[]; lastRun: Run | null; steps?: Step[]
+  dependsOn: string[]; orderedAfter?: string[] // explicit dependencies; and task order, drawn (finishers of the task before)
+  files: string[]; lastRun: Run | null; steps?: Step[]
 }
 export interface GraphTask { id: string; number: number; position: number; title: string; brief: string | null; phaseIds: string[] }
 // What the planner settled (provisional until a person approves) and what it could not.
@@ -25,6 +26,7 @@ export interface Graph {
   phases: GraphPhase[]
   decisions: Decision[]
   questions: Question[]
+  conflicts: [string, string][] // open phases that claim the same path: they take turns
 }
 export interface PlanSummary { id: string; title: string; status: string; createdAt: string; app: { id: string; name: string } | null; taskCount: number; phases: Record<string, number> }
 export interface App { id: string; name: string; defaultBranch: string }

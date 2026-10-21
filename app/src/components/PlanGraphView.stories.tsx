@@ -32,5 +32,8 @@ export const WithAFailure: Story = { args: { phases: [
   ph(5, 'README: settings are validated', 'queued', { heldReason: 'blocked: phase #2 failed' }),
 ] } }
 export const NotStarted: Story = { args: { phases: midRun.map((x) => ({ ...x, status: 'queued' as const, attempt: 0, branch: null, heldReason: null, lastRun: null, steps: undefined })) } }
-export const SharedFiles: Story = { args: { phases: midRun.slice(0, 3).map((x) => ({ ...x, status: 'queued' as const, lastRun: null, steps: undefined })), links: [['ph_sample1', 'ph_sample3']] } }
+export const SharedFiles: Story = { args: {
+  phases: midRun.slice(0, 3).map((x) => ({ ...x, status: 'queued' as const, lastRun: null, steps: undefined, files: x.number === 2 ? ['.github/workflows/ci.yml'] : ['poc/hg/db.py'] })),
+  conflicts: [['ph_sample1', 'ph_sample3']],
+} }
 export const SinglePhase: Story = { args: { phases: [ph(1, 'Add a GET /health endpoint to the POC', 'done', { lastRun: run('completed', '0.40') })], labels: { ph_sample1: 'A health endpoint' } } }

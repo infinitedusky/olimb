@@ -56,7 +56,7 @@ export function PlanPage() {
       </ol>
 
       {graph.phases.length
-        ? <PlanGraphView phases={graph.phases} labels={Object.fromEntries(graph.phases.map((p) => [p.id, short(taskOf(p)?.title ?? '')]))} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} />
+        ? <PlanGraphView phases={graph.phases} labels={Object.fromEntries(graph.phases.map((p) => [p.id, short(taskOf(p)?.title ?? '')]))} conflicts={graph.conflicts} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} />
         : <div className="empty">No phases yet. <strong>Plan</strong> a task above: the planner reads the repo and the task's brief and proposes phases, decisions and questions. Or write phases by hand with <code>pnpm if task phases</code>.</div>}
 
       {(graph.questions.length > 0 || graph.decisions.length > 0) && (
@@ -159,7 +159,10 @@ function PhaseDetail({ phase, task, planStatus, busy, act }: { phase: GraphPhase
         <dt>Task</dt><dd>{task ? `#${task.number} ${task.title}` : '—'}</dd>
         <dt>Brief</dt><dd>{phase.brief ? <div className="brief">{phase.brief}</div> : <span className="faint">None.</span>}</dd>
         <dt>Files</dt><dd>{phase.files.length ? <span className="mono">{phase.files.join(', ')}</span> : <span className="faint">None declared: claims the whole app.</span>}</dd>
-        <dt>Depends on</dt><dd>{phase.dependsOn.length ? `${phase.dependsOn.length} phase${phase.dependsOn.length > 1 ? 's' : ''}` : <span className="faint">Nothing explicit (task order still applies).</span>}</dd>
+        <dt>Depends on</dt><dd>
+          {phase.dependsOn.length ? `${phase.dependsOn.length} phase${phase.dependsOn.length > 1 ? 's' : ''}` : <span className="faint">Nothing explicit.</span>}
+          {phase.orderedAfter?.length ? <span className="faint"> Task order: after {phase.orderedAfter.length} phase{phase.orderedAfter.length > 1 ? 's' : ''} of the task before.</span> : null}
+        </dd>
         <dt>Held</dt><dd>{phase.heldReason ?? <span className="faint">Not held.</span>}</dd>
         <dt>Branch</dt><dd>{phase.branch ? <span className="mono">{phase.branch}</span> : <span className="faint">Not started.</span>}</dd>
         <dt>Attempts</dt><dd>{phase.attempt} of {phase.maxAttempts}</dd>

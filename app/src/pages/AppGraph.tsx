@@ -55,7 +55,7 @@ export function AppGraph() {
       <div className="page-head">
         <div>
           <h1>Graph</h1>
-          <p className="muted" style={{ margin: '4px 0 0' }}>Every phase of every plan. Anything open and unblocked runs; phases that share a file take turns; a plan's tasks go in order.</p>
+          <p className="muted" style={{ margin: '4px 0 0' }}>Every phase of every plan. An arrow is a wait: the phase at its head starts after the one at its tail lands. A dashed area is a shared file: the phases inside take turns.</p>
         </div>
         {apps.length > 1 && <select value={appId} onChange={(e) => setAppId(e.target.value)}>{apps.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select>}
       </div>
@@ -69,7 +69,7 @@ export function AppGraph() {
             {error && <Badge tone="warn" dot>{error}</Badge>}
           </div>
           {data.phases.length
-            ? <PlanGraphView phases={data.phases} labels={Object.fromEntries(data.phases.map((p) => [p.id, short(taskOf(p)?.title ?? planOf(p)?.title ?? '')]))} links={data.conflicts} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} tall />
+            ? <PlanGraphView phases={data.phases} labels={Object.fromEntries(data.phases.map((p) => [p.id, short(taskOf(p)?.title ?? planOf(p)?.title ?? '')]))} conflicts={data.conflicts} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} tall />
             : <div className="empty">No phases in {data.app.name} yet.</div>}
           {selected && (
             <section className="panel">
