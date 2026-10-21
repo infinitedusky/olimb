@@ -61,9 +61,11 @@ plan.command('graph').argument('<planId>').action(async (planId: string) => {
   for (const t of g.tasks) {
     console.log(`  task #${t.number} ${t.title}`)
     for (const x of g.phases.filter((q) => q.taskId === t.id)) {
-      const deps = x.dependsOn.length ? `  ← ${x.dependsOn.map((d: string) => '#' + (g.phases.find((q) => q.id === d)?.number ?? d)).join(', ')}` : ''
+      const num = (d: string) => '#' + (g.phases.find((q) => q.id === d)?.number ?? d)
+      const deps = x.dependsOn.length ? `  ← ${x.dependsOn.map(num).join(', ')}` : ''
+      const after = x.orderedAfter?.length ? `  ⇐ ${x.orderedAfter.map(num).join(', ')} (task order)` : ''
       const held = x.heldReason ? `  [held: ${x.heldReason}]` : ''
-      console.log(`    ${x.status.padEnd(15)} ${x.id}  #${x.number} ${x.title}${deps}${held}`)
+      console.log(`    ${x.status.padEnd(15)} ${x.id}  #${x.number} ${x.title}${deps}${after}${held}`)
       for (const s of x.steps ?? []) console.log(`      ${s.status === 'completed' ? '✓' : s.status === 'in_progress' ? '●' : '○'} ${s.text}`)
     }
   }

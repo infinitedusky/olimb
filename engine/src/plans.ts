@@ -107,25 +107,59 @@ async function loadPlan(tx: Tx | typeof db, planId: string) {
   const [thePr] = await tx.select().from(pr).where(eq(pr.planId, planId))
   const decisions = await tx.select().from(decision).where(eq(decision.planId, planId))
   const questions = await tx.select().from(question).where(eq(question.planId, planId)).orderBy(asc(question.askedAt))
+  const full = phases.map((x) => {
+    const last = runs.filter((r) => r.phaseId === x.id).sort((r, q) => q.attempt - r.attempt)[0] ?? null
+    return {
+      ...x,
+      dependsOn: deps.filter((d) => d.phaseId === x.id).map((d) => d.dependsOnPhaseId),
+      files: claims.filter((c) => c.phaseId === x.id).map((c) => c.path),
+      lastRun: last,
+      steps: last ? steps.filter((s) => s.phaseId === x.id && s.runId === last.id) : [],
+    }
+  })
+  const order = orderEdges(full, tasks)
   return {
     plan: p, app: { id: a.id, name: a.name, defaultBranch: a.defaultBranch, workspaceId: a.workspaceId }, pr: thePr ?? null,
     decisions, questions, // the planner's: what it settled (provisional until approved) and what it could not
     tasks: tasks.map((t) => ({ ...t, phaseIds: phases.filter((x) => x.taskId === t.id).map((x) => x.id) })),
-    phases: phases.map((x) => {
-      const last = runs.filter((r) => r.phaseId === x.id).sort((r, q) => q.attempt - r.attempt)[0] ?? null
-      return {
-        ...x,
-        dependsOn: deps.filter((d) => d.phaseId === x.id).map((d) => d.dependsOnPhaseId),
-        files: claims.filter((c) => c.phaseId === x.id).map((c) => c.path),
-        lastRun: last,
-        steps: last ? steps.filter((s) => s.phaseId === x.id && s.runId === last.id) : [],
-      }
-    }),
+    phases: full.map((x) => ({ ...x, orderedAfter: order.get(x.id) ?? [] })),
+    conflicts: fileConflicts(full),
   }
+}
+
+/** Pairs of open phases that claim the same path (a file, or a directory above it): they never run at once. */
+export function fileConflicts(phases: { id: string; status: string; files: string[] }[]): [string, string][] {
+  const open = phases.filter((x) => !['done', 'failed', 'cancelled'].includes(x.status))
+  const out: [string, string][] = []
+  for (let i = 0; i < open.length; i++) for (let j = i + 1; j < open.length; j++) {
+    const x = open[i], y = open[j]
+    if (x.files.length && y.files.length && x.files.some((f) => y.files.some((g) => claimsOverlap(f, g)))) out.push([x.id, y.id])
+  }
+  return out
 }
 
 export const planGraph = (planId: string) => loadPlan(db, planId)
 export type Graph = NonNullable<Awaited<ReturnType<typeof planGraph>>>
+
+/**
+ * Task order, drawn: the phases that start a task point back at the phases that finish the nearest earlier task
+ * with phases. Transitively the same constraint as impliedDeps, with far fewer edges, so a graph reads left to
+ * right: whatever a phase waits on is to its left.
+ */
+export function orderEdges(phases: { id: string; taskId: string; dependsOn: string[] }[], tasks: { id: string; position: number }[]): Map<string, string[]> {
+  const pos = new Map(tasks.map((t) => [t.id, t.position]))
+  const byTask = new Map<string, typeof phases>()
+  for (const x of phases) byTask.set(x.taskId, [...(byTask.get(x.taskId) ?? []), x])
+  const ordered = [...byTask.entries()].sort((a, b) => (pos.get(a[0]) ?? 0) - (pos.get(b[0]) ?? 0)).map((e) => e[1])
+  const out = new Map<string, string[]>(phases.map((x) => [x.id, []]))
+  for (let i = 1; i < ordered.length; i++) {
+    const prev = ordered[i - 1], cur = ordered[i]
+    const curIds = new Set(cur.map((x) => x.id))
+    const finishers = prev.filter((x) => !prev.some((y) => y.dependsOn.includes(x.id))).map((x) => x.id)
+    for (const x of cur) if (!x.dependsOn.some((d) => curIds.has(d))) out.set(x.id, finishers.filter((f) => !x.dependsOn.includes(f)))
+  }
+  return out
+}
 
 /** Task order as edges: a phase depends on every phase of the earlier tasks in its plan. */
 function impliedDeps(phases: { id: string; taskId: string }[], tasks: { id: string; position: number }[]): Map<string, string[]> {
@@ -251,15 +285,12 @@ export async function appGraph(appId: string) {
     files: claims.filter((c) => c.phaseId === x.id).map((c) => c.path),
     lastRun: runs.filter((r) => r.phaseId === x.id).sort((r, q) => q.attempt - r.attempt)[0] ?? null,
   }))
-  const open = full.filter((x) => !['done', 'failed', 'cancelled'].includes(x.status))
-  const conflicts: [string, string][] = []
-  for (let i = 0; i < open.length; i++) for (let j = i + 1; j < open.length; j++) {
-    const x = open[i], y = open[j]
-    if (x.files.length && y.files.length && x.files.some((f) => y.files.some((g) => claimsOverlap(f, g)))) conflicts.push([x.id, y.id])
-  }
+  const conflicts = fileConflicts(full)
+  const order = new Map<string, string[]>()
+  for (const p of plans) for (const [id, after] of orderEdges(full.filter((x) => x.planId === p.id), tasks.filter((t) => t.planId === p.id))) order.set(id, after)
   return {
     app: { id: a.id, name: a.name, defaultBranch: a.defaultBranch },
     plans: plans.map((p) => ({ ...p, pr: prs.find((q) => q.planId === p.id) ?? null })),
-    tasks, phases: full, conflicts,
+    tasks, phases: full.map((x) => ({ ...x, orderedAfter: order.get(x.id) ?? [] })), conflicts,
   }
 }
