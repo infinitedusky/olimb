@@ -14,12 +14,17 @@ export interface GraphPhase {
   dependsOn: string[]; files: string[]; lastRun: Run | null; steps?: Step[]
 }
 export interface GraphTask { id: string; number: number; position: number; title: string; brief: string | null; phaseIds: string[] }
+// What the planner settled (provisional until a person approves) and what it could not.
+export interface Decision { id: string; taskId: string | null; question: string; options: { key: string; text: string; recommended: boolean }[]; chosen: string | null; provisional: boolean; rationale: string | null }
+export interface Question { id: string; taskId: string | null; text: string; options: { label: string; description: string; changes: string[]; recommended: boolean }[]; reason: string | null; cost: 'cheap' | 'moderate' | 'expensive' | null; status: string; answer: string | null }
 export interface Graph {
   plan: { id: string; title: string; status: string; integrationBranch: string | null; spec: string | null; createdAt: string }
   app: { id: string; name: string; defaultBranch: string }
   pr: { number: number; url: string; status: string } | null
   tasks: GraphTask[]
   phases: GraphPhase[]
+  decisions: Decision[]
+  questions: Question[]
 }
 export interface PlanSummary { id: string; title: string; status: string; createdAt: string; app: { id: string; name: string } | null; taskCount: number; phases: Record<string, number> }
 export interface App { id: string; name: string; defaultBranch: string }
@@ -40,6 +45,8 @@ export const engine = {
   graph: (id: string) => call<Graph>('GET', `/plans/${id}/graph`),
   createPlan: (body: { appId: string; title: string; spec?: string; tasks: NewTask[] }) => call<{ plan: { id: string } }>('POST', '/plans', body),
   addPhases: (taskId: string, phases: NewPhase[]) => call<unknown>('POST', `/tasks/${taskId}/phases`, phases),
+  planTask: (taskId: string) => call<{ runId: string }>('POST', `/tasks/${taskId}/plan`), // 202; the outcome arrives as task.planned / task.plan_failed
+  answer: (questionId: string, answer: string) => call<unknown>('POST', `/questions/${questionId}/answer`, { answer }),
   start: (id: string) => call<unknown>('POST', `/plans/${id}/start`),
   tick: (id: string) => call<unknown>('POST', `/plans/${id}/tick`),
   setStatus: (phaseId: string, status: PhaseStatus) => call<unknown>('POST', `/phases/${phaseId}/status`, { status }),
@@ -47,6 +54,7 @@ export const engine = {
 
 export const EVENT_TYPES = [
   'plan.created', 'plan.started', 'plan.landed', 'plan.cleaned', 'task.created',
+  'task.planning', 'task.planned', 'task.plan_failed', 'question.asked', 'question.answered',
   'phase.created', 'phase.status', 'phase.held', 'phase.retry', 'phase.failed', 'phase.error', 'phase.interrupted',
   'run.started', 'run.message', 'run.steps', 'run.tool_call', 'run.tool_result', 'run.result', 'run.error', 'run.rate_limit',
   'land.committed', 'land.tested', 'land.landed', 'land.conflict', 'land.retry', 'pr.opened', 'pr.updated', 'pr.error',
