@@ -240,15 +240,16 @@ above (20–30 photographed pages).
 ### Audience: teenagers (Sandy, 2026-10-20)
 
 "This really is for teenagers. Young kids are not getting homework and their
-parents can control their devices more." The student is Sandy's **little
-brother**: **13, 8th grade**; plays Fortnite, watches TikTok sports
-videos. Consequences:
+parents can control their devices more." The student is a teenager in
+**8th grade**, in Sandy's family; his interests (a popular battle-royale game, short
+sports videos) shaped the design. Consequences:
 - Nothing that feels like a kids' app (drop/limit handwritten cheer,
   mascots, Khan Kids tone). Heron's grown-up look, the Sprayground shark and
   Brick's self-chosen framing already fit.
-- Borrow from Fortnite: homework steps as daily quests, mastery as tiers,
-  XP across nights, the gate opening as the win screen. From TikTok: help is
-  short and vertical (60-second explanations); tutor examples from sports.
+- Borrow from the games he plays: homework steps as daily quests, mastery as
+  tiers, XP across nights, the gate opening as the win screen. From the short
+  videos he watches: help is short and vertical (60-second explanations);
+  tutor examples from sports.
 - Product: teens have their own phones, so the gate must be something they
   accept — autonomy ("this is mine, it helps me") is the core, not the tone.
 - Open: who is "the parent" in the interview — Sandy, the parents, or both?
@@ -271,7 +272,7 @@ unlocks itself.
 - **Parent-managed** (Sandy): Family Sharing / child authorization, like
   Bark — a parent approves on his phone; he can't turn it off. Apple
   combines all apps' restrictions, so Bark/Downtime blocks still apply;
-  for the demo Homework Gate must be what blocks games/TikTok. Pitch:
+  for the demo Homework Gate must be what blocks games and video apps. Pitch:
   Bark watches and blocks; Homework Gate unlocks when he's earned it.
 - Server: stays on this machine behind a tunnel (Cloudflare Tunnel or
   Tailscale) so the model stays on Sandy's subscription, personal use.
@@ -402,6 +403,11 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
    Recommended order: tamper rule + router next, dongle prototype after.
    Waiting on: router admin access at the house (else a cheap second
    router).
+10. **Tutor as a side panel that can point** (Sandy, 2026-10-20, raised while
+    step 3 ran). The tutor is a floating section on the right that you open;
+    it pushes the page left, and it can move the page and highlight parts of
+    it ("look at this"). Fits the explain-out-loud quiz and the field-notebook
+    tutor screen. Captured, not chased.
 5. **Bounties and a support circle** (parked). Parents post bounties for
    extra work; others in his life join in (an uncle reading with him 3 h a
    week; the parent offers a gift card to the helper) — framed as
@@ -426,6 +432,328 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
   marked talked-about. N=1: trends, not proof.
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
+
+## The name, again: Self Evident (Sandy, 2026-10-22)
+
+Sandy, after a day with Olimb: "less sold on this name" — properplan, buildrite, then "Self Evident is nice too,
+the thing proves itself." The test that settled it: the goal is strangers trying it on GitHub, so the name has to
+say the idea before anyone reads a line. Olimb named the loop but needed the five icons to explain itself;
+properplan and buildrite each named one stage (and the last one, ceremony). **Self Evident** names the idea: the
+mock-up makes the decision self-evident, the shipped build proves itself through telemetry, the promises are
+clauses the app asserts about itself. Checked: `selfevident` free on npm and PyPI; `self-evident.dev`,
+`selfevident.dev/.ai/.io` no DNS; three repos on GitHub with the name. Repository renamed to
+`infinitedusky/self-evident` (GitHub redirects `olimb` and `idea-factory`); it is **public** as of today.
+In code: packages `self-evident` / `@self-evident/engine`, CLI `pnpm se …` (`if` kept), wordmark "Self Evident."
+with the accent period, the five icons stay as the nav and the loop; the agent introduces itself as Self Evident's.
+The adverb is the engine's voice ("Landed, self-evidently"). Lesson for the record: a name that needs its logo to
+explain it is a name for people already inside.
+
+## The name: Olimb (Sandy, 2026-10-22)
+
+Sandy: "olimb… stands for observe, learn, ideate, mockup, build." The acronym is the thesis in order — Observe
+(telemetry, the floor) → Learn → Ideate (the inbox) → Mockup (decide on something real) → Build (plans, phases,
+PRs) → back to Observe — and it sounds like "climb". Checked the same minute: `olimb` is free on npm and PyPI;
+`olimb.dev`, `olimb.ai`, `olimb.io` have no DNS (confirm at a registrar); `olimb.com` is taken; the GitHub user
+`olimb` exists, `infinitedusky/olimb` is free. Same day: Sandy renamed the repository to `infinitedusky/olimb` (private still; going public next), and the
+product is renamed in code on PR #12 — brand **O.L.I.M.B** in the UI with the five words under it, packages
+`olimb` / `@olimb/engine`, the CLI `pnpm olimb …` (`if` kept as an alias), the agent introduces itself as
+Olimb's, PR bodies say "Built by Olimb"; the app row inside the factory is now "Olimb". Kept as they were: the
+local folder name (Claude Code's memory is keyed by it), the Postgres user/database/container `ideafactory`
+(renaming would orphan the volume for no gain). "Auto Olimb" (Sandy) is the name for the mode where nothing
+waits for a person: a PR merges itself when its checks hold and rolls back on the signal. SHAPE.md's title
+changes when PR #6 lands.
+- **The logo** (Sandy, same day): the five steps as five emoji, close together — 🔭🧠💡✏️🔨 — "it is fun."
+  Considered first (`app/public/logo-ideas.html`, kept as the record): "climb" with the C closed into an O by a
+  pencil, by a climber, by a thin line; a tree whose hollow is the O; the letters alone with accent periods; the
+  letters with the five words under them. The emoji won on the thing that matters for this product: it is the
+  loop, readable by a teenager, and nobody has to be told what it means. Known cost, accepted: emoji render
+  differently per platform; if that ever bothers us, swap in one fixed set (Noto or Twemoji) as inline SVG. Then settled
+  (Sandy): the **wordmark** O.L.I.M.B at the top of the site, the **five icons as the nav** — the nav *is* the
+  loop: 🔭 Observe (Now), 🧠 Learn, 💡 Ideate (the inbox), ✏️ Mockup, 🔨 Build (plans, Graph as its view), then
+  Talk and Settings — and the **emoji row as the logo outside** the site (README, social). Sandy: "plan and task are
+  not really part of that, they are a way of building" — so Build is the stage and plans/tasks/phases are its
+  machinery, the way Now is inside Observe. Learn and Mockup exist as pages before their content, each saying what
+  exists today and what lands there, so the loop is whole in the nav from day one. The bulb is the favicon.
+
+## Talk: an agent you can talk to, in the UI (2026-10-22, idea-factory PR #12)
+
+Sandy: "the big missing piece is an agent we can talk to. We need this environment." Built as `engine/src/talk.ts`:
+an interactive Agent SDK session the engine owns — the same Claude Code the planner and the builders run, with a
+person on the other end. Its cwd is the factory checkout (so CLAUDE.md, LOG.md, SHAPE.md are its context) or an
+app's repo; **the engine is its MCP tools** (`createSdkMcpServer`: now, plans, plan_graph, ideas, create_idea,
+create_plan, plan_task, answer_question, start_plan, cancel_plan, events); reads are free, **edits and commands
+wait for the person's yes in the UI** (Allow / Allow for this conversation / Deny — Claude Code's default mode,
+in the browser). The transcript is rows (`session` now has kind/cwd/agent_session_id; `session_message` has
+kind/payload; migration 0002) plus `talk.*` events, so a conversation survives a restart and resumes from its SDK
+session id. Streaming input: one long-lived `query()` with an async-iterable prompt; each person's message is
+pushed in; each turn ends in a `result` row. UI: `/talk`, sessions on the left, the conversation (tool calls
+folded, results collapsible), permission cards, Stop / End.
+- First exchange, from the web: "What needs me right now?" → it called `mcp__engine__now`, answered with the open
+  spaced-repetition question and the demo plan ready to run, and recommended which to do first. 5 rows, one turn.
+- Decided on the way: the agent may edit the factory itself from the web, every edit and command approved; no
+  hard deny on push/PR for this agent (the person is the guard), unlike the builders.
+- **Then, same day (Sandy: "overlaid on the whole app, so it follows you around and you can ask it to do
+  whatever")**: the agent is a drawer on every page (floating button, ⌘J), one conversation carried along; each
+  message is sent with where the person is (`context: {path, planId, appId}`), which the engine turns into one
+  line the agent sees ("The person is looking at plan … (drafting; 1 task, 3 phases, 1 open question)") while the
+  transcript keeps the plain text. Checked on the spaced-repetition plan: "what's still open on this plan?" → it
+  called `plan_graph` for that plan unprompted and answered specifically.
+- **One app at a time** (Sandy): the current app is picked in the nav and highlighted; Now, Plans, Ideas, the
+  Graph and the agent's working directory follow it (`?app=` on the routes). **The Idea Factory is now an app**
+  (repo `infinitedusky/idea-factory`, local checkout, `pnpm -r test`), so it is built through the same
+  machinery as Homework Gate — the "build the factory inside the app" loop Sandy asked for.
+- **The app is the conversation** (Sandy: "the app you are on should determine the chat and only one at a time,
+  so we can remove the dropdown"): one open conversation per app (`POST /talks/current` finds or starts it); the
+  drawer and the Talk page show the current app's and switch when the app switches; Start over ends it and begins
+  a new one; earlier conversations about the app are listed, read-only.
+- **app_id on every row** (Sandy saw Homework Gate ideas while on the Idea Factory app; asked whether the tenant key
+  belongs on every table or only on the parent — answer: every table, the multi-tenant norm, because derived
+  scoping leaks the first time a join is forgotten, and RLS/sharding need the column). Done: every table below an
+  app carries `app_id`, required; composite foreign keys tie each row to its parent's app (`(plan_id, app_id) →
+  plan(id, app_id)` and likewise task/phase/idea/session); `(app_id, …)` indexes; migration 0003 hand-ordered
+  (add nullable → backfill from the parent → drop development chatter with no app → require → keys). Conversations
+  and events now require an app; a talk session's cwd is the app's checkout. The visible leak was the UI: the
+  design-note idea files were shown regardless of app, and pages fetched once before the current app was known.
+- Next: previews per branch; decisions approvable. With this, the loop closes: work in the UI, talk to the agent
+  there, come back to this chat only when the factory itself needs a fix the agent can't make.
+
+## Web first: the UI becomes the place Sandy works (2026-10-21, idea-factory PR #12)
+
+Sandy: "I need to get Idea Factory to a place where I can start interacting with it on the web, or else I'm never
+going to know what it's doing… building Homework Gate through there, coming back here when we notice problems to
+fix on Idea Factory." Decision: the web UI is the working surface; this chat is where the factory gets fixed.
+Local only for now. Done tonight on `web-first` (stacked on #11 → #10):
+- **One command, one address**: `pnpm dev` at the root brings up Postgres, the engine and the UI
+  (http://localhost:5180); `pnpm start` serves the built UI from the engine on :4000. API under `/api`,
+  migrations on boot, deep links.
+- **Now** at `/`: needs-you (failed phases, open questions, drafts to plan or run, landed plans with a PR waiting),
+  each with its action; running plans with each live phase's current step and what's held; just-happened. Live.
+- **Settings**: apps and repos (test command, model, budget) edited on the web; add an app. No CLI for setup.
+- **Plan page**: Plan / Re-plan a task (clears the planner's output and runs it again), Discard draft, Cancel plan
+  (agents aborted, landed work kept, worktrees removed; an aborted run no longer re-queues its phase).
+- **Graph**: edges only, left to right by what a phase waits on; the dashed file areas are gone.
+- **Ideas inbox**: type it, it's kept; "Make it a task" (a plan of one, the body as the brief) or "Break it
+  down" (the composer prefilled). Tonight's two captured ideas went in through it.
+Still to do for "usable for Homework Gate": previews per branch (`preview_cmd`), decisions approvable. Waiting on
+Sandy: merge #5 → #11 → #10 → #12, and the two POC variants on homework-gate #18. The dev stack runs from the
+`web-first` worktree until then: http://localhost:5180.
+
+## The factory by hand: the spaced-repetition POC (2026-10-21, homework-gate PR #18, draft)
+
+The first task done the thesis's way: a proof of concept to react to *before* planning, instead of decision cards.
+Branch `spaced-repetition-poc` in its own worktree; Storybook stories rendered from the real templates with sample
+data; app on 8002, Storybook on 6008 (`STORYBOOK_APP` override added so a Storybook can point at any checkout).
+- **What it shows**: quiz with a returning question in slot 3, unmarked (two variants: new version / exact same);
+  result page for *first miss, still passes* (banner says it will come back), *second miss holds the gate* (the
+  4-of-5 banner that explains itself), *returning question cleared* (two variants: done / comes back once more);
+  parent page with a **Coming back** card (first missed, how often, waiting / due / holding the gate) and tags in
+  the quiz table. Templates render nothing new without the new data; no routes, storage or grading touched.
+- **What it took**: ~25 minutes by hand. Three template conditionals, ~60 lines of sample data, two manifest
+  edits, the existing `test_stories.py` as the check that every story renders (it caught a missing `endif`).
+  Compared with the planner's run on the same task: $1.16 and 220 s produced seven decisions to *read*; this
+  produced eight screens to *look at*, and the two real questions fell out as variants rather than cards.
+- **What the tool needs, from doing it by hand**: (1) a *POC phase* the planner emits first for anything with a
+  surface — stories + sample data + manifest entries, landing as a branch, verified by "every story renders";
+  (2) **a preview per branch**: a Storybook (and app) per worktree, with a link on the plan page — I had to find a
+  free port and add an env override by hand; (3) variants as a first-class thing: a question = two stories side
+  by side, and the pick becomes the decision row; (4) the agreed POC should become the phase's checks: each story
+  a verification shot, the behaviours in it the clauses.
+- Waiting on Sandy: look at the eight stories, pick the two variants, and say whether this is a plan to build.
+
+## Telemetry floor: PostHog live for Homework Gate (2026-10-21)
+
+Sandy supplied the PostHog project (677236, US cloud): a personal API key (`phx_`, for reading — engine `.env`)
+and the project token (`phc_`, for sending — Homework Gate `poc/.env`); both gitignored, never committed. PR #9
+tested from a detached worktree before merge: parent sign-in, open, close, schedule → three `parent_action`
+events in PostHog within seconds, super-properties `app=homework-gate`, no free text. 22 tests pass. Recommended
+merge; after it, restart the app on 8000 with the key, then the engine's first `evidence` read from this project.
+- **Decided (Sandy: "we can start, we aren't being perfect")**: OpenTelemetry is the protocol apps speak (clauses
+  and sensors are spans); **PostHog is the destination** — it ingests OTLP traces over HTTP (alpha,
+  `/i/v1/traces`, project token) alongside product events, so evidence reads come from one place. No Jaeger of
+  our own (InDusk shipped Jaeger + otelcol binaries; that weight stays behind). Fallback if querying spans back
+  out of PostHog proves thin: a stock OTel collector fanning out to PostHog and a local Jaeger for development.
+- Idea captured, not chased (Sandy): PostHog as the design comp for a more teenager-friendly Homework Gate; a
+  mascot *team* from Tchaikovsky's *Children of Time* — a jumping spider, an octopus, a pair of crows, a mantis
+  shrimp. For the design pass.
+
+## The thesis: decide fast on something real, then let the machine hold the line (Sandy, 2026-10-21)
+
+Sandy, questioning whether PRs are the right unit: the goal is speed, and the expensive mistake in the usual way
+of working is deciding *after* building (sunk cost). So:
+1. **Decide fast, on something real.** Pre-plan proofs of concept and mock-ups — a Storybook story, a clickable
+   prototype behind a flag, two variants side by side, a measurement for plumbing. Agreement is on the thing, not
+   on a description of it. The brief and the planner's decision cards were a document standing in for this.
+2. **The decision becomes the checks.** Every behaviour in the agreed POC turns into something the machine holds:
+   a story, a test, a clause the running app asserts. The build is verified against the decision and keeps being
+   verified. Regression by promise, not by suite: only what someone agreed to is ever tested.
+3. **Telemetry catches the rest; recovery is the metric.** No attempt at full coverage; accept problems in
+   production that get fixed very quickly. The signal arrives with enough context to revert the PR or open a fix
+   task on its own. Optimise time-to-fix, not time-between-failures.
+Consequences: the PR stays the delivery and rollback unit but stops being what anyone watches; the UI leads with
+the POC before a plan and the signal after a merge; the planner's first phase for a task is the POC phase, landing
+as stories; telemetry is the floor, not a later feature (Homework Gate: the PostHog token and PR #9 are next). The
+cross-plan / lazy-planning engine work (entry below) is paused as premature until this is tested by hand: the
+spaced-repetition POC in Storybook (quiz with a returning question unmarked, result page saying why 4-of-5
+failed, the parent's "coming back" card, the two open questions as variants), agreed, then re-planned from it.
+SHAPE.md should open with this once PR #6 lands.
+
+## Plans know about each other (Sandy, 2026-10-21)
+
+The model, in Sandy's words: a **rough plan** — tasks with briefs, in order; some tasks run in parallel, others are
+*planned* only after what they depend on has landed, so the planner reads the result instead of predicting it.
+**Plans know what other plans are doing**: plan B can say "wait for phase 3 of plan A to land before we plan our
+phase 3; but phases 1 and 2 are plumbing we need regardless, so they go now, in sequence; and our phase 3 depends
+on their phase 4." In engine terms, three missing pieces on top of what runs today (global scheduling across
+plans, file claims, planning per task on a click):
+1. **Dependencies cross plans** — a phase may depend on a phase in another plan (`addPhases` currently refuses).
+   Crossing a plan means crossing a PR boundary, so the dependent phase's base must include the other plan's
+   landed code: **stacked** (merge `plan/A` into B's branch when B.3 starts; B's PR marked "stacked on A", can't
+   merge first) rather than waiting for A to reach `main`, which would park B behind A's review. Decision pending
+   Sandy's yes on stacked.
+2. **Lazy planning as a rule** — a task declares what it plans after (the task before it; a phase of another
+   plan); when that lands the engine plans it, or marks it ready to plan when a person wants to read the result
+   first.
+3. **The planner sees the app graph** — other plans' tasks, phases, files and status in its prompt, so it can
+   declare cross-plan dependencies and keep off files another plan is mid-way through.
+**Edges imply a planning step** (Sandy). At every level: an edge into a task means "plan this task when that has
+landed" (the planner runs then, reading the result); an edge into a phase means "build this when that has
+landed" (the builder starts then, reads the real code, writes its own steps). A plan is the rough shape — tasks
+and the edges between them, inside the plan or into other plans' phases; phases are what planning a task
+produces; steps are what building a phase produces.
+**Files are not a concept anyone designs.** They come out of planning: the planner just read the code and
+declares what each phase touches; the scheduler uses the claims like locks. The order between two phases that
+share a file is never anyone's decision, so it is not structure in the graph: show it only when it bites — the
+held reason on the waiting phase, and the file list on a selected phase. The per-file dashed areas (tried today;
+unreadable when one phase touches eight files) come out. Graph = edges only, every edge "planned after".
+Also: a dependency means "built on the other's *landed code*"; no human decision sits between phases — the
+coarser unit for "look at the result first" is the task. Idea captured, not chased: the whole graph isometric,
+in layers like a circuit board.
+
+## The planner (2026-10-21, idea-factory PR #10; UI on PR #11)
+
+InDusk's planning approach on the new foundation, as `engine/src/planner.ts`. `POST /tasks/:id/plan` runs one
+Claude Code session read-only in the app's checkout (Read/Glob/Grep/LS, read-only git/ls/cat; everything else
+denied) with the task's brief, the plan's why, the earlier tasks and the test command, and gets back **one object
+the SDK validates against a JSON schema**: phases (summary for a stranger to the plan, steps with technical notes,
+behavioural checks, done-when, files, depends-on), decisions (chosen, rejected, reason), questions (options with
+what each changes, a recommendation, a cost), notes. One self-review pass inside the same run, no hash-chained
+review. Rows: phases through the same `addPhases` a person uses (brief composed from the proposal), `decision`
+provisional until approved, `question` open; a `run` of kind `plan` on the task carries cost and session. **The
+server sets the cost**: any option that changes what was agreed makes the question expensive, whatever the agent
+said (InDusk's rule, kept). Events: `task.planning`, the run's messages, `question.asked`, `task.planned` /
+`task.plan_failed`; the request returns 202 at once (`?wait=1` to hold). Tests with a fake proposer; 27 passing.
+- **First live run** (plan `plan_s7LcjyCmlBFn`, one authored task, "Spaced repetition on missed questions", brief
+  in Sandy's words): Opus, 10 turns, 220 s, $1.16 est. Three phases in a chain (memory + due logic → wired into
+  the quiz and the gate rule → parent page), each with files, steps with technical notes, checks and done-when;
+  **seven decisions** each with rejected alternatives and a reason (kept the 4-of-5 threshold; returns from the
+  next night, never a same-night retry; returning questions take slots inside the five, unmarked; plugs in only
+  through `quizzes.passed`; a `review_items` table); **two questions**, both raised to expensive by the server
+  because an option declares what it changes ("same question or a new version of it?", "done after one right
+  answer?"); notes with its assumptions. It read as a plan I would approve. Started from the UI's Plan button;
+  the page updated live.
+- **Found while watching it: every agent guard so far was inert.** The SDK auto-approves bare names in
+  `allowedTools` before `canUseTool` is consulted, and allow rules from settings files shadow the callback too
+  (Sandy's own settings allow `Bash(git push:*)`). So "no push / no checkout / no gh pr", "edits only inside the
+  worktree" and the planner's read-only rule never fired; nothing went wrong only because the agents did as told.
+  Fixed in `engine/src/guard.ts`: the guard is a **PreToolUse hook** (consulted for every call, before any allow
+  rule) and `canUseTool` as the fallback; `tools` restricts the set, `allowedTools` holds only the read tools.
+  Verified live with `settingSources: ['user', 'project']`: `git push --dry-run` and a piped `git log | head`
+  denied by the hook, `git status` through. Lesson for the log: a guard that has never been seen to refuse
+  something has not been tested.
+- Kept out on purpose: the plan-level conversation (say the brief back before planning), approval of decisions,
+  late answers opening follow-ons, re-planning a task that has phases (remove them first).
+- The UI moved to the vocabulary too (PR #11): phases are the nodes, labelled with their task; tasks in order
+  above the graph; steps live on the node; the composer authors tasks with optional phases.
+
+## Vocabulary and promises (Sandy, 2026-10-21)
+
+- **idea → plan → task → phase → step.** An idea is one task or a plan of several. A plan is tasks *in order*
+  (an InDusk master plan). A task is authored: title + brief (an InDusk plan). Phases are the atomic unit the
+  engine schedules — one agent, one worktree, one commit, files and depends-on — generated by the planner from
+  the task's brief (a person may still write them). Steps are the builder's own todo list while it builds a
+  phase, captured from Claude Code's TodoWrite and shown live. Task order is an implicit dependency between
+  phases. Branch and PR stay per plan. Renamed in the engine (`task` → `phase`, new `task`, new `step`);
+  the initial migration regenerated and the dev database reset, since nothing has shipped.
+- **Promises stay; the registry goes.** InDusk's mistake: a promise became the required way of telling the agent
+  what to build. The brief does that. A promise is what must hold, **mapped directly to OpenTelemetry**: a
+  **clause** is an OTel span written as true/false (a promise asserting itself inside the running app); a
+  **sensor** is an OTel span that measures something, for a test or a monitor. Evidence and phase checks point at
+  clauses and sensors, not prose. Schema pass after the rename: `promise`, `clause`, `sensor`.
+
+## Planning: InDusk's approach on the new foundation (2026-10-21)
+
+Sandy: Lightsprint's plan/task ≈ InDusk's master plan/plan; under plans InDusk had **phases**, which the agent
+creates from the plan's brief — the person never writes them. "Here is where InDusk had it correct." The approach
+was right; the file-based process ("how to work with AI to develop") turned into an app is what made it slow. Port
+the approach, not the process: the brief is a row, the planner is an agent run, phases/decisions/questions are
+rows, the graph runs the phases. Mapping: idea ≈ master plan; plan = title + brief (authored); phase = generated,
+one agent / one worktree / one commit, declares files and depends-on. The hand-written composer rows from PR #11
+were a stopgap: the real flow is brief in → proposed phases out → edit → run. A read-out of InDusk's planner
+(`research/planning-from-indusk.md` when written) comes first; vocabulary rename task → phase pending Sandy's
+yes.
+
+## The graph is at the step level, across all plans (2026-10-20, idea-factory PR #10 and #11)
+
+Sandy, restating the design (it's InDusk's, not new): **the step is the atomic unit of development** — one agent,
+one worktree, one commit — and the unit telemetry and tests point back to. Steps declare what they depend on and
+which files they touch; anything open and unblocked runs, whichever plan it belongs to; plans are grouping and
+the PR. The engine had it one plan at a time (`tick(planId)`), so two plans never ran together and shared files
+across plans were never checked. Now: one dispatch pass across every running plan, file claims namespaced by app
+(different repos never collide; no claims = the whole app), one global cap; an app-level graph endpoint and a
+top-level **Graph** page showing every step of every plan with dashed links between steps that share a file.
+Test: two plans at once — steps on different files overlap, two on the same file never do, both land.
+- Branching, confirmed with Sandy: a plan is a *branch* (no worktree), steps are worktrees cut from it at
+  dispatch and landing back into it; a dependent step starts seconds after its parent lands on the plan branch,
+  not when the plan's PR merges. Cross-plan dependencies aren't modelled yet (same plan, or stacked plans later).
+- A detour worth recording: I proposed a recursive task/parent model; Sandy hadn't asked for it and it wasn't
+  needed. The flat step graph with plan grouping is the design. Lesson for the agent: restate before redesigning.
+
+## Engine step 4, first half: the live graph in the web UI (2026-10-20, idea-factory PR #11)
+
+Sandy: "do we have a UI to look at?" and "we don't really have the planning setup yet to show the tasks."
+Half right: plans exist as rows (three real ones), but could only be made from a JSON file. So step 4's first
+half is the Plans pages in the web UI: the list, a plan's live graph (xyflow + dagre over `/plans/:id/graph`,
+refreshed from `/events` over SSE), the selected task's detail, the event ticker, the PR badge, and a New plan
+composer (tasks as rows) so plans can be made without the CLI. Verified live in a browser: a by-hand transition
+produced the event and the node changed with no reload. The same graph component is what the VS Code webview
+will host (second half). The planning *agent* (description → proposed tasks → edit → run) is the step after and
+fills the same composer.
+- Tedious: Vite/Storybook dependency churn restarting the dev server mid-check (twice mistaken for a bug);
+  another session reclaiming port 5173. Judgement: what a node should show (status, why held, last run's cost);
+  by-hand transitions only for drafts, never for running plans.
+- Also raised by Sandy, captured not chased: a dyslexia-friendly font toggle (retracted a moment later; noting
+  it anyway as cheap and worth doing in the design system).
+
+## Engine step 3: parallel for real (2026-10-20, idea-factory PR #10)
+
+Several tasks under the cap, dependents only after their parents land, retries with the reason (from the log,
+so it survives a restart), recovery on boot (interrupted runs marked, tasks re-queued, the agent session
+resumed, stray `claude` processes in our worktrees reaped), clean shutdown (live runs aborted), worktree cleanup
+once a plan lands. Live on Homework Gate: four tasks (three independent + a README task depending on two of
+them) → **PR #15 in 66 seconds**: three agents at once, landings serial (suite 21 → 22 → 27 passing on the
+merged commits), the README task started only after its parents landed, PR opened at the first landing and
+updated after each, four worktrees removed at the end. Runner tests with a fake executor cover the cap, the
+ordering, retries, recovery and cleanup (19 tests in all).
+- Found by the tests: on macOS, git reports worktree paths with symlinks resolved (`/private/var/…`), so a retry
+  tried to re-create an existing worktree; and an error while preparing a worktree left the task stuck at
+  `ready`. Both fixed (realpath comparison; preparation errors count as a failed attempt).
+- Brief quality is the new bottleneck: the README brief claimed the file mentions CI; it doesn't, and the agent
+  said so rather than inventing a section. Good behaviour; bad brief. A plan step that checks briefs against the
+  repo before dispatch belongs in step 5+.
+- Not exercised live yet: the restart path (covered by a test). Skipped the kill-mid-run drill to keep PR #15
+  clean; worth doing once before step 4 ships.
+
+## Engine steps 1 and 2 (2026-10-20, idea-factory PR #10)
+
+Step 1: schema as migrations, Hono server as single writer, `event` log over SSE via `LISTEN/NOTIFY`, pure
+scheduler with tests, `if` CLI. Step 2: one task end to end on Homework Gate — the engine cut `plan/<id>` from
+main, a worktree per task, ran Claude Code through the Agent SDK on Sandy's login (7 turns, 27 s), merged, ran
+the suite on the merged commit (22 passed), fast-forwarded by compare-and-swap, pushed, and **opened
+homework-gate PR #13 itself** ("Health endpoint for the POC"). First engine-made PR.
+- Bugs found only by running: CHECK constraints rendered as `$1…` placeholders (parameterised literals in DDL);
+  an edit script that silently matched nothing. Both caught before commit.
+- Tedious (→ the engine does it now): worktree, branch, merge, test, push, PR. Judgement: the task brief and
+  file claims; reading the agent's diff. Left behind on purpose until step 3: the task worktree and branches.
 
 ## InDusk, paused
 

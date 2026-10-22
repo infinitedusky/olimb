@@ -2,3 +2,4 @@ homework-gate/
 .DS_Store
 .playwright-mcp/
 homework-gate-worktrees/
+node_modules/
