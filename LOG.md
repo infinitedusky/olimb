@@ -432,6 +432,17 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## Telemetry floor: PostHog live for Homework Gate (2026-10-21)
+
+Sandy supplied the PostHog project (677236, US cloud): a personal API key (`phx_`, for reading — engine `.env`)
+and the project token (`phc_`, for sending — Homework Gate `poc/.env`); both gitignored, never committed. PR #9
+tested from a detached worktree before merge: parent sign-in, open, close, schedule → three `parent_action`
+events in PostHog within seconds, super-properties `app=homework-gate`, no free text. 22 tests pass. Recommended
+merge; after it, restart the app on 8000 with the key, then the engine's first `evidence` read from this project.
+- Idea captured, not chased (Sandy): PostHog as the design comp for a more teenager-friendly Homework Gate; a
+  mascot *team* from Tchaikovsky's *Children of Time* — a jumping spider, an octopus, a pair of crows, a mantis
+  shrimp. For the design pass.
+
 ## The thesis: decide fast on something real, then let the machine hold the line (Sandy, 2026-10-21)
 
 Sandy, questioning whether PRs are the right unit: the goal is speed, and the expensive mistake in the usual way
