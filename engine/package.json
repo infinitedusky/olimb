@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "serve": "tsx src/server.ts",
+    "db:up": "docker compose up -d --wait",
     "if": "tsx src/cli/if.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",

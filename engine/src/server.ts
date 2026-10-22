@@ -3,8 +3,13 @@
  * the event log over SSE at GET /events.
  */
 import { serve } from '@hono/node-server'
+import { serveStatic } from '@hono/node-server/serve-static'
+import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
+import { existsSync } from 'node:fs'
+import { relative, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { db, pool } from './db/client.js'
 import { app as appTable, PHASE_STATUSES, repo as repoTable, workspace, type PhaseStatus } from './db/schema.js'
 import { EventBus, eventsSince } from './events.js'
@@ -133,10 +138,23 @@ export function buildApp(bus: EventBus) {
     })
   })
 
-  return api
+  // One address: the API under /api, the built UI (app/dist) at everything else, with the SPA's index for deep
+  // links. In development Vite serves the UI itself and proxies /api here.
+  const root = new Hono()
+  root.route('/api', api)
+  const dist = resolve(fileURLToPath(import.meta.url), '../../../app/dist')
+  if (existsSync(dist)) {
+    const rel = relative(process.cwd(), dist) || '.'
+    root.use('/assets/*', serveStatic({ root: rel }))
+    root.get('*', serveStatic({ path: `${rel}/index.html` }))
+  } else {
+    root.get('*', (c) => c.text('The UI is not built. Run `pnpm build` at the repo root (or `pnpm dev` for Vite with live reload). The API is under /api.', 404))
+  }
+  return root
 }
 
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()!)) {
+  await migrate(db, { migrationsFolder: fileURLToPath(new URL('../drizzle', import.meta.url)) }) // idempotent; `pnpm dev` just works
   const bus = new EventBus()
   await bus.start()
   const recovered = await runner.recover()
@@ -144,7 +162,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()
   if (stranded) console.log(`[engine] ${stranded} planner run(s) interrupted by the restart; plan those tasks again`)
   if (recovered.plans || recovered.phases || recovered.reaped) console.log('recovered:', JSON.stringify(recovered))
   const port = Number(process.env.PORT ?? 4000)
-  serve({ fetch: buildApp(bus).fetch, port }, (info) => console.log(`engine listening on http://localhost:${info.port}`))
+  serve({ fetch: buildApp(bus).fetch, port }, (info) => console.log(`engine listening on http://localhost:${info.port}  (API under /api; UI at / when built)`))
   const shutdown = async () => { await runner.shutdown(); await bus.stop(); await pool.end(); process.exit(0) }
   process.on('SIGINT', shutdown)
   process.on('SIGTERM', shutdown)

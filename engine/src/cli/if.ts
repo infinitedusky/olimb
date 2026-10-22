@@ -5,7 +5,7 @@
 import { readFile } from 'node:fs/promises'
 import { Command } from 'commander'
 
-const ENGINE_URL = process.env.ENGINE_URL ?? 'http://localhost:4000'
+const ENGINE_URL = process.env.ENGINE_URL ?? 'http://localhost:4000/api'
 
 async function api<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(ENGINE_URL + path, {
