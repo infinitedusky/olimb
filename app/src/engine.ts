@@ -62,8 +62,9 @@ export interface RunningPlan {
 export interface Now { running: RunningPlan[]; needsYou: Attention[]; recent: Event[]; counts: { plans: number; running: number; needsYou: number } }
 
 // Talk: a conversation with the factory's agent. Messages are rows; talk.* events say when to refetch.
-export interface TalkSession { id: string; appId: string | null; cwd: string | null; title: string | null; status: string; createdAt: string; lastActiveAt: string | null; live: boolean; busy: boolean; messages?: number }
-export interface TalkMessage { id: number; sessionId: string; author: 'user' | 'agent' | 'tool' | 'engine'; kind: 'text' | 'tool_call' | 'tool_result' | 'permission' | 'result' | 'error'; body: string; payload: Record<string, any> | null; sentAt: string | null }
+export type Risk = 'free' | 'cheap' | 'moderate' | 'expensive'
+export interface TalkSession { id: string; appId: string | null; cwd: string | null; title: string | null; status: string; createdAt: string; lastActiveAt: string | null; live: boolean; busy: boolean; messages?: number; autoApprove: Exclude<Risk, 'expensive'> }
+export interface TalkMessage { id: number; sessionId: string; author: 'user' | 'agent' | 'tool' | 'engine'; kind: 'text' | 'tool_call' | 'tool_result' | 'permission' | 'auto' | 'result' | 'error'; body: string; payload: Record<string, any> | null; sentAt: string | null }
 export interface Transcript { session: TalkSession; messages: TalkMessage[]; pending: string[] }
 export interface TalkContext { path: string; label?: string; planId?: string; appId?: string; ideaId?: string } // where the person is, sent with each message
 
@@ -75,6 +76,7 @@ export const engine = {
   say: (id: string, text: string, context?: TalkContext) => call<{ messageId: number }>('POST', `/talks/${id}/say`, { text, context }),
   permission: (id: string, requestId: string, allow: boolean, always = false) => call<unknown>('POST', `/talks/${id}/permission`, { requestId, allow, always }),
   interrupt: (id: string) => call<unknown>('POST', `/talks/${id}/interrupt`),
+  setAuto: (id: string, level: 'free' | 'cheap' | 'moderate') => call<TalkSession>('POST', `/talks/${id}/auto`, { level }),
   endTalk: (id: string) => call<unknown>('POST', `/talks/${id}/end`),
   now: (appId?: string) => call<Now>('GET', `/now${appId ? `?app=${appId}` : ''}`),
   ideas: (appId?: string) => call<IdeaRow[]>('GET', `/ideas${appId ? `?app=${appId}` : ''}`),

@@ -68,6 +68,7 @@ export function TalkDrawer() {
     <aside className="talk-drawer" data-component="TalkDrawer">
       <div className="talk-drawer-head">
         <strong style={{ flex: 1 }}>{app?.name ?? 'The factory'}</strong>
+        <AutoSelect sessionId={sessionId} />
         <button className="btn quiet small" onClick={() => { if (window.confirm(`Start a fresh conversation about ${app?.name ?? 'the factory'}? This one is kept in Talk.`)) void startOver() }} title="End this conversation and begin a new one">Start over</button>
         <button className="btn quiet small" onClick={() => set(false)} title="Close (⌘J)">×</button>
       </div>
@@ -77,5 +78,20 @@ export function TalkDrawer() {
         : problem ? <div className="empty bad" style={{ margin: 12 }}>{problem}</div>
         : <p className="muted" style={{ padding: 12 }}>Starting…</p>}
     </aside>
+  )
+}
+
+/** How much the agent may do without asking in this conversation. Expensive always asks. */
+function AutoSelect({ sessionId }: { sessionId: string | null }) {
+  const [level, setLevel] = useState<'free' | 'cheap' | 'moderate'>('cheap')
+  useEffect(() => { if (sessionId) engine.transcript(sessionId).then((t) => setLevel(t.session.autoApprove ?? 'cheap')).catch(() => {}) }, [sessionId])
+  if (!sessionId) return null
+  return (
+    <select className="auto-select" value={level} title="What it may do without asking; expensive always asks"
+      onChange={(e) => { const v = e.target.value as 'free' | 'cheap' | 'moderate'; setLevel(v); void engine.setAuto(sessionId, v) }}>
+      <option value="free">asks for everything</option>
+      <option value="cheap">runs cheap things</option>
+      <option value="moderate">runs up to moderate</option>
+    </select>
   )
 }

@@ -163,8 +163,9 @@ export const session = pgTable('session', { // a conversation with an agent: a t
   title: text('title'), agentSessionId: text('agent_session_id'), // the SDK session, for --resume after a restart
   status: text('status').notNull().default('open'), createdBy: text('created_by'), createdAt: createdAt(),
   lastActiveAt: timestamp('last_active_at', { withTimezone: true }),
+  autoApprove: text('auto_approve').notNull().default('cheap'), // the agent acts without asking up to this risk; expensive always asks
 }, (t) => [uniqueIndex('session_id_app').on(t.id, t.appId), index('session_app').on(t.appId, t.status),
-  inList('session_status', t.status, ['open', 'ended']), inList('session_kind', t.kind, ['talk', 'phase']),
+  inList('session_status', t.status, ['open', 'ended']), inList('session_kind', t.kind, ['talk', 'phase']), inList('session_auto_approve', t.autoApprove, ['free', 'cheap', 'moderate']),
   foreignKey({ name: 'session_phase_app_fk', columns: [t.phaseId, t.appId], foreignColumns: [phase.id, phase.appId] })])
 
 export const sessionMessage = pgTable('session_message', { // the transcript: what was said, what the agent did, what it asked

@@ -433,6 +433,22 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## Auto-approve by risk in the agent's conversations (Sandy, 2026-10-22)
+
+Sandy: "we need to use the auto approve based on risk or (cost) in the chat sessions." The planner's rule — the
+server sets the cost, the person decides the expensive ones — applied to the agent's hands. `engine/src/risk.ts`
+rates every tool call, never the agent: **free** (reads, the engine's read-only tools), **cheap** (edits on a
+branch, tests, typecheck, builds, keeping an idea, drafting a plan), **moderate** (commits, branches, pushes,
+PRs, installs, running a process, edits in a checkout that is on main, running the planner, answering a question
+for the person), **expensive** (main, force, deletes, merges, publishing, remote writes, starting a plan, anything
+outside the checkout). A PreToolUse hook rates each call: up to the conversation's threshold it runs and is
+logged as an `auto` row; above, a card asks, showing the risk and why; expensive always asks. The threshold is a
+select in the drawer (asks for everything / runs cheap things / runs up to moderate), default cheap, stored on
+the session (migration 0004). 40 tests, six of them on the rating itself (pipelines, redirects, main vs branch).
+- Found on the way: the agent's cwd is the app's main checkout, so any edit there rates moderate ("main is
+  production"). The right shape is a worktree per conversation on its own branch, so edits are cheap by
+  construction and a PR is the natural end; next.
+
 ## On main: the web UI, the agent, the name (2026-10-22, PR #12 merged, with #10, #11, #5, #13)
 
 Sandy: "anyway merge it you need to or whatever." Merged #13 (MIT license, root README) first because the repo
