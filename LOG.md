@@ -446,6 +446,13 @@ local folder name (Claude Code's memory is keyed by it), the Postgres user/datab
 (renaming would orphan the volume for no gain). "Auto Olimb" (Sandy) is the name for the mode where nothing
 waits for a person: a PR merges itself when its checks hold and rolls back on the signal. SHAPE.md's title
 changes when PR #6 lands.
+- **The logo** (Sandy, same day): the five steps as five emoji, close together — 🔭🧠💡✏️🔨 — "it is fun."
+  Considered first (`app/public/logo-ideas.html`, kept as the record): "climb" with the C closed into an O by a
+  pencil, by a climber, by a thin line; a tree whose hollow is the O; the letters alone with accent periods; the
+  letters with the five words under them. The emoji won on the thing that matters for this product: it is the
+  loop, readable by a teenager, and nobody has to be told what it means. Known cost, accepted: emoji render
+  differently per platform; if that ever bothers us, swap in one fixed set (Noto or Twemoji) as inline SVG. In the
+  nav with O.L.I.M.B small under it; the bulb is the favicon; the row heads the README.
 
 ## Talk: an agent you can talk to, in the UI (2026-10-22, idea-factory PR #12)
 
