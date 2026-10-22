@@ -451,8 +451,13 @@ changes when PR #6 lands.
   pencil, by a climber, by a thin line; a tree whose hollow is the O; the letters alone with accent periods; the
   letters with the five words under them. The emoji won on the thing that matters for this product: it is the
   loop, readable by a teenager, and nobody has to be told what it means. Known cost, accepted: emoji render
-  differently per platform; if that ever bothers us, swap in one fixed set (Noto or Twemoji) as inline SVG. In the
-  nav with O.L.I.M.B small under it; the bulb is the favicon; the row heads the README.
+  differently per platform; if that ever bothers us, swap in one fixed set (Noto or Twemoji) as inline SVG. Then settled
+  (Sandy): the **wordmark** O.L.I.M.B at the top of the site, the **five icons as the nav** — the nav *is* the
+  loop: 🔭 Observe (Now), 🧠 Learn, 💡 Ideate (the inbox), ✏️ Mockup, 🔨 Build (plans, Graph as its view), then
+  Talk and Settings — and the **emoji row as the logo outside** the site (README, social). Sandy: "plan and task are
+  not really part of that, they are a way of building" — so Build is the stage and plans/tasks/phases are its
+  machinery, the way Now is inside Observe. Learn and Mockup exist as pages before their content, each saying what
+  exists today and what lands there, so the loop is whole in the nav from day one. The bulb is the favicon.
 
 ## Talk: an agent you can talk to, in the UI (2026-10-22, idea-factory PR #12)
 
