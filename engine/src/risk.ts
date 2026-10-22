@@ -48,20 +48,31 @@ export function riskOf(tool: string, input: Record<string, unknown>, ctx: RiskCo
     if (!ctx.branch || ctx.branch === 'main' || ctx.branch === 'master') return { risk: 'moderate', why: `edits a checkout that is on ${ctx.branch ?? 'an unknown branch'}; main is production` }
     return { risk: 'cheap', why: `edits on branch ${ctx.branch}` }
   }
-  if (tool === 'Bash') {
-    const cmd = String(input.command ?? '')
-    if (EXPENSIVE.test(cmd)) return { risk: 'expensive', why: 'hard to undo, or outward-facing' }
-    const writes = /(^|[^2&])>(?!\s*\/dev\/null)/.test(cmd.replace(/2>&1/g, '')) // a redirect is a write, unless it only discards
-    if (writes && !BUILD.test(cmd)) return { risk: 'moderate', why: 'writes a file through a redirect' }
-    if (/[|;&`$]/.test(cmd) && !BUILD.test(cmd)) {
-      // Pipes can hide a write; a pipeline of known readers is still free.
-      const parts = cmd.replace(/2>&1/g, '').split(/\|\||&&|\||;/).map((p) => p.trim()).filter(Boolean)
-      if (parts.length && parts.every((p) => RO.test(p))) return { risk: 'free', why: 'a read-only pipeline' }
-    }
-    if (RO.test(cmd)) return { risk: 'free', why: 'a read-only command' }
-    if (BUILD.test(cmd)) return { risk: 'cheap', why: 'tests, typecheck or build; changes nothing of record' }
-    if (MODERATE.test(cmd)) return { risk: 'moderate', why: 'leaves a mark: commits, branches, pushes, installs or runs a process' }
-    return { risk: 'moderate', why: 'a command the engine does not recognise' }
-  }
+  if (tool === 'Bash') return rateShell(String(input.command ?? ''))
   return { risk: 'expensive', why: `${tool} is not a tool this agent has` }
+}
+
+/**
+ * A shell line is rated by its parts: split on && ; || and |, rate each, take the worst. `cd` and other readers
+ * are free, so `cd engine && pnpm test` is cheap, and `cd x && rm -rf y` is expensive. A redirect that writes is
+ * moderate unless it only discards.
+ */
+export function rateShell(cmd: string): { risk: Risk; why: string } {
+  if (EXPENSIVE.test(cmd)) return { risk: 'expensive', why: 'hard to undo, or outward-facing' }
+  const parts = cmd.replace(/2>&1/g, '').split(/\|\||&&|;|\|/).map((p) => p.trim()).filter(Boolean)
+  let worst: { risk: Risk; why: string } = { risk: 'free', why: 'a read-only command' }
+  for (const part of parts) {
+    const r = ratePart(part)
+    if (rank(r.risk) > rank(worst.risk)) worst = r
+  }
+  return worst
+}
+
+function ratePart(part: string): { risk: Risk; why: string } {
+  if (/^(cd|pushd|popd|true|false|exit|set|export)\b/.test(part) || /^\s*\$\?\s*$/.test(part)) return { risk: 'free', why: 'shell plumbing' }
+  if (/(^|[^2&])>(?!\s*\/dev\/null)/.test(part)) return { risk: 'moderate', why: 'writes a file through a redirect' }
+  if (RO.test(part)) return { risk: 'free', why: 'a read-only command' }
+  if (BUILD.test(part)) return { risk: 'cheap', why: 'tests, typecheck or build; changes nothing of record' }
+  if (MODERATE.test(part)) return { risk: 'moderate', why: 'leaves a mark: commits, branches, pushes, installs or runs a process' }
+  return { risk: 'moderate', why: `a command the engine does not recognise: ${part.slice(0, 40)}` }
 }

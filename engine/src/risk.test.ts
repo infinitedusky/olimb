@@ -42,6 +42,14 @@ describe('riskOf', () => {
     expect(r('mcp__engine__plan_task', {})).toBe('moderate')
     expect(r('mcp__engine__start_plan', {})).toBe('expensive')
   })
+  it('rates a compound command by its worst part; cd and echo are plumbing', () => {
+    expect(r('Bash', { command: 'cd engine && pnpm -s typecheck; echo $?' })).toBe('cheap')
+    expect(r('Bash', { command: 'cd engine && pnpm test && git commit -am ok' })).toBe('moderate')
+    expect(r('Bash', { command: 'cd x && rm -rf y' })).toBe('expensive')
+    expect(r('Bash', { command: 'git status && git log --oneline -3' })).toBe('free')
+    expect(r('Bash', { command: 'pnpm test 2>&1 | tail -20' })).toBe('cheap')
+    expect(r('Bash', { command: 'pnpm test > out.txt' })).toBe('moderate')
+  })
   it('unknown commands and tools do not pass silently', () => {
     expect(r('Bash', { command: 'mystery --do-things' })).toBe('moderate')
     expect(r('Task', {})).toBe('expensive')
