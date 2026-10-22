@@ -12,7 +12,7 @@ export function Plans({ mode }: { mode: 'plan' | 'build' }) {
   const { app } = useCurrentApp()
   const [plans, setPlans] = useState<PlanSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => { if (app) engine.plans(app.id).then(setPlans).catch((e) => setError(String(e.message ?? e))) }, [app?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPlans(null); if (app) engine.plans(app.id).then(setPlans).catch((e) => setError(String(e.message ?? e))) }, [app?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const shown = plans?.filter((p) => (mode === 'plan' ? DRAFT.includes(p.status) : !DRAFT.includes(p.status))) ?? null
   return (
     <>

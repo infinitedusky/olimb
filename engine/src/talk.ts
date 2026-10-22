@@ -10,7 +10,7 @@ import { promisify } from 'node:util'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from './db/client.js'
-import { app, idea, plan, repo, session, sessionMessage, workspace } from './db/schema.js'
+import { app, idea, plan, question, repo, session, sessionMessage, task, workspace } from './db/schema.js'
 import { addWorktree, git, removeWorktree } from './git.js'
 import { withLock } from './landing.js'
 import { appendEvent } from './events.js'
@@ -66,28 +66,33 @@ const summariseInput = (name: string, input: any) => {
 }
 
 /** The engine, as tools. Thin wrappers over the same functions the routes call. */
-function engineTools() {
+function engineTools(appId: string) {
   const text = (v: unknown) => ({ content: [{ type: 'text' as const, text: typeof v === 'string' ? v : JSON.stringify(v, null, 2) }] })
   const tryIt = async (fn: () => Promise<unknown>) => { try { return text(await fn()) } catch (err: any) { return { ...text(`error: ${err?.message ?? err}`), isError: true } } }
+  // The wall: this conversation sees and touches only its own app. Anything addressed by id is checked against it.
+  const foreign = () => new PlanError('that belongs to another app; this conversation is scoped to its own')
+  const ownPlan = async (planId: string) => { const g = await planGraph(planId); if (!g || g.plan.appId !== appId) throw foreign(); return g }
+  const ownTask = async (taskId: string) => { const [t] = await db.select().from(task).where(eq(task.id, taskId)); if (!t || t.appId !== appId) throw foreign(); return t }
+  const ownQuestion = async (questionId: string) => { const [q] = await db.select().from(question).where(eq(question.id, questionId)); if (!q || q.appId !== appId) throw foreign(); return q }
   return createSdkMcpServer({
-    name: 'engine', version: '0.1.0',
-    instructions: 'The Self Evident engine. Plans are tasks in order; tasks become phases through the planner; phases run as agents in worktrees and land into the plan\'s branch and PR.',
+    name: 'engine', version: '0.2.0',
+    instructions: 'The Self Evident engine, scoped to this conversation\'s app. Plans are tasks in order; tasks become phases through the planner; phases run as agents in worktrees and land into the plan\'s branch and PR.',
     tools: [
-      tool('now', 'What is running, what needs a person, what just happened.', {}, async () => tryIt(now)),
-      tool('plans', 'Every plan with its app and counts (superseded hidden unless all=true).', { all: z.boolean().optional() }, async (a) => tryIt(() => listPlans({ all: a.all }))),
-      tool('plan_graph', 'A plan in full: tasks in order, phases with dependencies, files, held reasons, steps and last run; the planner\'s decisions and questions.', { planId: z.string() }, async (a) => tryIt(() => planGraph(a.planId))),
-      tool('ideas', 'The ideas inbox and what left it.', {}, async () => tryIt(listIdeas)),
-      tool('create_idea', 'Keep an idea: a title and, optionally, why and what is already decided.', { appId: z.string(), title: z.string(), body: z.string().optional() }, async (a) => tryIt(() => createIdea({ ...a, actor: 'agent' }))),
-      tool('create_plan', 'Create a plan: tasks in order, each a title and a brief. Phases come from the planner (plan_task) or can be given.', {
-        appId: z.string(), title: z.string(), spec: z.string().optional(), ideaId: z.string().optional(),
+      tool('now', 'What is running, what needs a person, what just happened, in this app.', {}, async () => tryIt(() => now(appId))),
+      tool('plans', 'This app\'s plans with counts (superseded hidden unless all=true).', { all: z.boolean().optional() }, async (a) => tryIt(() => listPlans({ all: a.all, appId }))),
+      tool('plan_graph', 'A plan in full: tasks in order, phases with dependencies, files, held reasons, steps and last run; the planner\'s decisions and questions.', { planId: z.string() }, async (a) => tryIt(() => ownPlan(a.planId))),
+      tool('ideas', 'This app\'s ideas inbox and what left it.', {}, async () => tryIt(() => listIdeas(appId))),
+      tool('create_idea', 'Keep an idea in this app: a title and, optionally, why and what is already decided.', { title: z.string(), body: z.string().optional() }, async (a) => tryIt(() => createIdea({ ...a, appId, actor: 'agent' }))),
+      tool('create_plan', 'Create a plan in this app: tasks in order, each a title and a brief. Phases come from the planner (plan_task) or can be given.', {
+        title: z.string(), spec: z.string().optional(), ideaId: z.string().optional(),
         tasks: z.array(z.object({ title: z.string(), brief: z.string().optional(), phases: z.array(z.object({ key: z.string(), title: z.string(), brief: z.string().optional(), dependsOn: z.array(z.string()).optional(), files: z.array(z.string()).optional() })).optional() })),
-      }, async (a) => tryIt(() => createPlan(a))),
-      tool('plan_task', 'Run the planner on a task (minutes): reads the repo and the brief, writes phases, decisions and questions. Returns when done.', { taskId: z.string() }, async (a) => tryIt(async () => finishPlanning(await preparePlanning(a.taskId, { actor: 'agent' })))),
-      tool('answer_question', 'Answer one of the planner\'s questions on the person\'s behalf; say so to them first.', { questionId: z.string(), answer: z.string() }, async (a) => tryIt(() => answerQuestion(a.questionId, a.answer, 'agent'))),
-      tool('start_plan', 'Run a plan: integration branch, a worktree and an agent per phase, landing, PR.', { planId: z.string() }, async (a) => tryIt(() => runner.startPlan(a.planId))),
-      tool('cancel_plan', 'Stop a plan: agents aborted, unlanded phases cancelled, landed work kept.', { planId: z.string() }, async (a) => tryIt(() => runner.cancelPlan(a.planId))),
-      tool('events', 'The event log, newest last. Filter by plan or phase; since is a sequence number.', { planId: z.string().optional(), phaseId: z.string().optional(), since: z.number().optional(), limit: z.number().optional() },
-        async (a) => tryIt(async () => (await eventsSince(a.since ?? 0, { planId: a.planId, phaseId: a.phaseId })).slice(-(a.limit ?? 50)))),
+      }, async (a) => tryIt(() => createPlan({ ...a, appId }))),
+      tool('plan_task', 'Run the planner on a task of this app (minutes): reads the repo and the brief, writes phases, decisions and questions. Returns when done.', { taskId: z.string() }, async (a) => tryIt(async () => { await ownTask(a.taskId); return finishPlanning(await preparePlanning(a.taskId, { actor: 'agent' })) })),
+      tool('answer_question', 'Answer one of the planner\'s questions on the person\'s behalf; say so to them first.', { questionId: z.string(), answer: z.string() }, async (a) => tryIt(async () => { await ownQuestion(a.questionId); return answerQuestion(a.questionId, a.answer, 'agent') })),
+      tool('start_plan', 'Run a plan of this app: integration branch, a worktree and an agent per phase, landing, PR.', { planId: z.string() }, async (a) => tryIt(async () => { await ownPlan(a.planId); return runner.startPlan(a.planId) })),
+      tool('cancel_plan', 'Stop a plan of this app: agents aborted, unlanded phases cancelled, landed work kept.', { planId: z.string() }, async (a) => tryIt(async () => { await ownPlan(a.planId); return runner.cancelPlan(a.planId) })),
+      tool('events', 'This app\'s event log, newest last. Filter by plan or phase; since is a sequence number.', { planId: z.string().optional(), phaseId: z.string().optional(), since: z.number().optional(), limit: z.number().optional() },
+        async (a) => tryIt(async () => (await eventsSince(a.since ?? 0, { appId, planId: a.planId, phaseId: a.phaseId })).slice(-(a.limit ?? 50)))),
     ],
   })
 }
@@ -185,7 +190,7 @@ async function open(sessionId: string): Promise<Live> {
       model: setup.model,
       settingSources: ['project'],
       systemPrompt: { type: 'preset', preset: 'claude_code', append: talkPrompt(s.cwd!, s.branch, a?.defaultBranch ?? 'main') },
-      mcpServers: { engine: engineTools() },
+      mcpServers: { engine: engineTools(s.appId) },
       tools: [...READ_TOOLS, ...ASK_TOOLS],
       allowedTools: READ_TOOLS, // everything else is rated by the hook (the hook sees every call; allowedTools would not)
       permissionMode: 'default',

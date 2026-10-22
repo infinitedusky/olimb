@@ -53,7 +53,7 @@ export function buildApp(bus: EventBus) {
   }))
 
   api.get('/health', async (c) => { await db.execute('select 1'); return c.json({ ok: true }) })
-  api.get('/now', async (c) => c.json(await now(c.req.query('app') || undefined))) // the front door: running, needs you, recent
+  api.get('/now', async (c) => { const a = c.req.query('app'); return a ? c.json(await now(a)) : c.json({ error: 'app is required: one app at a time' }, 400) }) // the front door: running, needs you, recent
 
   api.post('/workspaces', async (c) => {
     const { name } = await c.req.json<{ name: string }>()
@@ -124,7 +124,7 @@ export function buildApp(bus: EventBus) {
   api.post('/talks/:id/end', async (c) => c.json(await endTalk(c.req.param('id'))))
 
   // The inbox: capture an idea in a moment; make it a plan when its time comes.
-  api.get('/ideas', async (c) => c.json(await listIdeas(c.req.query('app') || undefined)))
+  api.get('/ideas', async (c) => { const a = c.req.query('app'); return a ? c.json(await listIdeas(a)) : c.json({ error: 'app is required: one app at a time' }, 400) })
   api.post('/ideas', async (c) => {
     try { return c.json(await createIdea({ ...(await c.req.json()), actor: 'user' }), 201) } catch (err) { return planError(c, err) }
   })
@@ -133,7 +133,7 @@ export function buildApp(bus: EventBus) {
     try { return c.json(await planFromIdea(c.req.param('id'), body.tasks), 201) } catch (err) { return planError(c, err) }
   })
 
-  api.get('/plans', async (c) => c.json(await listPlans({ all: c.req.query('all') === '1', appId: c.req.query('app') || undefined })))
+  api.get('/plans', async (c) => { const a = c.req.query('app'); return a ? c.json(await listPlans({ all: c.req.query('all') === '1', appId: a })) : c.json({ error: 'app is required: one app at a time' }, 400) })
   api.post('/plans', async (c) => {
     try { return c.json(await createPlan(await c.req.json()), 201) } catch (err) { return planError(c, err) }
   })
