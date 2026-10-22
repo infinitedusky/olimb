@@ -96,7 +96,7 @@ export const plan = pgTable('plan', { // a group of tasks in order (an InDusk ma
   integrationBranch: text('integration_branch'), // [ID] the plan's branch; tasks land here, only it reaches trunk
   spec: text('spec'), createdAt: createdAt(),
 }, (t) => [uniqueIndex('plan_id_app').on(t.id, t.appId), index('plan_app').on(t.appId),
-  inList('plan_status', t.status, ['drafting', 'proposed', 'approved', 'running', 'landed', 'superseded']),
+  inList('plan_status', t.status, ['drafting', 'proposed', 'approved', 'running', 'landed', 'stopped', 'superseded']),
   foreignKey({ name: 'plan_idea_app_fk', columns: [t.ideaId, t.appId], foreignColumns: [idea.id, idea.appId] })])
 
 export const task = pgTable('task', { // authored: a title and a brief (like an InDusk plan); plans are tasks in order
