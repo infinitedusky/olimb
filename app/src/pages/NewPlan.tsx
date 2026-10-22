@@ -25,13 +25,13 @@ export function NewPlan() {
   const [params] = useSearchParams()
   const ideaId = params.get('idea') // "Break it down" from the inbox: the idea becomes the plan's title and why, and the first task
   useEffect(() => {
-    if (ideaId) engine.ideas().then((all) => {
+    if (ideaId && app) engine.ideas(app.id).then((all) => {
       const i = all.find((x) => x.id === ideaId)
       if (!i) return
       setAppId(i.appId); setTitle(i.title); setSpec(i.body ?? '')
       setTasks([{ ...blankTask(), title: i.title, brief: i.body ?? '' }])
     }).catch(() => {})
-  }, [ideaId])
+  }, [ideaId, app?.id])
   useEffect(() => { if (app && !appId) setAppId(app.id) }, [app, appId])
 
   const updateTask = (ti: number, patch: Partial<TaskRow>) => setTasks((ts) => ts.map((t, j) => (j === ti ? { ...t, ...patch } : t)))

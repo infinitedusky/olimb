@@ -487,6 +487,17 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## The wall between apps (Sandy, 2026-10-22; PR #20)
+
+Sandy: "we still have the issue of app_id not being a hard wall between the apps. I am seeing plans when I switch
+apps that stay the same." Three gaps, all closed: a plan page is addressed by id and stayed put when the app
+changed — now the app follows the plan you open, and switching the app while on another app's plan leaves it for
+that app's Plan/Build list; the list pages kept their last result until the next fetch — they clear on switch;
+and the agent's engine tools were not scoped — now each conversation's tools see and touch only its own app
+(plans, ideas, now, events filtered; anything addressed by id is checked and refused if it belongs elsewhere).
+The list routes (`/plans`, `/ideas`, `/now`) refuse to answer without `?app=`. The database side (`app_id` on
+every row, composite keys) was already there; this is the wall in the two places that read it.
+
 ## Conversations: several at once, pinned, each in its own worktree (Sandy, 2026-10-22; PR #19)
 
 Sandy: "we need to have multiple agent sessions. And the session gets somehow pinned to what it worked on… the

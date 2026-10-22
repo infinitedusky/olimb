@@ -22,7 +22,7 @@ export function Board({ ideas }: { ideas: Idea[] }) {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const reload = () => Promise.all([engine.ideas(appId || undefined), engine.plans(appId || undefined)]).then(([i, p]) => { setRows(i); setPlans(p) }).catch((e) => setError(String(e.message ?? e)))
-  useEffect(() => { if (appId) void reload() }, [appId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setRows(null); setPlans([]); if (appId) void reload() }, [appId]) // eslint-disable-line react-hooks/exhaustive-deps
   const add = async () => {
     if (!title.trim() || !appId) return
     setBusy('add')

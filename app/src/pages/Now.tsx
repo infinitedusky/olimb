@@ -17,6 +17,7 @@ export function Now() {
   const [busy, setBusy] = useState<string | null>(null)
   const timer = useRef<number | undefined>(undefined)
   useEffect(() => {
+    setData(null) // never show the last app's picture while the next one loads
     if (!app) return
     let closed = false
     const refresh = () => engine.now(app.id).then((d) => { if (!closed) { setData(d); setError(null) } }).catch((e) => setError(String(e.message ?? e)))

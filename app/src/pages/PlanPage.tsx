@@ -2,11 +2,12 @@
  * One plan, live: its tasks in order (plan one with a click), the phase graph, the planner's questions and
  * decisions, the selected phase's detail and steps, the event ticker, the PR.
  */
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Badge, type Tone } from '../components/Badge'
 import { PlanGraphView, STATUS_TONE } from '../components/PlanGraphView'
 import { engine, useLivePlan, type Decision, type Event, type GraphPhase, type GraphTask, type Question } from '../engine'
+import { useCurrentApp } from '../current-app'
 
 const PLAN_TONE: Record<string, Tone> = { drafting: 'neutral', proposed: 'neutral', approved: 'neutral', running: 'accent', landed: 'ok', superseded: 'neutral' }
 const COST_TONE: Record<string, Tone> = { cheap: 'neutral', moderate: 'warn', expensive: 'bad' }
@@ -16,6 +17,14 @@ export function PlanPage() {
   const { id } = useParams()
   const nav = useNavigate()
   const { graph, events, error } = useLivePlan(id)
+  const { app, setAppId } = useCurrentApp()
+  const synced = useRef(false) // one app at a time: the app follows the plan you open; switching apps leaves this plan
+  useEffect(() => {
+    if (!graph || !app) return
+    if (app.id === graph.app.id) { synced.current = true; return }
+    if (!synced.current) setAppId(graph.app.id)
+    else nav(['drafting', 'proposed', 'approved'].includes(graph.plan.status) ? '/plan' : '/build')
+  }, [graph?.app.id, app?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const [selectedId, setSelectedId] = useState<string>()
   const [busy, setBusy] = useState(false)
   if (error && !graph) return <p className="muted">{error}</p>
