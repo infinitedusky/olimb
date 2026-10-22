@@ -929,6 +929,13 @@ loosen). Why homework first: a buyer who isn't the one being gated, a proof that
 (Beeminder, StickK, Forfeit, Opal, Freedom) have fines or timers as the lock and no real proof; that is the part
 to own.
 
+**Why now (Sandy):** AI gives us proof at a level that was never possible before. Today it can read the real
+assignment and tell whether it was understood; the day it can tell whether you're lying is coming, and heart rate
+and the rest are already measurable. A lot of this gets creepy, and it is inevitable. The stance that follows:
+Gate takes only proofs the gated person agreed to and can see (the student sees what is measured; counts, never
+content, leave the house; his download is his). Being the gate people trust with that is the position; the
+creepy version will exist, and it won't be the one a parent chooses.
+
 Build consequence, cheap now: the server stops knowing that "quiz passed" means "open NextDNS". The night emits
 proof events, a policy says what they unlock, locks are drivers. One phase in `locks.py`/`gate.py`.
 
