@@ -1,6 +1,6 @@
-# Olimb
+# 🔭🧠💡✏️🔨 Olimb
 
-**Observe · Learn · Ideate · Mockup · Build.** An open-source factory that turns ideas into software and keeps
+**Observe · Learn · Ideate · Mockup · Build.** (That's the logo, too.) An open-source factory that turns ideas into software and keeps
 them honest with telemetry. Agents plan, build and open the PRs; the running app's signal decides what was worth
 it and what to roll back.
 
