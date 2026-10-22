@@ -8,8 +8,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
     <div className="shell" data-component="Shell">
       <TalkDrawer />
       <nav className="nav">
-        <Link to="/" className="brand" title="Observe · Learn · Ideate · Mockup · Build">O.L.I.M.B</Link>
-        <div className="faint brand-sub">observe · learn · ideate · mockup · build</div>
+        <Link to="/" className="brand" title="Observe · Learn · Ideate · Mockup · Build" aria-label="Olimb: observe, learn, ideate, mockup, build">
+          <span className="brand-mark" aria-hidden="true">🔭🧠💡✏️🔨</span>
+          <span className="brand-name">O.L.I.M.B</span>
+        </Link>
         <NavLink to="/" end className={({ isActive }) => `link ${isActive ? 'active' : ''}`}>Now</NavLink>
         <NavLink to="/talk" className={({ isActive }) => `link ${isActive ? 'active' : ''}`}>Talk</NavLink>
         <NavLink to="/ideas" className={({ isActive }) => `link ${isActive ? 'active' : ''}`}>Ideas</NavLink>
