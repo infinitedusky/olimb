@@ -936,6 +936,19 @@ Gate takes only proofs the gated person agreed to and can see (the student sees 
 content, leave the house; his download is his). Being the gate people trust with that is the position; the
 creepy version will exist, and it won't be the one a parent chooses.
 
+**Who may gate whom (Sandy's abuse cases, 2026-10-22):** the creepy versions are an adult controlling another
+adult (a husband locks an account until he sees a video of his wife working out) and surveillance of a child
+dressed up as rules (a nanny cam that locks things automatically). Protection is in the product: (1) only three
+relationships exist, a guardian over a minor, yourself over yourself, an organisation over its members' work
+resources; no partner role; a second adult on your own gate is a *referee* who can confirm or release, never
+lock, and whom you can remove. (2) A proof is something the gated person does, never something done to them:
+no cameras, video, location or continuous monitoring; a lock changes only on a proof he produced or a rule set
+in advance that he can read. (3) The gated person always sees the rule, the proof, who set it, and the ledger.
+(4) Locks only on things the gated person connected themselves (his phone through Screen Time's consent, a card
+the account holder owns); Gate never holds another adult's credentials. (5) An adult can leave at any time and
+everything unlocks; a minor's gate never blocks calls, family contacts or school, and ends at 18 or becomes a
+self-gate.
+
 Build consequence, cheap now: the server stops knowing that "quiz passed" means "open NextDNS". The night emits
 proof events, a policy says what they unlock, locks are drivers. One phase in `locks.py`/`gate.py`.
 
