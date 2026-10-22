@@ -27,7 +27,10 @@ export interface Graph {
   decisions: Decision[]
   questions: Question[]
   conflicts: [string, string][] // open phases that claim the same path: they take turns
+  files?: GraphFile[] // the paths more than one open phase claims, as nodes of their own
 }
+/** A file on the graph: who claims it, and who has it right now (the phase that is running with it). */
+export interface GraphFile { path: string; phases: string[]; heldBy: string | null }
 export interface PlanSummary { id: string; title: string; status: string; createdAt: string; ideaId?: string | null; app: { id: string; name: string } | null; taskCount: number; phases: Record<string, number> }
 export interface IdeaRow { id: string; appId: string; number: number; title: string; body: string | null; lane: string }
 export interface AppSetup { test_cmd?: string; preview_cmd?: string; model?: string; max_budget_usd?: number; max_turns?: number }

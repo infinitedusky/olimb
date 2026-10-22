@@ -125,6 +125,7 @@ async function loadPlan(tx: Tx | typeof db, planId: string) {
     tasks: tasks.map((t) => ({ ...t, phaseIds: phases.filter((x) => x.taskId === t.id).map((x) => x.id) })),
     phases: full.map((x) => ({ ...x, orderedAfter: order.get(x.id) ?? [] })),
     conflicts: fileConflicts(full),
+    files: sharedFiles(full),
   }
 }
 
@@ -137,6 +138,17 @@ export function fileConflicts(phases: { id: string; status: string; files: strin
     if (x.files.length && y.files.length && x.files.some((f) => y.files.some((g) => claimsOverlap(f, g)))) out.push([x.id, y.id])
   }
   return out
+}
+
+/** Files more than one open phase claims: nodes of their own on the graph, with who has the file right now. */
+export function sharedFiles(phases: { id: string; status: string; files: string[] }[]): { path: string; phases: string[]; heldBy: string | null }[] {
+  const open = phases.filter((x) => !['done', 'failed', 'cancelled'].includes(x.status))
+  const active = (s: string) => ['running', 'awaiting_answer', 'merging', 'testing'].includes(s)
+  const byPath = new Map<string, string[]>()
+  for (const x of open) for (const f of new Set(x.files.map((p) => p.replace(/\/+$/, '')))) byPath.set(f, [...(byPath.get(f) ?? []), x.id])
+  return [...byPath].filter(([, ids]) => ids.length > 1).sort(([a], [b]) => a.localeCompare(b)).map(([path, ids]) => ({
+    path, phases: ids, heldBy: ids.find((id) => active(open.find((x) => x.id === id)!.status)) ?? null,
+  }))
 }
 
 export const planGraph = (planId: string) => loadPlan(db, planId)
@@ -211,11 +223,16 @@ export async function tickAll(room: number, opts: { planId?: string } = {}) {
       const a = apps.find((q) => q.id === x.appId)!
       return { workspaceId: a.workspaceId, appId: x.appId, planId: x.planId, taskId: x.taskId, actor: 'engine' }
     }
-    const describe = (reason: string, me: typeof phases[number]) => reason.replace(/(waiting on|shares files with|blocked:) (ph_\S+)/, (_, verb, other) => {
+    // A phase held over a file is waiting on the phase that has it, the same as a dependency; say so, and name the
+    // file (Sandy, 2026-10-22: "if it shares the file and goes second, it's dependent on it").
+    const describe = (reason: string, me: typeof phases[number]) => reason.replace(/(waiting on|shares files with|shares (\S+) with|blocked:) (ph_\S+)/, (_, verb, file, other) => {
       const o = phases.find((q) => q.id === other)
       if (!o) return `${verb} ${other}`
       const t = tasks.find((q) => q.id === o.taskId)
       const where = o.planId !== me.planId ? ' (another plan)' : o.taskId !== me.taskId ? ` (task #${t?.number}, earlier in the plan)` : ''
+      const path = file?.replace(/^app_[A-Za-z0-9]+\/?/, '') // claims are namespaced by app; the person wants the path
+      if (path) return `waiting on phase #${o.number} (${path})${where}`
+      if (file !== undefined || verb === 'shares files with') return `waiting on phase #${o.number} (the whole app)${where}`
       return `${verb} phase #${o.number}${where}`
     })
     for (const id of pick.start) {
@@ -317,6 +334,6 @@ export async function appGraph(appId: string) {
   return {
     app: { id: a.id, name: a.name, defaultBranch: a.defaultBranch },
     plans: plans.map((p) => ({ ...p, pr: prs.find((q) => q.planId === p.id) ?? null })),
-    tasks, phases: full.map((x) => ({ ...x, orderedAfter: order.get(x.id) ?? [] })), conflicts,
+    tasks, phases: full.map((x) => ({ ...x, orderedAfter: order.get(x.id) ?? [] })), conflicts, files: sharedFiles(full),
   }
 }

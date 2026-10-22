@@ -115,7 +115,7 @@ describe.skipIf(!reachable)('runner', () => {
     expect(maxLive).toBeGreaterThanOrEqual(2)
     for (const snapshot of overlapsOnShared) expect(snapshot.length).toBe(1)
     const held = (await db.select().from(event).where(inArray(event.planId, [A.plan.id, B.plan.id]))).filter((e) => e.type === 'phase.held').map((e) => (e.payload as any).reason)
-    expect(held.some((r) => /shares files with phase #\d+ \(another plan\)/.test(r))).toBe(true)
+    expect(held.some((r) => /waiting on phase #\d+ \(.+\) \(another plan\)/.test(r))).toBe(true)
   })
 
   it('retries a failed run with the reason, and gives up after max attempts', async () => {

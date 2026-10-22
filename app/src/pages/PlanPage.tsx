@@ -74,7 +74,7 @@ export function PlanPage() {
       </ol>
 
       {graph.phases.length
-        ? <PlanGraphView phases={graph.phases} labels={Object.fromEntries(graph.phases.map((p) => [p.id, short(taskOf(p)?.title ?? '')]))} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} />
+        ? <PlanGraphView phases={graph.phases} files={graph.files} labels={Object.fromEntries(graph.phases.map((p) => [p.id, short(taskOf(p)?.title ?? '')]))} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} />
         : <div className="empty">No phases yet. <strong>Plan</strong> a task above: the planner reads the repo and the task's brief and proposes phases, decisions and questions. Or write phases by hand with <code>pnpm if task phases</code>.</div>}
 
       {(graph.questions.length > 0 || graph.decisions.length > 0) && (
