@@ -912,3 +912,36 @@ claimants, the holder pointing at it, it pointing at the ones waiting, undecided
 file run together and only true overlaps re-run.
 - Lesson from writing the schedule plan by hand: don't put `api.py` in three phases of one task; one phase per
   file-heavy module, or split the module. The engine's rule was right; the plan's granularity was mine.
+
+## Gate: access is the reward, proof is the price (Sandy, 2026-10-22, evening)
+
+Sandy's thesis, stated after a day of building the schedule, the companion and the deck: Homework Gate is one
+instance of a general thing, **a reward-gating service**: access to something you want is the reward, and a
+verified proof is the price. The same engine, later, on yourself: lock a vendor on your bank card until Whoop
+says you hit the week's goal. **The future product is called Gate**; Homework Gate is the first gate.
+
+Three parts, none of them "homework": **proofs** (things that can be verified rather than claimed: a quiz passed
+on tonight's assignment, a Whoop score, steps, a shipped PR, a savings transfer), **locks** (things worth wanting
+back: apps and sites, a merchant or category on a card, a smart plug), and **the rule** (who sets it, for whom:
+a parent for a kid, yourself for yourself, a team for its members; trust points are the ledger that lets a rule
+loosen). Why homework first: a buyer who isn't the one being gated, a proof that is genuinely hard
+(understanding, not minutes), and a reason the gated person accepts it (confidence). Self-commitment apps
+(Beeminder, StickK, Forfeit, Opal, Freedom) have fines or timers as the lock and no real proof; that is the part
+to own.
+
+Build consequence, cheap now: the server stops knowing that "quiz passed" means "open NextDNS". The night emits
+proof events, a policy says what they unlock, locks are drivers. One phase in `locks.py`/`gate.py`.
+
+Also decided today: **parents have accounts; the child never signs up.** A parent creates the household and the
+kids (name + a short code); a kid signs in on the household's link with his code. Every night row gets a
+`child_id` (one parent, several kids). The parent's identity comes from a provider (Clerk recommended: Next.js
+sign-in pieces, passkeys and Apple sign-in, an iOS SDK for the parent app later, a Python SDK so the server
+verifies the session); the child's session stays ours, a signed cookie like the parent PIN. Hosted for many
+families on an API key; the subscription is for Sandy's own household on Sandy's machine.
+
+Competition check done the same evening (store and launch-site searches by mechanism, not category): generic-quiz
+unlocks for small children (BrainTokens, Applatch, Learn It 2 Earn It, TimeSchool, EarnIt, Screenwise), chore
+proof with parent approval (Earn Time, Screeni), ChoreLocks (photo + AI check + Screen Time, for chores),
+StudyLock (generic quiz, adults), tutors with no gate (Khanmigo, homeworkAI). None unlocks on the real
+assignment, understood. For YC this matters in one way: name ChoreLocks and StudyLock and say the difference in
+a sentence; what moves the decision is families on it before the deadline.
