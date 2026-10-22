@@ -15,9 +15,8 @@ import { PlanPage } from './pages/PlanPage'
 import { NewPlan } from './pages/NewPlan'
 import { AppGraph } from './pages/AppGraph'
 import { Now } from './pages/Now'
-import { Talk } from './pages/Talk'
 import { Learn } from './pages/Learn'
-import { Mockups } from './pages/Mockups'
+import { Validate } from './pages/Validate'
 
 function IdeaRoute() {
   const idea = findIdea(useParams().slug ?? '')
@@ -31,14 +30,13 @@ createRoot(document.getElementById('root')!).render(
         <Shell>
           <Routes>
             <Route path="/" element={<Now />} />
-            <Route path="/talk" element={<Talk />} />
-            <Route path="/talk/:id" element={<Talk />} />
             <Route path="/learn" element={<Learn />} />
-            <Route path="/mockups" element={<Mockups />} />
+            <Route path="/plan" element={<Plans mode="plan" />} />
+            <Route path="/validate" element={<Validate />} />
+            <Route path="/build" element={<Plans mode="build" />} />
             <Route path="/ideas" element={<Board ideas={ideas} />} />
             <Route path="/ideas/:slug" element={<IdeaRoute />} />
             <Route path="/graph" element={<AppGraph />} />
-            <Route path="/plans" element={<Plans />} />
             <Route path="/plans/new" element={<NewPlan />} />
             <Route path="/plans/:id" element={<PlanPage />} />
             <Route path="/settings" element={<Settings modules={modules} />} />

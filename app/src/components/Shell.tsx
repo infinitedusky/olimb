@@ -2,13 +2,14 @@ import { Link, NavLink, useLocation } from 'react-router'
 import { useCurrentApp } from '../current-app'
 import { TalkDrawer } from './TalkDrawer'
 
-/** The nav is the loop: one step per line, its icon in front. The wordmark sits above; the emoji row is the logo outside the site. */
-const STEPS: { to: string; icon: string; label: string; also?: RegExp; sub?: { to: string; label: string }[] }[] = [
+/** The nav is the loop: one stage per line, its icon in front. The wordmark sits above; the agent is the drawer, not a page. */
+const STAGES: { to: string; icon: string; label: string; also?: RegExp; sub?: { to: string; label: string }[] }[] = [
   { to: '/', icon: '🔭', label: 'Observe' },
   { to: '/learn', icon: '🧠', label: 'Learn' },
   { to: '/ideas', icon: '💡', label: 'Ideate' },
-  { to: '/mockups', icon: '✏️', label: 'Mockup' },
-  { to: '/plans', icon: '🔨', label: 'Build', also: /^\/(plans|graph)/, sub: [{ to: '/graph', label: 'Graph' }] },
+  { to: '/plan', icon: '📋', label: 'Plan', also: /^\/plans/ },
+  { to: '/validate', icon: '🧪', label: 'Validate' },
+  { to: '/build', icon: '🔨', label: 'Build', also: /^\/graph/, sub: [{ to: '/graph', label: 'Graph' }] },
 ]
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -22,7 +23,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <Link to="/" className="brand" title="Self Evident: the thing proves itself" aria-label="Self Evident">
           Self Evident<i>.</i>
         </Link>
-        {STEPS.map((s) => (
+        {STAGES.map((s) => (
           <div key={s.to}>
             <NavLink to={s.to} end={s.to === '/'} className={({ isActive }) => cls(isActive || !!s.also?.test(pathname))}>
               <span className="ico" aria-hidden="true">{s.icon}</span>{s.label}
@@ -31,7 +32,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         ))}
         <div className="nav-rule" />
-        <NavLink to="/talk" className={({ isActive }) => cls(isActive)}><span className="ico" aria-hidden="true">💬</span>Talk</NavLink>
         <NavLink to="/settings" className={({ isActive }) => cls(isActive)}><span className="ico" aria-hidden="true">⚙️</span>Settings</NavLink>
         <div className="apps">
           <div className="mono faint" style={{ margin: '0 10px 6px' }}>APP</div>

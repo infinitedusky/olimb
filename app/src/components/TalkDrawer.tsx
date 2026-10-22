@@ -4,7 +4,7 @@
  * apps. Every message carries the page you are on, so you can ask it to do whatever, about whatever you see.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation } from 'react-router'
+import { useLocation } from 'react-router'
 import { Conversation } from './Conversation'
 import { engine, type TalkContext } from '../engine'
 import { useCurrentApp } from '../current-app'
@@ -17,13 +17,13 @@ export function contextFor(pathname: string, search: string): TalkContext {
   const app = new URLSearchParams(search).get('app') ?? undefined
   if (plan) return { path: pathname, planId: plan, label: 'this plan' }
   if (pathname === '/plans/new') return { path: pathname, label: 'the plan composer' }
-  if (pathname.startsWith('/plans')) return { path: pathname, label: 'Build' }
+  if (pathname.startsWith('/plans') || pathname.startsWith('/plan')) return { path: pathname, label: 'Plan' }
+  if (pathname.startsWith('/build')) return { path: pathname, label: 'Build' }
+  if (pathname.startsWith('/validate')) return { path: pathname, label: 'Validate' }
   if (pathname.startsWith('/ideas')) return { path: pathname, label: 'Ideate (the inbox)' }
   if (pathname.startsWith('/learn')) return { path: pathname, label: 'Learn' }
-  if (pathname.startsWith('/mockups')) return { path: pathname, label: 'Mockup' }
   if (pathname.startsWith('/graph')) return { path: pathname, appId: app, label: 'the graph' }
   if (pathname.startsWith('/settings')) return { path: pathname, label: 'settings' }
-  if (pathname.startsWith('/talk')) return { path: pathname, label: 'the Talk page' }
   return { path: pathname, label: 'Observe' }
 }
 
@@ -63,14 +63,12 @@ export function TalkDrawer() {
   }, [])
   useEffect(() => { document.body.classList.toggle('talk-open', open); return () => document.body.classList.remove('talk-open') }, [open])
 
-  if (loc.pathname.startsWith('/talk')) return null // the full page is the drawer, there
   if (!open) return <button className="talk-fab" onClick={() => set(true)} title="Talk to the factory (⌘J)" data-component="TalkFab">Talk</button>
   return (
     <aside className="talk-drawer" data-component="TalkDrawer">
       <div className="talk-drawer-head">
         <strong style={{ flex: 1 }}>{app?.name ?? 'The factory'}</strong>
         <button className="btn quiet small" onClick={() => { if (window.confirm(`Start a fresh conversation about ${app?.name ?? 'the factory'}? This one is kept in Talk.`)) void startOver() }} title="End this conversation and begin a new one">Start over</button>
-        <Link className="btn quiet small" to="/talk" title="Open in full">Full</Link>
         <button className="btn quiet small" onClick={() => set(false)} title="Close (⌘J)">×</button>
       </div>
       <div className="faint" style={{ fontSize: 12, padding: '0 12px 6px' }}>It knows you're looking at {context.label}.</div>
