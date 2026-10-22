@@ -7,9 +7,9 @@
  * reasons, runs and steps are props on the nodes, so live updates never jump.
  */
 import dagre from '@dagrejs/dagre'
-import { Background, Handle, type Node, type NodeProps, Position, ReactFlow, ReactFlowProvider, type Edge, MarkerType, useReactFlow } from '@xyflow/react'
+import { Background, Handle, type Node, type NodeChange, type NodeProps, Panel, Position, ReactFlow, ReactFlowProvider, type Edge, MarkerType, useReactFlow } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { GraphFile, GraphPhase, PhaseStatus } from '../engine'
 import { Badge, type Tone } from './Badge'
 
@@ -93,25 +93,41 @@ function layout(phases: GraphPhase[], files: GraphFile[]): Map<string, { x: numb
   return new Map([...phases.map((p) => [p.id, at(p.id, W, H)] as const), ...files.map((f) => [fileId(f), at(fileId(f), FW, FH)] as const)])
 }
 
+type Pos = { x: number; y: number }
+/** Where the viewer dragged nodes to, remembered in this browser only (a convenience, never state). */
+const loadMoved = (key?: string): Record<string, Pos> => { try { return key ? JSON.parse(localStorage.getItem(`graph.moved.${key}`) ?? '{}') : {} } catch { return {} } }
+const saveMoved = (key: string | undefined, moved: Record<string, Pos>) => { try { if (key) localStorage.setItem(`graph.moved.${key}`, JSON.stringify(moved)) } catch { /* private window: it just doesn't stick */ } }
+
 export interface PlanGraphViewProps {
   phases: GraphPhase[]
   files?: GraphFile[] // shared files, drawn as nodes between the phases that claim them
+  storageKey?: string // the plan or app: dragged positions are remembered per key, in this browser
   onSelect?: (p: GraphPhase) => void
   selectedId?: string
   labels?: Record<string, string> // e.g. the task (or plan · task) each phase belongs to
   tall?: boolean
 }
 
-export function PlanGraphView({ phases, files = [], onSelect, selectedId, labels, tall }: PlanGraphViewProps) {
+export function PlanGraphView({ phases, files = [], onSelect, selectedId, labels, tall, storageKey }: PlanGraphViewProps) {
   const shared = files.filter((f) => f.phases.filter((id) => phases.some((x) => x.id === id)).length > 1)
   const topology = [...phases.map((p) => `${p.id}:${waitsOn(p).join(',')}`), ...shared.map((f) => `${f.path}:${f.heldBy ?? ''}:${f.phases.join(',')}`)].join('|')
   const positions = useMemo(() => layout(phases, shared), [topology]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Nodes can be dragged; a dragged node keeps its place through live updates and re-layouts until "Tidy up".
+  const [moved, setMoved] = useState<Record<string, Pos>>(() => loadMoved(storageKey))
+  const onNodesChange = (changes: NodeChange[]) => {
+    const next = { ...moved }
+    let changed = false
+    for (const c of changes) if (c.type === 'position' && c.position) { next[c.id] = c.position; changed = true }
+    if (changed) { setMoved(next); saveMoved(storageKey, next) }
+  }
+  const tidy = () => { setMoved({}); saveMoved(storageKey, {}) }
+  const at = (id: string) => moved[id] ?? positions.get(id) ?? { x: 0, y: 0 }
   const nodes: Node<PhaseNodeData | FileNodeData>[] = [
     ...phases.map((p): Node<PhaseNodeData> => ({
-      id: p.id, type: 'phase', position: positions.get(p.id) ?? { x: 0, y: 0 }, data: { phase: p, label: labels?.[p.id] }, selected: p.id === selectedId, draggable: false,
+      id: p.id, type: 'phase', position: at(p.id), data: { phase: p, label: labels?.[p.id] }, selected: p.id === selectedId,
     })),
     ...shared.map((f): Node<FileNodeData> => ({
-      id: fileId(f), type: 'file', position: positions.get(fileId(f)) ?? { x: 0, y: 0 }, data: { file: f, holder: phases.find((x) => x.id === f.heldBy) }, draggable: false, selectable: false,
+      id: fileId(f), type: 'file', position: at(fileId(f)), data: { file: f, holder: phases.find((x) => x.id === f.heldBy) }, selectable: false,
     })),
   ]
   const edges: Edge[] = [
@@ -129,9 +145,10 @@ export function PlanGraphView({ phases, files = [], onSelect, selectedId, labels
   return (
     <div className={`graph-canvas ${tall ? 'tall' : ''}`} data-component="PlanGraphView">
       <ReactFlowProvider>
-        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.2, maxZoom: 1 }} onNodesChange={onNodesChange}
           onNodeClick={(_, n) => { if (n.type === 'phase') onSelect?.((n.data as PhaseNodeData).phase) }} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
           <Background gap={20} color="var(--line)" />
+          {Object.keys(moved).length > 0 && <Panel position="top-right"><button type="button" className="graph-tidy" onClick={tidy}>Tidy up</button></Panel>}
           <FitOnChange topology={topology} />
         </ReactFlow>
       </ReactFlowProvider>
