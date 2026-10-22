@@ -449,9 +449,18 @@ folded, results collapsible), permission cards, Stop / End.
   spaced-repetition question and the demo plan ready to run, and recommended which to do first. 5 rows, one turn.
 - Decided on the way: the agent may edit the factory itself from the web, every edit and command approved; no
   hard deny on push/PR for this agent (the person is the guard), unlike the builders.
-- Next: Talk as a drawer on every page ("plan this" from where you are); previews per branch; decisions
-  approvable. With this, the loop Sandy asked for closes: work in the UI, talk to the agent there, come back to
-  this chat only when the factory itself needs a fix the agent can't make.
+- **Then, same day (Sandy: "overlaid on the whole app, so it follows you around and you can ask it to do
+  whatever")**: the agent is a drawer on every page (floating button, ⌘J), one conversation carried along; each
+  message is sent with where the person is (`context: {path, planId, appId}`), which the engine turns into one
+  line the agent sees ("The person is looking at plan … (drafting; 1 task, 3 phases, 1 open question)") while the
+  transcript keeps the plain text. Checked on the spaced-repetition plan: "what's still open on this plan?" → it
+  called `plan_graph` for that plan unprompted and answered specifically.
+- **One app at a time** (Sandy): the current app is picked in the nav and highlighted; Now, Plans, Ideas, the
+  Graph and the agent's working directory follow it (`?app=` on the routes). **The Idea Factory is now an app**
+  (repo `infinitedusky/idea-factory`, local checkout, `pnpm -r test`), so it is built through the same
+  machinery as Homework Gate — the "build the factory inside the app" loop Sandy asked for.
+- Next: previews per branch; decisions approvable. With this, the loop closes: work in the UI, talk to the agent
+  there, come back to this chat only when the factory itself needs a fix the agent can't make.
 
 ## Web first: the UI becomes the place Sandy works (2026-10-21, idea-factory PR #12)
 
