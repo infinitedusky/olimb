@@ -4,6 +4,14 @@ Working name. Brainstormed with Sandy, 2026-10-20, after deciding InDusk had
 grown more process than product. Draft: research in `research/` fills in the
 comps, the method and what to salvage.
 
+## The dream: company as code (Sandy, 2026-10-21 — "this has been a dream forever")
+
+A company whose logic lives in git (processes, standards, skills, integrations; changed by PR), whose state lives
+in a database (orders, messages, decisions, evidence; never in the code), that is changed on evidence by the
+factory (telemetry proposes, agents build, telemetry judges), and where people make the judgement calls and
+those calls are recorded as part of the company's record. Infrastructure as code took a decade to become the
+default; the tech-pack company (`LOG.md`) would be the first one written this way, from its first garment.
+
 ## What matters most (Sandy, 2026-10-20)
 
 1. **Agents produce PRs and the support for them.**
@@ -13,6 +21,13 @@ When someone asks "how do I know this will work?", the answer is never "trust me
 the loop it ran, and here are its telemetry results. It's all green, so you can launch production." After launch:
 "Still all green." Metrics keep coming in, and **every idea, the moment it arrives, is analysed against them** —
 the data that supports it, augments it, or argues against it is attached to the idea.
+
+## Start with people who are starting (Sandy, 2026-10-21)
+
+"It's hard to retrofit any company, easier if you start using this." The factory and everything built with it
+are for greenfield: PostHog-native from the first line, Postgres from day one, a brand's first tech pack rather
+than a migration of its hundredth. Converters run outward (our standard → the formats incumbents already use), so
+nobody on the other side has to change. The standard spreads because newcomers keep arriving with it.
 
 ## The goal: free and open source (Sandy, 2026-10-20)
 
@@ -66,13 +81,6 @@ Platform risk, and the defences: **telemetry-neutral** (PostHog *and* Datadog �
 that reads your Datadog); **deep where PostHog won't go** (PRs on any stack with their evidence, demos with
 labelled fake data, an agent that pushes back on whether an idea is worth building — their loop is a feature
 inside analytics, ours is the product); and the best extension of PostHog is also what PostHog would buy.
-Sandy, 2026-10-20: "just because they're doing the same thing we're doing, you can position your company slightly
-differently and win" — and the way to know the gap is to use them, so Homework Gate gets built with Lightsprint
-(LOG). **Strategy: start as a copy, then change a little.** Even with the same feature set, how far ours can beat
-theirs is unknowable before we're running; it is defensible to start from what Lightsprint does, copy the shape
-(patterns and ideas, never pixels, brand or code) and make a small change. The small change has to be one they
-can't match without rebuilding: the unit of work (an idea that outlives the merge, not a task that ends at it) and
-the buyer (a PostHog user, not a Linear user). A small change they *can* match is just a feature request to them.
 
 ## What it is
 
@@ -149,12 +157,9 @@ Details and sources in `research/`.
 - **Nobody does:** the idea as the unit of work — baseline, hypothesis,
   testability verdict, look-by date, verdict, re-check after shipping; an agent
   that pushes back on whether an idea is worth building; ideas proposed from
-  telemetry (not just bug fixes); demos that label the fake data and tie to
-  the hypothesis. **A seeded preview itself is not ours** (corrected
-  2026-10-20): Lightsprint defaults every preview to sample data, undocumented
-  — `research/lightsprint.md`. Seed data is still the weak spot in the open
-  tools (stalled or gone), but the layer we'd own is narrower: data for *this
-  change's scenario*, with what's fake stated in the review.
+  telemetry (not just bug fixes); demos on a seeded preview that label the fake
+  data and tie to the hypothesis. Seed data is the weak spot — the open tools
+  are stalled or gone, so we may own that layer.
 - **Closest threats:** PostHog (self-driving loop, June 2026: signals → agent
   → draft PR → checks the metric returned to baseline; MIT core) and Cursor
   (agents with demos). Building on PostHog may beat competing with it.
@@ -252,12 +257,9 @@ Details and sources in `research/`.
 
 - **Foundational decisions are drawn out, not automated** (Sandy,
   2026-10-20). Automating setup early takes decisions out of the person's
-  hands — easy, and useless. Setup decisions are mechanical (file layout,
-  routes, config: automate) or foundational (**stack and framework**, look
-  and feel, palette, type, voice, density, audience: the person's).
-  Corrected 2026-10-20: framework was listed as mechanical; the Homework
-  Gate POC was built as Python-rendered UI without asking and had to move to
-  React a day later. The agent asks before building on a stack. Foundational ones get an
+  hands — easy, and useless. Setup decisions are mechanical (framework,
+  file layout, routes: automate) or foundational (look and feel, palette,
+  type, voice, density, audience: the person's). Foundational ones get an
   elicitation process, not a question: references (sites/apps liked and
   disliked, and why; who it's for) → the agent proposes 2–3 directions as
   real stories of the app's own screens → the person reacts (pick, mix,
