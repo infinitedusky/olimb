@@ -69,7 +69,7 @@ export function AppGraph() {
             {error && <Badge tone="warn" dot>{error}</Badge>}
           </div>
           {data.phases.length
-            ? <PlanGraphView phases={data.phases} files={data.files} labels={Object.fromEntries(data.phases.map((p) => [p.id, short(taskOf(p)?.title ?? planOf(p)?.title ?? '')]))} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} tall />
+            ? <PlanGraphView phases={data.phases} files={data.files} storageKey={data.app.id} labels={Object.fromEntries(data.phases.map((p) => [p.id, short(taskOf(p)?.title ?? planOf(p)?.title ?? '')]))} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} tall />
             : <div className="empty">No phases in {data.app.name} yet.</div>}
           {selected && (
             <section className="panel">
