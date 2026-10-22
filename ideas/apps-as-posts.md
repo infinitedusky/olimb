@@ -18,5 +18,13 @@ fizzled): a post is a self-contained app that runs in the reader's browser, buil
 components on a sandboxed runtime, with a thin shared backend only for state. A publishing format, not a
 code-hosting platform.
 
+Two tiers (Sandy: "either self-host or use our approved stack"). The **approved stack is the format**: a
+self-contained bundle of Self Evident's known components on the sandboxed browser runtime, a thin shared backend
+for state, and a declared capability list the runtime enforces (extended by PR, in the open); it runs in the feed
+and the email preview with telemetry we can vouch for. **Self-hosting is the escape hatch**: anyone runs the whole
+thing themselves, and an app that needs more than the format allows is published as a link, an external post
+with no embedding and no vouched telemetry. The format is open and runs identically hosted or self-hosted; we
+host the convenient instance (open core, hosted business).
+
 Cheapest test, no code: run it on Substack itself. A newsletter where every post is an app link, the email as
 the vehicle; subscribes, clicks and returning use are the behaviour that costs something.
