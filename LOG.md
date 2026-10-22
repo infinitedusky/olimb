@@ -319,6 +319,15 @@ iCloud Private Relay's `mask.apple-dns.net`.
   the lock model itself — took Sandy three rounds (overrides → two locks →
   unlock periods) to land; the agent's first model was wrong.
 
+### Idea raised: apps as posts (Sandy, 2026-10-22)
+
+"If self-evident is the best way to build apps, maybe we add a distribution layer that resembles Substack,
+where posts are not stories but apps. Apps become the way people express concepts." Captured as
+`ideas/apps-as-posts.md`: a feed where each post is a small app that shows itself; the factory's demonstration
+and telemetry make it self-evident; its telemetry is the read rate. Counterargument: the hosting graveyard
+(Glitch 2025, Observable, GPT Store) — so a publishing format for sandboxed, browser-run apps, not code hosting.
+Cheapest test: run it on Substack, posts as app links, measure subscribes, clicks, returning use.
+
 ### Ideas raised, not yet decided (2026-10-20)
 
 From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
