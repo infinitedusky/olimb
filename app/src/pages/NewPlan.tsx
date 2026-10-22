@@ -3,7 +3,7 @@
  * planner will propose from the brief; until it exists you can write them here. Straight into the engine.
  */
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { engine, type App } from '../engine'
 
 interface PhaseRow { key: string; title: string; brief: string; dependsOn: string[]; files: string }
@@ -21,7 +21,17 @@ export function NewPlan() {
   const [tasks, setTasks] = useState<TaskRow[]>([blankTask()])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  useEffect(() => { engine.apps().then((a) => { setApps(a); if (a.length) setAppId(a[a.length - 1].id) }).catch((e) => setError(String(e.message ?? e))) }, [])
+  const [params] = useSearchParams()
+  const ideaId = params.get('idea') // "Break it down" from the inbox: the idea becomes the plan's title and why, and the first task
+  useEffect(() => {
+    engine.apps().then((a) => { setApps(a); if (a.length) setAppId(a[a.length - 1].id) }).catch((e) => setError(String(e.message ?? e)))
+    if (ideaId) engine.ideas().then((all) => {
+      const i = all.find((x) => x.id === ideaId)
+      if (!i) return
+      setAppId(i.appId); setTitle(i.title); setSpec(i.body ?? '')
+      setTasks([{ ...blankTask(), title: i.title, brief: i.body ?? '' }])
+    }).catch(() => {})
+  }, [ideaId])
 
   const updateTask = (ti: number, patch: Partial<TaskRow>) => setTasks((ts) => ts.map((t, j) => (j === ti ? { ...t, ...patch } : t)))
   const updatePhase = (ti: number, pi: number, patch: Partial<PhaseRow>) => updateTask(ti, { phases: tasks[ti].phases.map((p, j) => (j === pi ? { ...p, ...patch } : p)) })
@@ -38,7 +48,7 @@ export function NewPlan() {
         })),
       }))
       if (!body.length) throw new Error('add at least one task with a title')
-      const { plan } = await engine.createPlan({ appId, title: title.trim(), spec: spec.trim() || undefined, tasks: body })
+      const { plan } = await engine.createPlan({ appId, title: title.trim(), spec: spec.trim() || undefined, ideaId: ideaId ?? undefined, tasks: body })
       nav(`/plans/${plan.id}`)
     } catch (e: any) { setError(String(e.message ?? e)) } finally { setBusy(false) }
   }

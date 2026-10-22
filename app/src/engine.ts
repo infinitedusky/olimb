@@ -28,7 +28,8 @@ export interface Graph {
   questions: Question[]
   conflicts: [string, string][] // open phases that claim the same path: they take turns
 }
-export interface PlanSummary { id: string; title: string; status: string; createdAt: string; app: { id: string; name: string } | null; taskCount: number; phases: Record<string, number> }
+export interface PlanSummary { id: string; title: string; status: string; createdAt: string; ideaId?: string | null; app: { id: string; name: string } | null; taskCount: number; phases: Record<string, number> }
+export interface IdeaRow { id: string; appId: string; number: number; title: string; body: string | null; lane: string }
 export interface AppSetup { test_cmd?: string; preview_cmd?: string; model?: string; max_budget_usd?: number; max_turns?: number }
 export interface Repo { id: string; appId: string; fullName: string; localPath: string | null; baseBranch: string | null }
 export interface App { id: string; workspaceId?: string; name: string; defaultBranch: string; setup?: AppSetup; repos?: Repo[] }
@@ -62,6 +63,9 @@ export interface Now { running: RunningPlan[]; needsYou: Attention[]; recent: Ev
 
 export const engine = {
   now: () => call<Now>('GET', '/now'),
+  ideas: () => call<IdeaRow[]>('GET', '/ideas'),
+  createIdea: (body: { appId: string; title: string; body?: string }) => call<IdeaRow>('POST', '/ideas', body),
+  planIdea: (id: string) => call<{ plan: { id: string } }>('POST', `/ideas/${id}/plan`, {}),
   apps: () => call<App[]>('GET', '/apps'),
   workspaces: () => call<Workspace[]>('GET', '/workspaces'),
   createWorkspace: (name: string) => call<Workspace>('POST', '/workspaces', { name }),
@@ -71,7 +75,7 @@ export const engine = {
   updateRepo: (id: string, body: { fullName?: string; localPath?: string | null; baseBranch?: string | null }) => call<Repo>('PATCH', `/repos/${id}`, body),
   plans: () => call<PlanSummary[]>('GET', '/plans'),
   graph: (id: string) => call<Graph>('GET', `/plans/${id}/graph`),
-  createPlan: (body: { appId: string; title: string; spec?: string; tasks: NewTask[] }) => call<{ plan: { id: string } }>('POST', '/plans', body),
+  createPlan: (body: { appId: string; title: string; spec?: string; ideaId?: string; tasks: NewTask[] }) => call<{ plan: { id: string } }>('POST', '/plans', body),
   addPhases: (taskId: string, phases: NewPhase[]) => call<unknown>('POST', `/tasks/${taskId}/phases`, phases),
   planTask: (taskId: string) => call<{ runId: string }>('POST', `/tasks/${taskId}/plan`), // 202; the outcome arrives as task.planned / task.plan_failed
   clearPhases: (taskId: string) => call<{ cleared: number }>('DELETE', `/tasks/${taskId}/phases`), // a draft task back to its brief

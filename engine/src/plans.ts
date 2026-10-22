@@ -6,7 +6,7 @@
  */
 import { and, asc, eq, inArray, notInArray, sql } from 'drizzle-orm'
 import { db, type Tx } from './db/client.js'
-import { app, decision, phase, phaseDependency, phaseFileClaim, plan, pr, question, run, step, task, type PhaseStatus } from './db/schema.js'
+import { app, decision, idea, phase, phaseDependency, phaseFileClaim, plan, pr, question, run, step, task, type PhaseStatus } from './db/schema.js'
 import { appendEvent } from './events.js'
 import { newId } from './ids.js'
 import { claimsOverlap, findCycle, pickTasksToStart, type SchedTask } from './scheduler.js'
@@ -37,6 +37,7 @@ export async function createPlan(input: NewPlan) {
     const [p] = await tx.insert(plan).values({
       id: planId, appId: a.id, ideaId: input.ideaId ?? null, title: input.title, spec: input.spec ?? null, integrationBranch: `plan/${planId}`,
     }).returning()
+    if (input.ideaId) await tx.update(idea).set({ lane: 'build' }).where(eq(idea.id, input.ideaId)) // the idea has left the inbox
     const [{ maxTask }] = await tx.select({ maxTask: sql<number>`coalesce(max(${task.number}), 0)` }).from(task).where(eq(task.appId, a.id))
     const [{ maxPhase }] = await tx.select({ maxPhase: sql<number>`coalesce(max(${phase.number}), 0)` }).from(phase).where(eq(phase.appId, a.id))
     let taskNumber = Number(maxTask), phaseNumber = Number(maxPhase)

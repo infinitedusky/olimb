@@ -15,6 +15,7 @@ import { db, pool } from './db/client.js'
 import { app as appTable, PHASE_STATUSES, repo as repoTable, workspace, type PhaseStatus } from './db/schema.js'
 import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
+import { createIdea, listIdeas, planFromIdea } from './ideas.js'
 import { now } from './now.js'
 import { answerQuestion, finishPlanning, preparePlanning, recoverPlanning } from './planner.js'
 import { addPhases, appGraph, clearPhases, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
@@ -92,6 +93,16 @@ export function buildApp(bus: EventBus) {
     const body = await c.req.json<{ appId: string; fullName: string; localPath?: string; baseBranch?: string }>()
     const [row] = await db.insert(repoTable).values({ id: newId('repo'), appId: body.appId, fullName: body.fullName, localPath: body.localPath ?? null, baseBranch: body.baseBranch ?? null }).returning()
     return c.json(row, 201)
+  })
+
+  // The inbox: capture an idea in a moment; make it a plan when its time comes.
+  api.get('/ideas', async (c) => c.json(await listIdeas()))
+  api.post('/ideas', async (c) => {
+    try { return c.json(await createIdea({ ...(await c.req.json()), actor: 'user' }), 201) } catch (err) { return planError(c, err) }
+  })
+  api.post('/ideas/:id/plan', async (c) => {
+    const body = await c.req.json<{ tasks?: { title: string; brief?: string }[] }>().catch(() => ({} as { tasks?: { title: string; brief?: string }[] }))
+    try { return c.json(await planFromIdea(c.req.param('id'), body.tasks), 201) } catch (err) { return planError(c, err) }
   })
 
   api.get('/plans', async (c) => c.json(await listPlans({ all: c.req.query('all') === '1' })))
