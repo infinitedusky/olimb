@@ -22,6 +22,13 @@
       "when": 1792673876824,
       "tag": "0002_icy_miek",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792675367499,
+      "tag": "0003_lumpy_starhawk",
+      "breakpoints": true
     }
   ]
 }

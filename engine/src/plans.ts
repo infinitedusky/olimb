@@ -51,9 +51,9 @@ export async function createPlan(input: NewPlan) {
       title: ph.title, brief: ph.brief ?? null, priority: ph.priority ?? 0, position: i,
     }))
     if (phaseRows.length) await tx.insert(phase).values(phaseRows)
-    const deps = allPhases.flatMap((ph) => (ph.dependsOn ?? []).map((d) => ({ phaseId: idByKey.get(ph.key)!, dependsOnPhaseId: idByKey.get(d)! })))
+    const deps = allPhases.flatMap((ph) => (ph.dependsOn ?? []).map((d) => ({ appId: a.id, phaseId: idByKey.get(ph.key)!, dependsOnPhaseId: idByKey.get(d)! })))
     if (deps.length) await tx.insert(phaseDependency).values(deps)
-    const claims = allPhases.flatMap((ph) => (ph.files ?? []).map((path) => ({ phaseId: idByKey.get(ph.key)!, path })))
+    const claims = allPhases.flatMap((ph) => (ph.files ?? []).map((path) => ({ appId: a.id, phaseId: idByKey.get(ph.key)!, path })))
     if (claims.length) await tx.insert(phaseFileClaim).values(claims)
 
     const base = { workspaceId: a.workspaceId, appId: a.id, planId, actor: 'engine' }
@@ -83,9 +83,9 @@ export async function addPhases(taskId: string, phases: NewPhase[], actor = 'eng
       priority: p.priority ?? 0, position: ++position, createdBy: actor,
     }))
     await tx.insert(phase).values(rows)
-    const deps = phases.flatMap((p) => (p.dependsOn ?? []).map((d) => ({ phaseId: idByKey.get(p.key)!, dependsOnPhaseId: idByKey.get(d) ?? d })))
+    const deps = phases.flatMap((p) => (p.dependsOn ?? []).map((d) => ({ appId: a.id, phaseId: idByKey.get(p.key)!, dependsOnPhaseId: idByKey.get(d) ?? d })))
     if (deps.length) await tx.insert(phaseDependency).values(deps)
-    const claims = phases.flatMap((p) => (p.files ?? []).map((path) => ({ phaseId: idByKey.get(p.key)!, path })))
+    const claims = phases.flatMap((p) => (p.files ?? []).map((path) => ({ appId: a.id, phaseId: idByKey.get(p.key)!, path })))
     if (claims.length) await tx.insert(phaseFileClaim).values(claims)
     const base = { workspaceId: a.workspaceId, appId: a.id, planId: t.planId, taskId: t.id, actor }
     for (const r of rows) await appendEvent(tx, { ...base, phaseId: r.id, type: 'phase.created', payload: { number: r.number, title: r.title } })

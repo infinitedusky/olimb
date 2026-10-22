@@ -22,7 +22,7 @@ export function Board({ ideas }: { ideas: Idea[] }) {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const reload = () => Promise.all([engine.ideas(appId || undefined), engine.plans(appId || undefined)]).then(([i, p]) => { setRows(i); setPlans(p) }).catch((e) => setError(String(e.message ?? e)))
-  useEffect(() => { void reload() }, [appId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (appId) void reload() }, [appId]) // eslint-disable-line react-hooks/exhaustive-deps
   const add = async () => {
     if (!title.trim() || !appId) return
     setBusy('add')
@@ -33,6 +33,7 @@ export function Board({ ideas }: { ideas: Idea[] }) {
     try { const { plan } = await engine.planIdea(id); nav(`/plans/${plan.id}`) } catch (e: any) { setError(String(e.message ?? e)); setBusy(null) }
   }
   const planOf = (i: IdeaRow) => plans.find((p) => p.ideaId === i.id)
+  const notes = ideas.filter((i) => i.app === app?.name) // the files are labelled with the app they are about
   const inbox = (rows ?? []).filter((r) => r.lane === 'inbox')
   const planned = (rows ?? []).filter((r) => r.lane !== 'inbox')
 
@@ -78,16 +79,18 @@ export function Board({ ideas }: { ideas: Idea[] }) {
         )}
       </section>
 
+      {notes.length > 0 && <>
       <div className="page-head" style={{ marginTop: 24 }}>
         <div>
           <h2 style={{ margin: 0 }}>From the design notes</h2>
           <p className="muted" style={{ margin: '4px 0 0' }}>The ideas written as files in <code>ideas/</code> before the inbox existed. Every idea carries its evidence; telemetry decides.</p>
         </div>
-        <span className="mono faint">{ideas.length} ideas</span>
+        <span className="mono faint">{notes.length} ideas</span>
       </div>
       <div className="lanes">
-        {LANES.map((l) => <LaneColumn key={l.id} label={l.label} hint={l.hint} ideas={ideas.filter((i) => i.lane === l.id)} />)}
+        {LANES.map((l) => <LaneColumn key={l.id} label={l.label} hint={l.hint} ideas={notes.filter((i) => i.lane === l.id)} />)}
       </div>
+      </>}
     </>
   )
 }

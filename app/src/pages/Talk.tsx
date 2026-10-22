@@ -11,7 +11,7 @@ import { engine, type TalkSession } from '../engine'
 
 export function Talk() {
   const { id } = useParams() // an earlier conversation, read-only; without it, the app's current one
-  const { app, sessionId, startOver } = useAppTalk()
+  const { app, sessionId, problem, startOver } = useAppTalk()
   const [sessions, setSessions] = useState<TalkSession[]>([])
   const reload = () => engine.talks().then(setSessions).catch(() => {})
   useEffect(() => { void reload() }, [sessionId])
@@ -44,7 +44,9 @@ export function Talk() {
           <div><strong>{app?.name ?? 'The factory'}</strong> <span className="mono faint">{current?.cwd}</span></div>
           {id && <Badge>earlier conversation</Badge>}
         </div>
-        {shown ? <Conversation sessionId={shown} context={{ path: '/talk', appId: app?.id, label: 'the Talk page' }} onChanged={reload} /> : <p className="muted">Starting…</p>}
+        {shown ? <Conversation sessionId={shown} context={{ path: '/talk', appId: app?.id, label: 'the Talk page' }} onChanged={reload} />
+          : !app ? <div className="empty">Pick an app in the nav, or add one in Settings. A conversation belongs to an app.</div>
+          : problem ? <div className="empty bad">{problem}</div> : <p className="muted">Starting…</p>}
       </section>
     </div>
   )

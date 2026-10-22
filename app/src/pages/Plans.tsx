@@ -11,7 +11,7 @@ export function Plans() {
   const { app } = useCurrentApp()
   const [plans, setPlans] = useState<PlanSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => { engine.plans(app?.id).then(setPlans).catch((e) => setError(String(e.message ?? e))) }, [app?.id])
+  useEffect(() => { if (app) engine.plans(app.id).then(setPlans).catch((e) => setError(String(e.message ?? e))) }, [app?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
       <div className="page-head">

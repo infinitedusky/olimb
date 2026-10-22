@@ -5,9 +5,7 @@
  * the UI, Claude Code's default mode. Development runs on the operator's login, the product on an API key.
  */
 import { createSdkMcpServer, query, tool, type Query, type SDKMessage, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
-import { and, desc, eq, isNull, sql } from 'drizzle-orm'
-import { resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from './db/client.js'
 import { app, repo, session, sessionMessage, workspace } from './db/schema.js'
@@ -20,7 +18,6 @@ import { createPlan, listPlans, PlanError, planGraph } from './plans.js'
 import { runner } from './runner.js'
 import { eventsSince } from './events.js'
 
-const FACTORY_ROOT = resolve(fileURLToPath(import.meta.url), '../../..') // the idea-factory checkout this engine runs from
 const READ_TOOLS = ['Read', 'Glob', 'Grep', 'LS', 'TodoWrite', 'WebFetch', 'WebSearch']
 const ASK_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash']
 const PERMISSION_TIMEOUT_MS = 10 * 60_000
@@ -85,8 +82,9 @@ function engineTools() {
   })
 }
 
-async function workspaceFor(appId: string | null) {
-  if (appId) { const [a] = await db.select().from(app).where(eq(app.id, appId)); if (a) return a.workspaceId }
+async function workspaceFor(appId: string) {
+  const [a] = await db.select().from(app).where(eq(app.id, appId))
+  if (a) return a.workspaceId
   const [w] = await db.select().from(workspace).limit(1)
   return w?.id ?? 'ws_none'
 }
@@ -94,31 +92,34 @@ async function workspaceFor(appId: string | null) {
 /** One transcript row, and the event that tells every open page about it. */
 async function record(sessionId: string, author: string, kind: string, body: string, payload?: Record<string, unknown>) {
   const [s] = await db.select().from(session).where(eq(session.id, sessionId))
-  const workspaceId = await workspaceFor(s?.appId ?? null)
-  const [row] = await db.insert(sessionMessage).values({ sessionId, author, kind, body, payload: payload ?? null, status: 'sent', sentAt: new Date() }).returning()
+  if (!s) throw new PlanError(`no session ${sessionId}`)
+  const workspaceId = await workspaceFor(s.appId)
+  const [row] = await db.insert(sessionMessage).values({ appId: s.appId, sessionId, author, kind, body, payload: payload ?? null, status: 'sent', sentAt: new Date() }).returning()
   await db.update(session).set({ lastActiveAt: new Date() }).where(eq(session.id, sessionId))
   await db.transaction((tx) => appendEvent(tx, {
-    workspaceId, appId: s?.appId ?? undefined, sessionId, actor: author === 'user' ? 'user' : `agent:${sessionId}`,
+    workspaceId, appId: s.appId, sessionId, actor: author === 'user' ? 'user' : `agent:${sessionId}`,
     type: kind === 'permission' ? 'talk.permission' : kind === 'result' ? 'talk.result' : 'talk.message',
     payload: { sessionId, messageId: row.id, author, kind, body: clip(body, 200), ...(payload ?? {}) },
   }))
   return row
 }
 
-export async function startTalk(input: { appId?: string; cwd?: string; title?: string; actor?: string }) {
+export async function startTalk(input: { appId: string; cwd?: string; title?: string; actor?: string }) {
+  const [a] = await db.select().from(app).where(eq(app.id, input.appId))
+  if (!a) throw new PlanError(`no app ${input.appId}`)
   let cwd = input.cwd
-  if (!cwd && input.appId) { const [r] = await db.select().from(repo).where(eq(repo.appId, input.appId)); cwd = r?.localPath ?? undefined }
-  cwd = cwd ?? FACTORY_ROOT
-  const [row] = await db.insert(session).values({ id: newId('session'), kind: 'talk', appId: input.appId ?? null, cwd, title: input.title ?? null, createdBy: input.actor ?? 'user', lastActiveAt: new Date() }).returning()
+  if (!cwd) { const [r] = await db.select().from(repo).where(eq(repo.appId, input.appId)); cwd = r?.localPath ?? undefined }
+  if (!cwd) throw new PlanError(`${a.name} has no local checkout yet; add its repo in Settings`)
+  const [row] = await db.insert(session).values({ id: newId('session'), appId: a.id, kind: 'talk', cwd, title: input.title ?? null, createdBy: input.actor ?? 'user', lastActiveAt: new Date() }).returning()
   return row
 }
 
-/** The one open conversation for an app (or for the factory checkout itself when appId is null): found, or started. */
-export async function currentTalk(appId: string | null, actor = 'user') {
+/** The one open conversation for an app: found, or started. */
+export async function currentTalk(appId: string, actor = 'user') {
   const [row] = await db.select().from(session)
-    .where(and(eq(session.kind, 'talk'), eq(session.status, 'open'), appId ? eq(session.appId, appId) : isNull(session.appId)))
+    .where(and(eq(session.kind, 'talk'), eq(session.status, 'open'), eq(session.appId, appId)))
     .orderBy(desc(session.lastActiveAt)).limit(1)
-  return row ?? startTalk({ appId: appId ?? undefined, actor })
+  return row ?? startTalk({ appId, actor })
 }
 
 export const listTalks = async () => {
@@ -150,7 +151,7 @@ async function open(sessionId: string): Promise<Live> {
   const q = query({
     prompt: input.it,
     options: {
-      cwd: s.cwd ?? FACTORY_ROOT,
+      cwd: s.cwd!,
       resume: s.agentSessionId ?? undefined,
       model: setup.model,
       settingSources: ['project'],

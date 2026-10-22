@@ -102,7 +102,7 @@ export class Runner {
     const attempt = x.attempt + 1
     await db.update(phase).set({ status: 'running', attempt, branch, worktreePath, baseSha, heldReason: null, updatedAt: new Date() }).where(eq(phase.id, phaseId))
     const runId = newId('run')
-    await db.insert(run).values({ id: runId, phaseId, attempt, kind: 'build', agent: 'claude-code', model: setup.model ?? null, status: 'working', budgetCapUsd: setup.max_budget_usd?.toString() ?? null })
+    await db.insert(run).values({ id: runId, appId: a.id, phaseId, attempt, kind: 'build', agent: 'claude-code', model: setup.model ?? null, status: 'working', budgetCapUsd: setup.max_budget_usd?.toString() ?? null })
     const rb = { ...pb, runId }
     await this.emit({ ...rb, type: 'phase.status', payload: { from: x.status, to: 'running', attempt, branch, worktreePath, resumes: interrupted?.agentSessionId ?? null } })
 
@@ -111,7 +111,7 @@ export class Runner {
       worktreePath, branch, files, testCmd: setup.test_cmd, previousFailure, model: setup.model, maxTurns: setup.max_turns, maxBudgetUsd: setup.max_budget_usd,
       resumeSessionId: interrupted?.agentSessionId ?? undefined, abort: this.active.get(phaseId),
       onEvent: async (type, payload) => {
-        if (type === 'run.steps') await this.saveSteps(phaseId, runId, (payload.steps as { text: string; status: string }[]) ?? [])
+        if (type === 'run.steps') await this.saveSteps(a.id, phaseId, runId, (payload.steps as { text: string; status: string }[]) ?? [])
         await this.emit({ ...rb, actor: `agent:${runId}`, type, payload })
       },
     })
@@ -138,11 +138,11 @@ export class Runner {
   }
 
   /** The builder's todo list, as the phase's steps: the latest list replaces the previous one for this run. */
-  private async saveSteps(phaseId: string, runId: string, steps: { text: string; status: string }[]) {
+  private async saveSteps(appId: string, phaseId: string, runId: string, steps: { text: string; status: string }[]) {
     const allowed = new Set(['pending', 'in_progress', 'completed'])
     await db.transaction(async (tx) => {
       await tx.delete(step).where(and(eq(step.phaseId, phaseId), eq(step.runId, runId)))
-      const rows = steps.filter((s) => s.text).map((s, i) => ({ phaseId, runId, position: i, text: s.text.slice(0, 500), status: allowed.has(s.status) ? s.status : 'pending' }))
+      const rows = steps.filter((s) => s.text).map((s, i) => ({ appId, phaseId, runId, position: i, text: s.text.slice(0, 500), status: allowed.has(s.status) ? s.status : 'pending' }))
       if (rows.length) await tx.insert(step).values(rows)
     })
   }
@@ -235,7 +235,7 @@ export class Runner {
     const result = await ensurePlanPr({ repoPath: r.localPath!, fullName: r.fullName, integrationBranch: p.integrationBranch!, base: a.defaultBranch, title: p.title, body })
     const [existing] = await db.select().from(prTable).where(eq(prTable.planId, planId))
     if (!existing) {
-      await db.insert(prTable).values({ id: newId('pr'), planId, repoId: r.id, number: result.number, url: result.url, headBranch: p.integrationBranch, baseBranch: a.defaultBranch, status: 'open', openedAt: new Date() })
+      await db.insert(prTable).values({ id: newId('pr'), appId: a.id, planId, repoId: r.id, number: result.number, url: result.url, headBranch: p.integrationBranch, baseBranch: a.defaultBranch, status: 'open', openedAt: new Date() })
     }
     await this.emit({ ...base, type: result.created ? 'pr.opened' : 'pr.updated', payload: { number: result.number, url: result.url, landed: landed.length } })
   }

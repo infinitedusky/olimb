@@ -69,8 +69,8 @@ export interface TalkContext { path: string; label?: string; planId?: string; ap
 
 export const engine = {
   talks: () => call<TalkSession[]>('GET', '/talks'),
-  startTalk: (body: { appId?: string; cwd?: string; title?: string }) => call<TalkSession>('POST', '/talks', body),
-  currentTalk: (appId?: string) => call<TalkSession>('POST', '/talks/current', { appId }), // the app's one open conversation
+  startTalk: (body: { appId: string; cwd?: string; title?: string }) => call<TalkSession>('POST', '/talks', body),
+  currentTalk: (appId: string) => call<TalkSession>('POST', '/talks/current', { appId }), // the app's one open conversation
   transcript: (id: string) => call<Transcript>('GET', `/talks/${id}`),
   say: (id: string, text: string, context?: TalkContext) => call<{ messageId: number }>('POST', `/talks/${id}/say`, { text, context }),
   permission: (id: string, requestId: string, allow: boolean, always = false) => call<unknown>('POST', `/talks/${id}/permission`, { requestId, allow, always }),

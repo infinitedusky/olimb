@@ -17,10 +17,11 @@ export function Now() {
   const [busy, setBusy] = useState<string | null>(null)
   const timer = useRef<number | undefined>(undefined)
   useEffect(() => {
+    if (!app) return
     let closed = false
-    const refresh = () => engine.now(app?.id).then((d) => { if (!closed) { setData(d); setError(null) } }).catch((e) => setError(String(e.message ?? e)))
+    const refresh = () => engine.now(app.id).then((d) => { if (!closed) { setData(d); setError(null) } }).catch((e) => setError(String(e.message ?? e)))
     void refresh()
-    const es = new EventSource(`${API}/events?since=-1${app ? `&app=${app.id}` : ''}`)
+    const es = new EventSource(`${API}/events?since=-1&app=${app.id}`)
     const bump = () => { window.clearTimeout(timer.current); timer.current = window.setTimeout(refresh, 250) }
     for (const type of EVENT_TYPES) if (!type.startsWith('run.tool') && type !== 'run.message') es.addEventListener(type, bump)
     es.onerror = () => setError('event stream disconnected; retrying')
@@ -29,6 +30,7 @@ export function Now() {
   const act = async (key: string, fn: () => Promise<unknown>) => { setBusy(key); try { await fn() } catch (e: any) { setError(String(e.message ?? e)) } finally { setBusy(null) } }
 
   if (error && !data) return <div className="empty">The engine isn't reachable: {error}. Run <code>pnpm dev</code> at the repo root.</div>
+  if (!app) return <div className="empty">No app yet. Add one in Settings: a repo with a local checkout, a test command, a model.</div>
   if (!data) return <p className="muted">Loading…</p>
   return (
     <>

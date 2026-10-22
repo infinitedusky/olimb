@@ -168,7 +168,7 @@ export function validateProposal(p: Proposal) {
 interface AppSetup { test_cmd?: string; model?: string; max_budget_usd?: number; max_turns?: number }
 
 export interface PlanningContext {
-  runId: string; taskId: string; planId: string; attempt: number
+  runId: string; taskId: string; planId: string; appId: string; attempt: number
   input: Omit<ProposeInput, 'onEvent' | 'abort'>
   base: Omit<NewEvent, 'type'>
 }
@@ -190,14 +190,14 @@ export async function preparePlanning(taskId: string, opts: { actor?: string } =
   const [{ n }] = await db.select({ n: sql<number>`count(*)` }).from(run).where(and(eq(run.taskId, taskId), eq(run.kind, 'plan')))
   const attempt = Number(n) + 1
   const runId = newId('run')
-  await db.insert(run).values({ id: runId, taskId, attempt, kind: 'plan', agent: 'claude-code', model: setup.model ?? null, status: 'working', budgetCapUsd: setup.max_budget_usd?.toString() ?? null })
+  await db.insert(run).values({ id: runId, appId: a.id, taskId, attempt, kind: 'plan', agent: 'claude-code', model: setup.model ?? null, status: 'working', budgetCapUsd: setup.max_budget_usd?.toString() ?? null })
   const base: Omit<NewEvent, 'type'> = { workspaceId: a.workspaceId, appId: a.id, planId: t.planId, taskId, runId, actor: opts.actor ?? 'engine' }
   await emit({ ...base, type: 'task.planning', payload: { attempt, number: t.number, title: t.title } })
   const earlier = g.tasks.filter((x) => x.position < t.position).map((x) => ({
     number: x.number, title: x.title, phases: g.phases.filter((p) => p.taskId === x.id).map((p) => ({ number: p.number, title: p.title })),
   }))
   return {
-    runId, taskId, planId: t.planId, attempt, base,
+    runId, taskId, planId: t.planId, appId: a.id, attempt, base,
     input: {
       repoPath: r.localPath, task: { number: t.number, title: t.title, brief: t.brief }, plan: { title: g.plan.title, spec: g.plan.spec }, earlier,
       testCmd: setup.test_cmd, model: setup.model, maxTurns: setup.max_turns, maxBudgetUsd: setup.max_budget_usd,
@@ -233,12 +233,12 @@ export async function finishPlanning(ctx: PlanningContext, opts: { propose?: Pro
         key: p.key, title: p.title, brief: phaseBrief(p), dependsOn: p.depends_on ?? [], files: p.files ?? [],
       })), 'planner', tx)
       const decisions = proposal.decisions.length ? await tx.insert(decision).values(proposal.decisions.map((d) => ({
-        id: newId('decision'), planId: ctx.planId, taskId: ctx.taskId, runId: ctx.runId, question: d.title,
+        id: newId('decision'), appId: ctx.appId, planId: ctx.planId, taskId: ctx.taskId, runId: ctx.runId, question: d.title,
         options: [{ key: 'A', text: d.chosen, recommended: true }, ...d.rejected.map((r, n) => ({ key: String.fromCharCode(66 + n), text: r, recommended: false }))],
         chosen: 'A', provisional: true, rationale: d.reason,
       }))).returning() : []
       const questions = proposal.questions.length ? await tx.insert(question).values(proposal.questions.map((q) => ({
-        id: newId('question'), planId: ctx.planId, taskId: ctx.taskId, runId: ctx.runId, text: q.question,
+        id: newId('question'), appId: ctx.appId, planId: ctx.planId, taskId: ctx.taskId, runId: ctx.runId, text: q.question,
         options: q.options.map((o) => ({ ...o, recommended: o.label === q.recommended })), reason: q.reason, cost: questionCost(q), status: 'open',
       }))).returning() : []
       for (const q of questions) await appendEvent(tx, { ...ctx.base, type: 'question.asked', payload: { questionId: q.id, text: q.text, cost: q.cost } })

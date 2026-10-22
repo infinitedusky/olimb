@@ -99,12 +99,14 @@ export function buildApp(bus: EventBus) {
   // Talk: an interactive agent session, the conversation as rows and events, permissions answered from the UI.
   api.get('/talks', async (c) => c.json(await listTalks()))
   api.post('/talks', async (c) => {
-    const body = await c.req.json<{ appId?: string; cwd?: string; title?: string }>().catch(() => ({}))
-    try { return c.json(await startTalk({ ...body, actor: 'user' }), 201) } catch (err) { return planError(c, err) }
+    const body = await c.req.json<{ appId?: string; cwd?: string; title?: string }>().catch(() => ({} as { appId?: string; cwd?: string; title?: string }))
+    if (!body.appId) return c.json({ error: 'appId is required: a conversation belongs to an app' }, 400)
+    try { return c.json(await startTalk({ ...body, appId: body.appId, actor: 'user' }), 201) } catch (err) { return planError(c, err) }
   })
   api.post('/talks/current', async (c) => { // the app's one open conversation, started if there is none
     const body = await c.req.json<{ appId?: string }>().catch(() => ({} as { appId?: string }))
-    try { return c.json(await currentTalk(body.appId ?? null, 'user')) } catch (err) { return planError(c, err) }
+    if (!body.appId) return c.json({ error: 'appId is required: a conversation belongs to an app' }, 400)
+    try { return c.json(await currentTalk(body.appId, 'user')) } catch (err) { return planError(c, err) }
   })
   api.get('/talks/:id', async (c) => { try { return c.json(await talkTranscript(c.req.param('id'))) } catch (err) { return planError(c, err, 404) } })
   api.post('/talks/:id/say', async (c) => {

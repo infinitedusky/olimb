@@ -149,7 +149,7 @@ describe.skipIf(!reachable)('runner', () => {
     const { plan: p, phases } = await createPlan({ appId, title: 'recovery', tasks: [one('T', [{ key: 'r', title: 'R', files: ['r.txt'] }])] })
     await db.update(plan).set({ status: 'running' }).where(eq(plan.id, p.id))
     await db.update(phase).set({ status: 'running', attempt: 1 }).where(eq(phase.id, phases[0].id))
-    await db.insert(run).values({ id: newId('run'), phaseId: phases[0].id, attempt: 1, kind: 'build', agent: 'claude-code', status: 'working', agentSessionId: 'sess-123' })
+    await db.insert(run).values({ id: newId('run'), appId, phaseId: phases[0].id, attempt: 1, kind: 'build', agent: 'claude-code', status: 'working', agentSessionId: 'sess-123' })
     await git(repoPath, ['branch', p.integrationBranch!, 'main'])
     let resumed: string | undefined
     const runner = new Runner({ execute: async (i) => { resumed = i.resumeSessionId; return commits('r')(i) }, sessionsMax: 2 })

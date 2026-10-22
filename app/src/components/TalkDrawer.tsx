@@ -29,25 +29,28 @@ export function contextFor(pathname: string, search: string): TalkContext {
 export function useAppTalk() {
   const { app } = useCurrentApp()
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [problem, setProblem] = useState<string | null>(null)
   useEffect(() => {
     let gone = false
-    setSessionId(null)
-    engine.currentTalk(app?.id).then((s) => { if (!gone) setSessionId(s.id) }).catch(() => {})
+    setSessionId(null); setProblem(null)
+    if (!app) return
+    engine.currentTalk(app.id).then((s) => { if (!gone) setSessionId(s.id) }).catch((e) => { if (!gone) setProblem(String(e.message ?? e)) })
     return () => { gone = true }
   }, [app?.id])
   const startOver = async () => {
+    if (!app) return
     if (sessionId) await engine.endTalk(sessionId)
     setSessionId(null)
-    const s = await engine.currentTalk(app?.id)
+    const s = await engine.currentTalk(app.id)
     setSessionId(s.id)
   }
-  return { app, sessionId, startOver }
+  return { app, sessionId, problem, startOver }
 }
 
 export function TalkDrawer() {
   const loc = useLocation()
   const [open, setOpen] = useState(() => { try { return localStorage.getItem(KEY) === '1' } catch { return false } })
-  const { app, sessionId, startOver } = useAppTalk()
+  const { app, sessionId, problem, startOver } = useAppTalk()
   const context = useMemo(() => ({ ...contextFor(loc.pathname, loc.search), appId: app?.id }), [loc.pathname, loc.search, app?.id])
   const set = (v: boolean) => { setOpen(v); try { localStorage.setItem(KEY, v ? '1' : '0') } catch { /* fine */ } }
 
@@ -69,7 +72,10 @@ export function TalkDrawer() {
         <button className="btn quiet small" onClick={() => set(false)} title="Close (⌘J)">×</button>
       </div>
       <div className="faint" style={{ fontSize: 12, padding: '0 12px 6px' }}>It knows you're looking at {context.label}.</div>
-      {sessionId ? <Conversation sessionId={sessionId} context={context} compact /> : <p className="muted" style={{ padding: 12 }}>Starting…</p>}
+      {sessionId ? <Conversation sessionId={sessionId} context={context} compact />
+        : !app ? <p className="muted" style={{ padding: 12 }}>Pick an app in the nav, or add one in Settings. A conversation belongs to an app.</p>
+        : problem ? <div className="empty bad" style={{ margin: 12 }}>{problem}</div>
+        : <p className="muted" style={{ padding: 12 }}>Starting…</p>}
     </aside>
   )
 }

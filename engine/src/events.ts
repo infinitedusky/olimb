@@ -13,7 +13,7 @@ export const CHANNEL = 'if_events'
 
 export interface NewEvent {
   workspaceId: string
-  appId?: string | null
+  appId: string
   ideaId?: string | null
   planId?: string | null
   taskId?: string | null
