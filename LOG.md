@@ -952,7 +952,10 @@ in advance that he can read. (3) The gated person always sees the rule, the proo
 (4) Locks only on things the gated person connected themselves (his phone through Screen Time's consent, a card
 the account holder owns); Gate never holds another adult's credentials. (5) An adult can leave at any time and
 everything unlocks; a minor's gate never blocks calls, family contacts or school, and ends at 18 or becomes a
-self-gate.
+self-gate. Sandy, on all of it: you don't get around coercion, it exists in any of these situations; the product
+doesn't add much to what's already problematic in the world, and it may be evidence in a crime, which would be
+good. So the claim stays narrow: Gate is never the instrument, and the ledger (who set which rule, what was
+granted and revoked, when) belongs to the gated person, exportable, the receipt if one is ever needed.
 
 Build consequence, cheap now: the server stops knowing that "quiz passed" means "open NextDNS". The night emits
 proof events, a policy says what they unlock, locks are drivers. One phase in `locks.py`/`gate.py`.
