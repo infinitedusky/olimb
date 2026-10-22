@@ -7,7 +7,7 @@ import { db } from './db/client.js'
 import { app, event, phase, plan, pr, question, run, step, task } from './db/schema.js'
 
 const LIVE = ['running', 'merging', 'testing', 'awaiting_answer']
-const NOISE = ['run.tool_call', 'run.tool_result', 'run.rate_limit', 'run.message']
+const NOISE = ['run.tool_call', 'run.tool_result', 'run.rate_limit', 'run.message', 'talk.message', 'talk.permission', 'talk.result'] // conversations have their own place
 
 export type Attention =
   | { kind: 'failed_phase'; planId: string; planTitle: string; appName: string; phaseId: string; number: number; title: string; error: string | null }
