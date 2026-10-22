@@ -276,7 +276,8 @@ export async function say(sessionId: string, text: string, context?: TalkContext
   const [s] = await db.select().from(session).where(eq(session.id, sessionId))
   if (s && !s.subject) { // pinned by first contact: the plan or idea in view, else the first thing said
     const from = await subjectFrom({ planId: context?.planId, ideaId: context?.ideaId })
-    await db.update(session).set({ subject: from.subject ?? text.trim().slice(0, 60), subjectRef: from.subjectRef ?? s.subjectRef }).where(eq(session.id, sessionId))
+    const said = text.trim().replace(/\s+/g, ' ').slice(0, 48).replace(/[\s.,;:!?]+$/, '')
+    await db.update(session).set({ subject: from.subject ?? said, subjectRef: from.subjectRef ?? s.subjectRef }).where(eq(session.id, sessionId))
   }
   const l = await open(sessionId)
   const row = await record(sessionId, 'user', 'text', text.trim(), context ? { context } : undefined)
@@ -324,7 +325,9 @@ export async function endTalk(sessionId: string) {
     if (r?.localPath) await withLock(`git:${r.localPath}`, async () => {
       await removeWorktree(r.localPath!, s.worktreePath!)
       if (s.branch) {
-        const ahead = await git(r.localPath!, ['rev-list', '--count', `${a?.defaultBranch ?? 'main'}..${s.branch}`], { allowFail: true })
+        const def = a?.defaultBranch ?? 'main'
+        const base = (await git(r.localPath!, ['rev-parse', '--verify', '--quiet', `origin/${def}`], { allowFail: true })).code === 0 ? `origin/${def}` : def // the same base it was cut from
+        const ahead = await git(r.localPath!, ['rev-list', '--count', `${base}..${s.branch}`], { allowFail: true })
         if (ahead.code === 0 && Number(ahead.stdout) === 0) await git(r.localPath!, ['branch', '-D', s.branch], { allowFail: true })
         else branchKept = s.branch
       }

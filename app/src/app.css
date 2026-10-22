@@ -169,3 +169,4 @@ a.badge { text-decoration: none; }
 .talk-tab.close { margin-left: auto; }
 .talk-tab .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent); }
 .talk-drawer-head input { flex: 1; margin: 0; font-size: 13px; }
+.talk-drawer-head strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
