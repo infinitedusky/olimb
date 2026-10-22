@@ -1,5 +1,5 @@
 {
-  "name": "@olimb/engine",
+  "name": "@self-evident/engine",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "dev": "tsx watch src/server.ts",
     "serve": "tsx src/server.ts",
     "db:up": "docker compose up -d --wait",
-    "olimb": "tsx src/cli/if.ts",
+    "se": "tsx src/cli/if.ts",
     "if": "tsx src/cli/if.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",

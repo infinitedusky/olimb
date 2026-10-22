@@ -19,8 +19,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
     <div className="shell" data-component="Shell">
       <TalkDrawer />
       <nav className="nav">
-        <Link to="/" className="brand" title="Olimb: observe, learn, ideate, mockup, build" aria-label="Olimb">
-          O<i>.</i>L<i>.</i>I<i>.</i>M<i>.</i>B
+        <Link to="/" className="brand" title="Self Evident: the thing proves itself" aria-label="Self Evident">
+          Self Evident<i>.</i>
         </Link>
         {STEPS.map((s) => (
           <div key={s.to}>

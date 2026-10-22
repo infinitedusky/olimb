@@ -17,7 +17,7 @@ export function Plans() {
       <div className="page-head">
         <div>
           <h1>🔨 Build{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
-          <p className="muted" style={{ margin: '4px 0 0' }}>How Olimb builds: a plan is tasks in order; the planner turns each task into phases; each phase is one agent in one worktree; what lands becomes the plan's PR.</p>
+          <p className="muted" style={{ margin: '4px 0 0' }}>How Self Evident builds: a plan is tasks in order; the planner turns each task into phases; each phase is one agent in one worktree; what lands becomes the plan's PR.</p>
         </div>
         <Link to="/plans/new" className="btn">New plan</Link>
       </div>

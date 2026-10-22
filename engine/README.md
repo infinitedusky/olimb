@@ -1,4 +1,4 @@
-# Olimb engine
+# Self Evident engine
 
 The core: **idea → plan → task → phase → step.** A plan is tasks in order. A task is authored: a title and a brief.
 Phases are the atomic unit the engine runs: one agent, one worktree, one commit, each declaring its files and what it
@@ -21,19 +21,19 @@ pnpm start      # or: the engine alone on http://localhost:4000, serving the bui
 ```
 
 Migrations run when the engine boots. The API is under `/api` (`GET /api` lists the routes); the UI is served at `/`.
-In here, `pnpm serve` runs just the engine and `pnpm olimb …` is the CLI (against `ENGINE_URL`, default `http://localhost:4000/api`):
+In here, `pnpm serve` runs just the engine and `pnpm se …` is the CLI (against `ENGINE_URL`, default `http://localhost:4000/api`):
 
 ```bash
-pnpm olimb workspace "My workspace"            # → {"id":"ws_…"}
-pnpm olimb app "Homework Gate" -w ws_…          # → {"id":"app_…"}
-pnpm olimb plan create -a app_… -t "The gate" -f examples/demo-plan.json   # tasks in order, each with phases
-pnpm olimb plan tick plan_… -r 2               # one dispatch pass with 2 free slots (drafts)
-pnpm olimb plan graph plan_…                   # tasks, phases, edges, why each held phase waits, steps
-pnpm olimb phase status ph_… done              # drive a draft by hand, or:
-pnpm olimb watch -p plan_…                     # replay the plan's events, then follow live
-pnpm olimb task plan task_…                    # the planner: brief → phases, decisions, questions (minutes; read-only on the repo)
-pnpm olimb task phases task_… -f phases.json   # or write a task's phases by hand
-pnpm olimb question answer q_… "Yes"           # answer one of the planner's questions
+pnpm se workspace "My workspace"            # → {"id":"ws_…"}
+pnpm se app "Homework Gate" -w ws_…          # → {"id":"app_…"}
+pnpm se plan create -a app_… -t "The gate" -f examples/demo-plan.json   # tasks in order, each with phases
+pnpm se plan tick plan_… -r 2               # one dispatch pass with 2 free slots (drafts)
+pnpm se plan graph plan_…                   # tasks, phases, edges, why each held phase waits, steps
+pnpm se phase status ph_… done              # drive a draft by hand, or:
+pnpm se watch -p plan_…                     # replay the plan's events, then follow live
+pnpm se task plan task_…                    # the planner: brief → phases, decisions, questions (minutes; read-only on the repo)
+pnpm se task phases task_… -f phases.json   # or write a task's phases by hand
+pnpm se question answer q_… "Yes"           # answer one of the planner's questions
 ```
 
 A plan file is `[{title, brief?, phases?: [{key, title, brief?, dependsOn?, files?}]}]`: tasks in order.
@@ -41,10 +41,10 @@ A plan file is `[{title, brief?, phases?: [{key, title, brief?, dependsOn?, file
 To run a plan for real, the app needs a repo with a local main checkout and a test command:
 
 ```bash
-pnpm olimb app "Homework Gate" -w ws_… --test-cmd "/abs/path/to/.venv/bin/python -m pytest -q poc" --max-budget-usd 10
-pnpm olimb repo infinitedusky/homework-gate -a app_… -p /abs/path/to/homework-gate
-pnpm olimb plan create -a app_… -t "Health endpoint" -f examples/homework-gate-health.json
-pnpm olimb plan start plan_…                   # integration branch, worktree per task, agent run, landing, PR
+pnpm se app "Homework Gate" -w ws_… --test-cmd "/abs/path/to/.venv/bin/python -m pytest -q poc" --max-budget-usd 10
+pnpm se repo infinitedusky/homework-gate -a app_… -p /abs/path/to/homework-gate
+pnpm se plan create -a app_… -t "Health endpoint" -f examples/homework-gate-health.json
+pnpm se plan start plan_…                   # integration branch, worktree per task, agent run, landing, PR
 ```
 
 Each phase gets `<repo>-worktrees/<plan>--<n>` on branch `phase/<plan>/<n>`, cut from `plan/<plan>` (itself cut from
@@ -91,7 +91,7 @@ database is never touched.
 
 ## Planning
 
-`POST /tasks/:id/plan` (or `pnpm olimb task plan`) runs the planner on a task that has no phases yet. It reads the
+`POST /tasks/:id/plan` (or `pnpm se task plan`) runs the planner on a task that has no phases yet. It reads the
 repo at the app's local checkout (nothing is written), gets the task's brief, the plan's title and why, the earlier
 tasks (already implied dependencies), and the test command; it returns one object the SDK validates against
 `PROPOSAL_SCHEMA`, after one self-review pass in the same run. What it settled is a `decision` (provisional until a

@@ -155,7 +155,7 @@ a.badge { text-decoration: none; }
 
 
 /* The wordmark at the top; the loop as the nav, one icon per step; the emoji row is the logo outside the site */
-.nav .brand { display: block; text-decoration: none; color: var(--ink); font-weight: 800; font-size: 20px; letter-spacing: -0.02em; margin: 0 10px 14px; }
+.nav .brand { display: block; text-decoration: none; color: var(--ink); font-weight: 800; font-size: 18px; letter-spacing: -0.02em; margin: 0 10px 14px; white-space: nowrap; }
 .nav .brand i { font-style: normal; color: var(--accent); }
 .nav .ico { display: inline-block; width: 1.5em; }
 .nav .link.sub { margin-left: 22px; padding-top: 4px; padding-bottom: 4px; font-size: 13px; }

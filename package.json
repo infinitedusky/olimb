@@ -1,12 +1,12 @@
 {
-  "name": "olimb",
+  "name": "self-evident",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter @olimb/engine db:up && pnpm -r --parallel --stream dev",
+    "dev": "pnpm --filter @self-evident/engine db:up && pnpm -r --parallel --stream dev",
     "build": "pnpm --filter app build",
-    "start": "pnpm --filter @olimb/engine db:up && pnpm --filter @olimb/engine serve",
+    "start": "pnpm --filter @self-evident/engine db:up && pnpm --filter @self-evident/engine serve",
     "test": "pnpm -r test",
-    "engine": "pnpm --filter @olimb/engine",
+    "engine": "pnpm --filter @self-evident/engine",
     "app": "pnpm --filter app"
   }
 }

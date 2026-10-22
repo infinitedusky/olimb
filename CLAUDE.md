@@ -1,6 +1,6 @@
-# Olimb — observe, learn, ideate, mockup, build
+# Self Evident — the thing proves itself
 
-The product is **Olimb** (written O.L.I.M.B in the UI); this repository was `idea-factory` until 2026-10-22.
+The product is **Self Evident** (repository `infinitedusky/self-evident`; it was `idea-factory`, then briefly `olimb`, on 2026-10-22). The loop it runs is observe → learn → ideate → mockup → build, which is the nav.
 
 Start here: read [LOG.md](LOG.md) (where things stand, decisions, next step)
 and [SHAPE.md](SHAPE.md) (what we're building). Research is in `research/`.

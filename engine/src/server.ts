@@ -33,7 +33,7 @@ export function buildApp(bus: EventBus) {
   const api = new Hono()
 
   api.get('/', (c) => c.json({
-    engine: 'Olimb',
+    engine: 'Self Evident',
     model: 'idea → plan (tasks in order) → task (title + brief) → phase (one agent, one worktree, one commit) → step (the builder\'s todo list)',
     routes: {
       'GET /health': 'database reachable?',

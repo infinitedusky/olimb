@@ -34,7 +34,7 @@ export interface LandedTask { number: number; title: string; summary?: string | 
 
 export function prBody(plan: { title: string; spec?: string | null; id: string }, tasks: LandedTask[], pending: { number: number; title: string }[]): string {
   const lines = [
-    `Built by Olimb from plan \`${plan.id}\`: ${plan.title}.`,
+    `Built by Self Evident from plan \`${plan.id}\`: ${plan.title}.`,
     plan.spec ? `\n${plan.spec}` : '',
     '',
     '## Tasks landed',
@@ -47,7 +47,7 @@ export function prBody(plan: { title: string; spec?: string | null; id: string }
     '',
     'Rollback plan: revert this PR. Off switch, guard metric and schema impact per task come in a later step.',
     '',
-    '🤖 Generated with [Claude Code](https://claude.com/claude-code) via Olimb',
+    '🤖 Generated with [Claude Code](https://claude.com/claude-code) via Self Evident',
   ]
   return lines.filter((l) => l !== null).join('\n')
 }
