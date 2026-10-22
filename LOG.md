@@ -432,6 +432,28 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## The factory by hand: the spaced-repetition POC (2026-10-21, homework-gate PR #18, draft)
+
+The first task done the thesis's way: a proof of concept to react to *before* planning, instead of decision cards.
+Branch `spaced-repetition-poc` in its own worktree; Storybook stories rendered from the real templates with sample
+data; app on 8002, Storybook on 6008 (`STORYBOOK_APP` override added so a Storybook can point at any checkout).
+- **What it shows**: quiz with a returning question in slot 3, unmarked (two variants: new version / exact same);
+  result page for *first miss, still passes* (banner says it will come back), *second miss holds the gate* (the
+  4-of-5 banner that explains itself), *returning question cleared* (two variants: done / comes back once more);
+  parent page with a **Coming back** card (first missed, how often, waiting / due / holding the gate) and tags in
+  the quiz table. Templates render nothing new without the new data; no routes, storage or grading touched.
+- **What it took**: ~25 minutes by hand. Three template conditionals, ~60 lines of sample data, two manifest
+  edits, the existing `test_stories.py` as the check that every story renders (it caught a missing `endif`).
+  Compared with the planner's run on the same task: $1.16 and 220 s produced seven decisions to *read*; this
+  produced eight screens to *look at*, and the two real questions fell out as variants rather than cards.
+- **What the tool needs, from doing it by hand**: (1) a *POC phase* the planner emits first for anything with a
+  surface — stories + sample data + manifest entries, landing as a branch, verified by "every story renders";
+  (2) **a preview per branch**: a Storybook (and app) per worktree, with a link on the plan page — I had to find a
+  free port and add an env override by hand; (3) variants as a first-class thing: a question = two stories side
+  by side, and the pick becomes the decision row; (4) the agreed POC should become the phase's checks: each story
+  a verification shot, the behaviours in it the clauses.
+- Waiting on Sandy: look at the eight stories, pick the two variants, and say whether this is a plan to build.
+
 ## Telemetry floor: PostHog live for Homework Gate (2026-10-21)
 
 Sandy supplied the PostHog project (677236, US cloud): a personal API key (`phx_`, for reading — engine `.env`)
@@ -439,6 +461,11 @@ and the project token (`phc_`, for sending — Homework Gate `poc/.env`); both g
 tested from a detached worktree before merge: parent sign-in, open, close, schedule → three `parent_action`
 events in PostHog within seconds, super-properties `app=homework-gate`, no free text. 22 tests pass. Recommended
 merge; after it, restart the app on 8000 with the key, then the engine's first `evidence` read from this project.
+- **Decided (Sandy: "we can start, we aren't being perfect")**: OpenTelemetry is the protocol apps speak (clauses
+  and sensors are spans); **PostHog is the destination** — it ingests OTLP traces over HTTP (alpha,
+  `/i/v1/traces`, project token) alongside product events, so evidence reads come from one place. No Jaeger of
+  our own (InDusk shipped Jaeger + otelcol binaries; that weight stays behind). Fallback if querying spans back
+  out of PostHog proves thin: a stock OTel collector fanning out to PostHog and a local Jaeger for development.
 - Idea captured, not chased (Sandy): PostHog as the design comp for a more teenager-friendly Homework Gate; a
   mascot *team* from Tchaikovsky's *Children of Time* — a jumping spider, an octopus, a pair of crows, a mantis
   shrimp. For the design pass.
