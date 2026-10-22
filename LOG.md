@@ -240,15 +240,16 @@ above (20–30 photographed pages).
 ### Audience: teenagers (Sandy, 2026-10-20)
 
 "This really is for teenagers. Young kids are not getting homework and their
-parents can control their devices more." The student is Sandy's **little
-brother**: **13, 8th grade**; plays Fortnite, watches TikTok sports
-videos. Consequences:
+parents can control their devices more." The student is a teenager in
+**8th grade**, in Sandy's family; his interests (a popular battle-royale game, short
+sports videos) shaped the design. Consequences:
 - Nothing that feels like a kids' app (drop/limit handwritten cheer,
   mascots, Khan Kids tone). Heron's grown-up look, the Sprayground shark and
   Brick's self-chosen framing already fit.
-- Borrow from Fortnite: homework steps as daily quests, mastery as tiers,
-  XP across nights, the gate opening as the win screen. From TikTok: help is
-  short and vertical (60-second explanations); tutor examples from sports.
+- Borrow from the games he plays: homework steps as daily quests, mastery as
+  tiers, XP across nights, the gate opening as the win screen. From the short
+  videos he watches: help is short and vertical (60-second explanations);
+  tutor examples from sports.
 - Product: teens have their own phones, so the gate must be something they
   accept — autonomy ("this is mine, it helps me") is the core, not the tone.
 - Open: who is "the parent" in the interview — Sandy, the parents, or both?
@@ -271,7 +272,7 @@ unlocks itself.
 - **Parent-managed** (Sandy): Family Sharing / child authorization, like
   Bark — a parent approves on his phone; he can't turn it off. Apple
   combines all apps' restrictions, so Bark/Downtime blocks still apply;
-  for the demo Homework Gate must be what blocks games/TikTok. Pitch:
+  for the demo Homework Gate must be what blocks games and video apps. Pitch:
   Bark watches and blocks; Homework Gate unlocks when he's earned it.
 - Server: stays on this machine behind a tunnel (Cloudflare Tunnel or
   Tailscale) so the model stays on Sandy's subscription, personal use.
@@ -431,6 +432,111 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
   marked talked-about. N=1: trends, not proof.
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
+
+## The name, again: Self Evident (Sandy, 2026-10-22)
+
+Sandy, after a day with Olimb: "less sold on this name" — properplan, buildrite, then "Self Evident is nice too,
+the thing proves itself." The test that settled it: the goal is strangers trying it on GitHub, so the name has to
+say the idea before anyone reads a line. Olimb named the loop but needed the five icons to explain itself;
+properplan and buildrite each named one stage (and the last one, ceremony). **Self Evident** names the idea: the
+mock-up makes the decision self-evident, the shipped build proves itself through telemetry, the promises are
+clauses the app asserts about itself. Checked: `selfevident` free on npm and PyPI; `self-evident.dev`,
+`selfevident.dev/.ai/.io` no DNS; three repos on GitHub with the name. Repository renamed to
+`infinitedusky/self-evident` (GitHub redirects `olimb` and `idea-factory`); it is **public** as of today.
+In code: packages `self-evident` / `@self-evident/engine`, CLI `pnpm se …` (`if` kept), wordmark "Self Evident."
+with the accent period, the five icons stay as the nav and the loop; the agent introduces itself as Self Evident's.
+The adverb is the engine's voice ("Landed, self-evidently"). Lesson for the record: a name that needs its logo to
+explain it is a name for people already inside.
+
+## The name: Olimb (Sandy, 2026-10-22)
+
+Sandy: "olimb… stands for observe, learn, ideate, mockup, build." The acronym is the thesis in order — Observe
+(telemetry, the floor) → Learn → Ideate (the inbox) → Mockup (decide on something real) → Build (plans, phases,
+PRs) → back to Observe — and it sounds like "climb". Checked the same minute: `olimb` is free on npm and PyPI;
+`olimb.dev`, `olimb.ai`, `olimb.io` have no DNS (confirm at a registrar); `olimb.com` is taken; the GitHub user
+`olimb` exists, `infinitedusky/olimb` is free. Same day: Sandy renamed the repository to `infinitedusky/olimb` (private still; going public next), and the
+product is renamed in code on PR #12 — brand **O.L.I.M.B** in the UI with the five words under it, packages
+`olimb` / `@olimb/engine`, the CLI `pnpm olimb …` (`if` kept as an alias), the agent introduces itself as
+Olimb's, PR bodies say "Built by Olimb"; the app row inside the factory is now "Olimb". Kept as they were: the
+local folder name (Claude Code's memory is keyed by it), the Postgres user/database/container `ideafactory`
+(renaming would orphan the volume for no gain). "Auto Olimb" (Sandy) is the name for the mode where nothing
+waits for a person: a PR merges itself when its checks hold and rolls back on the signal. SHAPE.md's title
+changes when PR #6 lands.
+- **The logo** (Sandy, same day): the five steps as five emoji, close together — 🔭🧠💡✏️🔨 — "it is fun."
+  Considered first (`app/public/logo-ideas.html`, kept as the record): "climb" with the C closed into an O by a
+  pencil, by a climber, by a thin line; a tree whose hollow is the O; the letters alone with accent periods; the
+  letters with the five words under them. The emoji won on the thing that matters for this product: it is the
+  loop, readable by a teenager, and nobody has to be told what it means. Known cost, accepted: emoji render
+  differently per platform; if that ever bothers us, swap in one fixed set (Noto or Twemoji) as inline SVG. Then settled
+  (Sandy): the **wordmark** O.L.I.M.B at the top of the site, the **five icons as the nav** — the nav *is* the
+  loop: 🔭 Observe (Now), 🧠 Learn, 💡 Ideate (the inbox), ✏️ Mockup, 🔨 Build (plans, Graph as its view), then
+  Talk and Settings — and the **emoji row as the logo outside** the site (README, social). Sandy: "plan and task are
+  not really part of that, they are a way of building" — so Build is the stage and plans/tasks/phases are its
+  machinery, the way Now is inside Observe. Learn and Mockup exist as pages before their content, each saying what
+  exists today and what lands there, so the loop is whole in the nav from day one. The bulb is the favicon.
+
+## Talk: an agent you can talk to, in the UI (2026-10-22, idea-factory PR #12)
+
+Sandy: "the big missing piece is an agent we can talk to. We need this environment." Built as `engine/src/talk.ts`:
+an interactive Agent SDK session the engine owns — the same Claude Code the planner and the builders run, with a
+person on the other end. Its cwd is the factory checkout (so CLAUDE.md, LOG.md, SHAPE.md are its context) or an
+app's repo; **the engine is its MCP tools** (`createSdkMcpServer`: now, plans, plan_graph, ideas, create_idea,
+create_plan, plan_task, answer_question, start_plan, cancel_plan, events); reads are free, **edits and commands
+wait for the person's yes in the UI** (Allow / Allow for this conversation / Deny — Claude Code's default mode,
+in the browser). The transcript is rows (`session` now has kind/cwd/agent_session_id; `session_message` has
+kind/payload; migration 0002) plus `talk.*` events, so a conversation survives a restart and resumes from its SDK
+session id. Streaming input: one long-lived `query()` with an async-iterable prompt; each person's message is
+pushed in; each turn ends in a `result` row. UI: `/talk`, sessions on the left, the conversation (tool calls
+folded, results collapsible), permission cards, Stop / End.
+- First exchange, from the web: "What needs me right now?" → it called `mcp__engine__now`, answered with the open
+  spaced-repetition question and the demo plan ready to run, and recommended which to do first. 5 rows, one turn.
+- Decided on the way: the agent may edit the factory itself from the web, every edit and command approved; no
+  hard deny on push/PR for this agent (the person is the guard), unlike the builders.
+- **Then, same day (Sandy: "overlaid on the whole app, so it follows you around and you can ask it to do
+  whatever")**: the agent is a drawer on every page (floating button, ⌘J), one conversation carried along; each
+  message is sent with where the person is (`context: {path, planId, appId}`), which the engine turns into one
+  line the agent sees ("The person is looking at plan … (drafting; 1 task, 3 phases, 1 open question)") while the
+  transcript keeps the plain text. Checked on the spaced-repetition plan: "what's still open on this plan?" → it
+  called `plan_graph` for that plan unprompted and answered specifically.
+- **One app at a time** (Sandy): the current app is picked in the nav and highlighted; Now, Plans, Ideas, the
+  Graph and the agent's working directory follow it (`?app=` on the routes). **The Idea Factory is now an app**
+  (repo `infinitedusky/idea-factory`, local checkout, `pnpm -r test`), so it is built through the same
+  machinery as Homework Gate — the "build the factory inside the app" loop Sandy asked for.
+- **The app is the conversation** (Sandy: "the app you are on should determine the chat and only one at a time,
+  so we can remove the dropdown"): one open conversation per app (`POST /talks/current` finds or starts it); the
+  drawer and the Talk page show the current app's and switch when the app switches; Start over ends it and begins
+  a new one; earlier conversations about the app are listed, read-only.
+- **app_id on every row** (Sandy saw Homework Gate ideas while on the Idea Factory app; asked whether the tenant key
+  belongs on every table or only on the parent — answer: every table, the multi-tenant norm, because derived
+  scoping leaks the first time a join is forgotten, and RLS/sharding need the column). Done: every table below an
+  app carries `app_id`, required; composite foreign keys tie each row to its parent's app (`(plan_id, app_id) →
+  plan(id, app_id)` and likewise task/phase/idea/session); `(app_id, …)` indexes; migration 0003 hand-ordered
+  (add nullable → backfill from the parent → drop development chatter with no app → require → keys). Conversations
+  and events now require an app; a talk session's cwd is the app's checkout. The visible leak was the UI: the
+  design-note idea files were shown regardless of app, and pages fetched once before the current app was known.
+- Next: previews per branch; decisions approvable. With this, the loop closes: work in the UI, talk to the agent
+  there, come back to this chat only when the factory itself needs a fix the agent can't make.
+
+## Web first: the UI becomes the place Sandy works (2026-10-21, idea-factory PR #12)
+
+Sandy: "I need to get Idea Factory to a place where I can start interacting with it on the web, or else I'm never
+going to know what it's doing… building Homework Gate through there, coming back here when we notice problems to
+fix on Idea Factory." Decision: the web UI is the working surface; this chat is where the factory gets fixed.
+Local only for now. Done tonight on `web-first` (stacked on #11 → #10):
+- **One command, one address**: `pnpm dev` at the root brings up Postgres, the engine and the UI
+  (http://localhost:5180); `pnpm start` serves the built UI from the engine on :4000. API under `/api`,
+  migrations on boot, deep links.
+- **Now** at `/`: needs-you (failed phases, open questions, drafts to plan or run, landed plans with a PR waiting),
+  each with its action; running plans with each live phase's current step and what's held; just-happened. Live.
+- **Settings**: apps and repos (test command, model, budget) edited on the web; add an app. No CLI for setup.
+- **Plan page**: Plan / Re-plan a task (clears the planner's output and runs it again), Discard draft, Cancel plan
+  (agents aborted, landed work kept, worktrees removed; an aborted run no longer re-queues its phase).
+- **Graph**: edges only, left to right by what a phase waits on; the dashed file areas are gone.
+- **Ideas inbox**: type it, it's kept; "Make it a task" (a plan of one, the body as the brief) or "Break it
+  down" (the composer prefilled). Tonight's two captured ideas went in through it.
+Still to do for "usable for Homework Gate": previews per branch (`preview_cmd`), decisions approvable. Waiting on
+Sandy: merge #5 → #11 → #10 → #12, and the two POC variants on homework-gate #18. The dev stack runs from the
+`web-first` worktree until then: http://localhost:5180.
 
 ## The factory by hand: the spaced-repetition POC (2026-10-21, homework-gate PR #18, draft)
 
