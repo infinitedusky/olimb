@@ -432,6 +432,27 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## Talk: an agent you can talk to, in the UI (2026-10-22, idea-factory PR #12)
+
+Sandy: "the big missing piece is an agent we can talk to. We need this environment." Built as `engine/src/talk.ts`:
+an interactive Agent SDK session the engine owns — the same Claude Code the planner and the builders run, with a
+person on the other end. Its cwd is the factory checkout (so CLAUDE.md, LOG.md, SHAPE.md are its context) or an
+app's repo; **the engine is its MCP tools** (`createSdkMcpServer`: now, plans, plan_graph, ideas, create_idea,
+create_plan, plan_task, answer_question, start_plan, cancel_plan, events); reads are free, **edits and commands
+wait for the person's yes in the UI** (Allow / Allow for this conversation / Deny — Claude Code's default mode,
+in the browser). The transcript is rows (`session` now has kind/cwd/agent_session_id; `session_message` has
+kind/payload; migration 0002) plus `talk.*` events, so a conversation survives a restart and resumes from its SDK
+session id. Streaming input: one long-lived `query()` with an async-iterable prompt; each person's message is
+pushed in; each turn ends in a `result` row. UI: `/talk`, sessions on the left, the conversation (tool calls
+folded, results collapsible), permission cards, Stop / End.
+- First exchange, from the web: "What needs me right now?" → it called `mcp__engine__now`, answered with the open
+  spaced-repetition question and the demo plan ready to run, and recommended which to do first. 5 rows, one turn.
+- Decided on the way: the agent may edit the factory itself from the web, every edit and command approved; no
+  hard deny on push/PR for this agent (the person is the guard), unlike the builders.
+- Next: Talk as a drawer on every page ("plan this" from where you are); previews per branch; decisions
+  approvable. With this, the loop Sandy asked for closes: work in the UI, talk to the agent there, come back to
+  this chat only when the factory itself needs a fix the agent can't make.
+
 ## Web first: the UI becomes the place Sandy works (2026-10-21, idea-factory PR #12)
 
 Sandy: "I need to get Idea Factory to a place where I can start interacting with it on the web, or else I'm never
