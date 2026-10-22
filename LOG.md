@@ -487,6 +487,23 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## Conversations: several at once, pinned, each in its own worktree (Sandy, 2026-10-22; PR #19)
+
+Sandy: "we need to have multiple agent sessions. And the session gets somehow pinned to what it worked on… the
+ability to move around to radically different places without abandoning the current conversation." Then: "maybe
+that's just context." Both: the page context travels with every message (already); the pin is what survives when
+you walk away — the name, the link, and the files the conversation is touching. Built: open conversations are
+**tabs** in the drawer, across apps; picking one doesn't change the page. A conversation is **pinned on first
+contact** (the plan or idea it started on, else the first thing said; renameable). Each gets **its own worktree**
+of the app's repo on `talk/<id>` cut from `origin/<default>`, so edits are cheap by the risk rule and a PR is the
+natural end; ending it removes the worktree and keeps the branch only if it has commits. Seen live: a
+Homework Gate conversation pinned to "Spaced repetition" edited `poc/README.md` on `talk/zoihqo` with the main
+checkout untouched; a Self Evident one answered from its own worktree; ending it removed the worktree.
+- Caught on the way: "ended, branch kept" fired because the branch was compared with local `main`, which was
+  behind `origin/main` (PR #6 had been merged from elsewhere); now compared with the base it was cut from.
+- Open question for later: a conversation that opened a PR could show that PR in its tab, and Build could list
+  conversations' branches alongside plans.
+
 ## Auto-approve by risk in the agent's conversations (Sandy, 2026-10-22)
 
 Sandy: "we need to use the auto approve based on risk or (cost) in the chat sessions." The planner's rule — the

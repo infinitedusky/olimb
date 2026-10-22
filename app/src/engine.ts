@@ -63,21 +63,22 @@ export interface Now { running: RunningPlan[]; needsYou: Attention[]; recent: Ev
 
 // Talk: a conversation with the factory's agent. Messages are rows; talk.* events say when to refetch.
 export type Risk = 'free' | 'cheap' | 'moderate' | 'expensive'
-export interface TalkSession { id: string; appId: string | null; cwd: string | null; title: string | null; status: string; createdAt: string; lastActiveAt: string | null; live: boolean; busy: boolean; messages?: number; autoApprove: Exclude<Risk, 'expensive'> }
+export interface SubjectRef { planId?: string; ideaId?: string; path?: string }
+export interface TalkSession { id: string; appId: string | null; cwd: string | null; branch: string | null; worktreePath: string | null; subject: string | null; subjectRef: SubjectRef | null; title: string | null; status: string; createdAt: string; lastActiveAt: string | null; live: boolean; busy: boolean; messages?: number; autoApprove: Exclude<Risk, 'expensive'> }
 export interface TalkMessage { id: number; sessionId: string; author: 'user' | 'agent' | 'tool' | 'engine'; kind: 'text' | 'tool_call' | 'tool_result' | 'permission' | 'auto' | 'result' | 'error'; body: string; payload: Record<string, any> | null; sentAt: string | null }
 export interface Transcript { session: TalkSession; messages: TalkMessage[]; pending: string[] }
 export interface TalkContext { path: string; label?: string; planId?: string; appId?: string; ideaId?: string } // where the person is, sent with each message
 
 export const engine = {
-  talks: () => call<TalkSession[]>('GET', '/talks'),
-  startTalk: (body: { appId: string; cwd?: string; title?: string }) => call<TalkSession>('POST', '/talks', body),
-  currentTalk: (appId: string) => call<TalkSession>('POST', '/talks/current', { appId }), // the app's one open conversation
+  talks: (open = true) => call<TalkSession[]>('GET', `/talks${open ? '?open=1' : ''}`),
+  startTalk: (body: { appId: string; subjectRef?: SubjectRef }) => call<TalkSession>('POST', '/talks', body),
+  renameTalk: (id: string, subject: string) => call<TalkSession>('POST', `/talks/${id}/rename`, { subject }),
   transcript: (id: string) => call<Transcript>('GET', `/talks/${id}`),
   say: (id: string, text: string, context?: TalkContext) => call<{ messageId: number }>('POST', `/talks/${id}/say`, { text, context }),
   permission: (id: string, requestId: string, allow: boolean, always = false) => call<unknown>('POST', `/talks/${id}/permission`, { requestId, allow, always }),
   interrupt: (id: string) => call<unknown>('POST', `/talks/${id}/interrupt`),
   setAuto: (id: string, level: 'free' | 'cheap' | 'moderate') => call<TalkSession>('POST', `/talks/${id}/auto`, { level }),
-  endTalk: (id: string) => call<unknown>('POST', `/talks/${id}/end`),
+  endTalk: (id: string) => call<{ ended: boolean; branchKept: string | null }>('POST', `/talks/${id}/end`),
   now: (appId?: string) => call<Now>('GET', `/now${appId ? `?app=${appId}` : ''}`),
   ideas: (appId?: string) => call<IdeaRow[]>('GET', `/ideas${appId ? `?app=${appId}` : ''}`),
   createIdea: (body: { appId: string; title: string; body?: string }) => call<IdeaRow>('POST', '/ideas', body),
