@@ -938,10 +938,15 @@ creepy version will exist, and it won't be the one a parent chooses.
 
 **Who may gate whom (Sandy's abuse cases, 2026-10-22):** the creepy versions are an adult controlling another
 adult (a husband locks an account until he sees a video of his wife working out) and surveillance of a child
-dressed up as rules (a nanny cam that locks things automatically). Protection is in the product: (1) only three
-relationships exist, a guardian over a minor, yourself over yourself, an organisation over its members' work
-resources; no partner role; a second adult on your own gate is a *referee* who can confirm or release, never
-lock, and whom you can remove. (2) A proof is something the gated person does, never something done to them:
+dressed up as rules (a nanny cam that locks things automatically). Sandy: the real issue is consent; a couple
+can keep each other honest, you can give another adult control of certain things. And consent is what a
+coercive partner extracts, so the product's job is to make consent cheap to withdraw and impossible to force
+through the product. Protection is in the product: (1) **an adult's gate is self-owned**: only you create it,
+choose the proof, and name who may see it or release it; nobody can lock you but you (a guardian over a minor
+is the one exception, the one the law makes). Whatever you grant you can take back alone, instantly and quietly,
+with no approval and no confrontation staged by the app; grants are specific (see this proof, release this lock,
+for this long), never "control of my account". A couple keeping each other honest is two self-owned gates with
+each other as witness and releaser. (2) A proof is something the gated person does, never something done to them:
 no cameras, video, location or continuous monitoring; a lock changes only on a proof he produced or a rule set
 in advance that he can read. (3) The gated person always sees the rule, the proof, who set it, and the ledger.
 (4) Locks only on things the gated person connected themselves (his phone through Screen Time's consent, a card
