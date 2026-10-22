@@ -1,7 +1,7 @@
-# 🔭🧠💡✏️🔨 Olimb
+# Self Evident
 
-**Observe · Learn · Ideate · Mockup · Build.** (That's the logo, too.) An open-source factory that turns ideas into software and keeps
-them honest with telemetry. Agents plan, build and open the PRs; the running app's signal decides what was worth
+🔭🧠💡✏️🔨 **Observe · Learn · Ideate · Mockup · Build.** An open-source factory that turns ideas into software and makes
+each one prove itself with telemetry. Agents plan, build and open the PRs; the running app's signal decides what was worth
 it and what to roll back.
 
 The thesis, in three parts:
@@ -20,7 +20,7 @@ comparisons that shaped it (Lightsprint, InDusk, PostHog). The engine and the we
 once their pull requests land; `engine/README.md` has the run instructions (`pnpm dev` at the root).
 
 The first app built through it is Homework Gate, a home system that opens a student's screen time when the
-homework is done *and understood*. Olimb is built the same way it builds anything else: it is an app inside itself.
+homework is done *and understood*. Self Evident is built the same way it builds anything else: it is an app inside itself.
 
 ## Working rules
 
