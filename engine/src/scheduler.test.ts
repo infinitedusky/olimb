@@ -22,7 +22,7 @@ describe('pickTasksToStart', () => {
     const tasks = [t('a', { files: ['src/x.ts'] }), t('b', { files: ['src/x.ts'] }), t('c', { files: ['src/y.ts'] })]
     const pick = pickTasksToStart(tasks, 4)
     expect(pick.start).toEqual(['a', 'c'])
-    expect(pick.held).toEqual([{ id: 'b', reason: 'shares files with a' }])
+    expect(pick.held).toEqual([{ id: 'b', reason: 'shares src/x.ts with a' }])
   })
 
   it('treats a directory claim as covering its files, and no claims as everything', () => {
@@ -36,7 +36,7 @@ describe('pickTasksToStart', () => {
   it('holds against work already active, not just against what it starts now', () => {
     const pick = pickTasksToStart([t('a', { status: 'merging', files: ['lib'] }), t('b', { files: ['lib/util.ts'] })], 4)
     expect(pick.start).toEqual([])
-    expect(pick.held).toEqual([{ id: 'b', reason: 'shares files with a' }])
+    expect(pick.held).toEqual([{ id: 'b', reason: 'shares lib/util.ts with a' }])
   })
 
   it('blocks dependents of a failed task and leaves the rest alone', () => {

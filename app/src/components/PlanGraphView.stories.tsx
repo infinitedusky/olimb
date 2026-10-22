@@ -34,6 +34,29 @@ export const WithAFailure: Story = { args: { phases: [
 export const NotStarted: Story = { args: { phases: midRun.map((x) => ({ ...x, status: 'queued' as const, attempt: 0, branch: null, heldReason: null, lastRun: null, steps: undefined })) } }
 export const TakingTurns: Story = { args: {
   phases: midRun.slice(0, 3).map((x) => ({ ...x, status: x.number === 1 ? 'running' as const : 'queued' as const, lastRun: x.number === 1 ? run('working', '0.05') : null, steps: undefined,
-    files: x.number === 2 ? ['.github/workflows/ci.yml'] : ['poc/hg/db.py'], heldReason: x.number === 3 ? 'shares files with phase #1' : null })),
+    files: x.number === 2 ? ['.github/workflows/ci.yml'] : ['poc/hg/db.py'], heldReason: x.number === 3 ? 'waiting on phase #1 (poc/hg/db.py)' : null })),
+  files: [{ path: 'poc/hg/db.py', phases: ['ph_sample1', 'ph_sample3'], heldBy: 'ph_sample1' }],
+} }
+// Three phases want api.py and nobody has it yet: the file hangs between them, undecided.
+export const SharedFileUndecided: Story = { args: {
+  phases: [
+    ph(1, 'Tables and functions for the schedule', 'done', { files: ['poc/hg/schedule.py', 'poc/hg/db.py'], lastRun: run('completed', '0.30') }),
+    ph(2, '/api/schedule routes', 'queued', { dependsOn: ['ph_sample1'], files: ['poc/hg/api.py', 'poc/tests/test_api.py'] }),
+    ph(3, 'The tutor points at the text', 'queued', { files: ['poc/hg/tutor.py', 'poc/hg/api.py'] }),
+    ph(4, 'The shutdown is the unlock', 'queued', { dependsOn: ['ph_sample1'], files: ['poc/hg/night.py', 'poc/hg/api.py'] }),
+  ],
+  files: [{ path: 'poc/hg/api.py', phases: ['ph_sample2', 'ph_sample3', 'ph_sample4'], heldBy: null }],
+  labels: { ph_sample1: 'Data and API', ph_sample2: 'Data and API', ph_sample3: 'Data and API', ph_sample4: 'Data and API' },
+} }
+// The same, once #2 has the file: it points at api.py, api.py points at the two waiting.
+export const SharedFileHeld: Story = { args: {
+  phases: [
+    ph(1, 'Tables and functions for the schedule', 'done', { files: ['poc/hg/schedule.py', 'poc/hg/db.py'], lastRun: run('completed', '0.30') }),
+    ph(2, '/api/schedule routes', 'running', { dependsOn: ['ph_sample1'], files: ['poc/hg/api.py', 'poc/tests/test_api.py'], lastRun: run('working', '0.08'), steps }),
+    ph(3, 'The tutor points at the text', 'queued', { files: ['poc/hg/tutor.py', 'poc/hg/api.py'], heldReason: 'waiting on phase #2 (poc/hg/api.py)' }),
+    ph(4, 'The shutdown is the unlock', 'queued', { dependsOn: ['ph_sample1'], files: ['poc/hg/night.py', 'poc/hg/api.py'], heldReason: 'waiting on phase #2 (poc/hg/api.py)' }),
+  ],
+  files: [{ path: 'poc/hg/api.py', phases: ['ph_sample2', 'ph_sample3', 'ph_sample4'], heldBy: 'ph_sample2' }],
+  labels: { ph_sample1: 'Data and API', ph_sample2: 'Data and API', ph_sample3: 'Data and API', ph_sample4: 'Data and API' },
 } }
 export const SinglePhase: Story = { args: { phases: [ph(1, 'Add a GET /health endpoint to the POC', 'done', { lastRun: run('completed', '0.40') })], labels: { ph_sample1: 'A health endpoint' } } }

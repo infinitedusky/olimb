@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { Badge, type Tone } from '../components/Badge'
 import { PlanGraphView } from '../components/PlanGraphView'
-import { API, EVENT_TYPES, type App, type GraphPhase } from '../engine'
+import { API, EVENT_TYPES, type App, type GraphFile, type GraphPhase } from '../engine'
 import { useCurrentApp } from '../current-app'
 
 interface AppGraphData {
@@ -15,6 +15,7 @@ interface AppGraphData {
   tasks: { id: string; planId: string; number: number; position: number; title: string }[]
   phases: GraphPhase[]
   conflicts: [string, string][]
+  files?: GraphFile[]
 }
 const PLAN_TONE: Record<string, Tone> = { running: 'accent', landed: 'ok' }
 const short = (t: string) => (t.length > 28 ? t.slice(0, 26).trimEnd() + '…' : t)
@@ -68,7 +69,7 @@ export function AppGraph() {
             {error && <Badge tone="warn" dot>{error}</Badge>}
           </div>
           {data.phases.length
-            ? <PlanGraphView phases={data.phases} labels={Object.fromEntries(data.phases.map((p) => [p.id, short(taskOf(p)?.title ?? planOf(p)?.title ?? '')]))} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} tall />
+            ? <PlanGraphView phases={data.phases} files={data.files} labels={Object.fromEntries(data.phases.map((p) => [p.id, short(taskOf(p)?.title ?? planOf(p)?.title ?? '')]))} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} tall />
             : <div className="empty">No phases in {data.app.name} yet.</div>}
           {selected && (
             <section className="panel">

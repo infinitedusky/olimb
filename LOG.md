@@ -899,3 +899,16 @@ Salvage map with paths: `research/salvage-from-indusk.md`.
 - Don't reinvent: check for an existing library or official integration first.
 - Write decisions into the documents (this log, SHAPE.md) the moment they're
   made; the next session only knows what's written here.
+
+## Files on the graph (Sandy, 2026-10-22; PR pending)
+
+Watching the schedule plan run on Homework Gate (homework-gate PR #21), Sandy saw "#12 shares files with #10" and said
+the hold is a dependency and should read as one; then that the dependency is on the *file*, not the phase; then asked for
+the file on the graph with the phases connected to it. Research (Bazel's action graph, Make, Dagster's assets, Petri
+nets) says the same: two kinds of node. Done: the scheduler names the file it held on; the engine turns it into
+"waiting on phase #10 (api.py)" and lists the shared files in the graph; the UI draws each as a node between its
+claimants, the holder pointing at it, it pointing at the ones waiting, undecided claimants hanging off it. Idea:
+`ideas/files-on-the-graph.md`. Follow-up on the same model: claims with a mode (append), so phases that only add to a
+file run together and only true overlaps re-run.
+- Lesson from writing the schedule plan by hand: don't put `api.py` in three phases of one task; one phase per
+  file-heavy module, or split the module. The engine's rule was right; the plan's granularity was mine.

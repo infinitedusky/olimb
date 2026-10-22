@@ -27,10 +27,14 @@ export function claimsOverlap(a: string, b: string): boolean {
   return x === y || x.startsWith(y + '/') || y.startsWith(x + '/')
 }
 
-export function tasksShareFiles(a: SchedTask, b: SchedTask): boolean {
-  if (a.files.length === 0 || b.files.length === 0) return true // no claims = claims everything
-  return a.files.some((p) => b.files.some((q) => claimsOverlap(p, q)))
+/** The first path two tasks both claim (the narrower of the two when one is a directory); '' when either claims everything. */
+export function sharedClaim(a: SchedTask, b: SchedTask): string | null {
+  if (a.files.length === 0 || b.files.length === 0) return '' // no claims = claims everything
+  for (const p of a.files) for (const q of b.files) if (claimsOverlap(p, q)) return p.length >= q.length ? p : q
+  return null
 }
+
+export const tasksShareFiles = (a: SchedTask, b: SchedTask): boolean => sharedClaim(a, b) !== null
 
 export function pickTasksToStart(tasks: SchedTask[], room: number): Pick {
   const byId = new Map(tasks.map((t) => [t.id, t]))
@@ -50,7 +54,7 @@ export function pickTasksToStart(tasks: SchedTask[], room: number): Pick {
     const waiting = deps.find((d) => d && d.status !== 'done')
     if (waiting) { held.push({ id: t.id, reason: `waiting on ${waiting.id}` }); continue }
     const clash = [...active, ...start].find((o) => tasksShareFiles(t, o))
-    if (clash) { held.push({ id: t.id, reason: `shares files with ${clash.id}` }); continue }
+    if (clash) { const f = sharedClaim(t, clash); held.push({ id: t.id, reason: f ? `shares ${f} with ${clash.id}` : `shares files with ${clash.id}` }); continue }
     if (room - start.length <= 0) { held.push({ id: t.id, reason: 'at the session cap' }); continue }
     start.push(t)
   }

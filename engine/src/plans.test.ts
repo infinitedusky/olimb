@@ -59,7 +59,11 @@ describe.skipIf(!reachable)('plans in Postgres', () => {
     expect(first.start).toEqual([a])
     let g = (await planGraph(p.id))!
     expect(g.phases.map((x) => [x.status, x.heldReason])).toEqual([
-      ['ready', null], ['queued', `shares files with phase #${n}`], ['queued', `waiting on phase #${n} (task #${tasks[0].number}, earlier in the plan)`],
+      ['ready', null], ['queued', `waiting on phase #${n} (x)`], ['queued', `waiting on phase #${n} (task #${tasks[0].number}, earlier in the plan)`],
+    ])
+    expect(g.files).toEqual([{ path: 'x', phases: [a, b], heldBy: null }]) // nobody has x yet: a is only ready
+    expect(g.phases.map((x) => [x.status, x.heldReason])).toEqual([
+      ['ready', null], ['queued', `waiting on phase #${n} (x)`], ['queued', `waiting on phase #${n} (task #${tasks[0].number}, earlier in the plan)`],
     ])
     await setPhaseStatus(a, 'running'); await setPhaseStatus(a, 'done')
     expect((await tick(p.id, 4)).start).toEqual([b]) // c still waits: b (task 1) hasn't landed
