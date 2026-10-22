@@ -29,6 +29,47 @@ are for greenfield: PostHog-native from the first line, Postgres from day one, a
 than a migration of its hundredth. Converters run outward (our standard → the formats incumbents already use), so
 nobody on the other side has to change. The standard spreads because newcomers keep arriving with it.
 
+## The goal: free and open source (Sandy, 2026-10-20)
+
+Not a pivot: this is still InDusk's successor. We learn as much as we can from Lightsprint (and InDusk), add our
+own ideas on top, and speed-run it — **not racing for venture money, but putting it out free for people to use and
+contribute to.** Success is people running it and contributing. Open-source neighbours turning tasks into agent PRs
+already exist (OpenHands, Open SWE, superplane, background-agents); ours is different by the loop — telemetry
+proposes, agents build with evidence, telemetry judges, PostHog-native. Open questions for Sandy: licence
+(recommended MIT, like PostHog's core) and the public repo's name. The current idea-factory repo stays private
+(the log and ideas describe a real family); the public project gets a fresh repo.
+
+## The core engine: parallel execution as a graph (Sandy, 2026-10-20)
+
+Name: **Idea Factory** (decided). Build the core engine first, as soon as possible: **plans are made of tasks;
+tasks form a dependency graph** (node = task, edge = dependency); running a plan runs every task whose
+dependencies are done, in parallel, each agent on its own branch/worktree, producing PRs. A **VS Code
+visualization** of the graph running. If people already do this, borrow what we can (InDusk's unbuilt
+`run-the-graph` plan, its session manager and worktrees; open-source parallel runners and graph engines —
+`research/parallel-engine.md` when written).
+
+## Founding rule of the engine: git holds code, the database holds state (Sandy, 2026-10-20)
+
+Why InDusk's graph runner failed when built: task status lived in versioned files (plan docs, `impl.md`
+sections and table rows), so every parallel agent that finished had to merge its status into the same document
+as every other agent — "two phases appending to one shared doc conflicted every time." The fix, a move of state
+to a database, stalled as a retrofit (`plan-state-is-a-database`). We get to do it from day one, with nothing to
+fix.
+- **Git holds code and authored inputs** (prose plans, skills, setup). **Postgres holds all state**: apps/stacks,
+  ideas, plans, tasks, dependencies, file claims, status, runs, sessions, events, questions, verifications, PRs,
+  evidence, verdicts. No status in a markdown file, a JSONL log in a repo, or a frontmatter field — including the
+  `ideas/` files (authored input only; evidence and verdicts are rows).
+- **One engine process is the single writer.** Agents, the CLI, the VS Code view and the UI talk to it. Agents
+  never write status; they emit events (or call a tool) and the engine records them. (Kills InDusk's other bug:
+  two processes each holding session state, launching a task twice.)
+- **Postgres from day one, so the engine is server-friendly** (Sandy): the engine is one server process owning
+  the database — local in development (Docker Postgres or PGlite), hosted for real, same code. The CLI, the VS Code
+  view and the UI are clients over HTTP plus a live stream; none touch the database directly. The live feed is
+  `LISTEN/NOTIFY` on the append-only event table, fanned out over WebSocket/SSE, so several machines can watch one
+  run. Workspace, membership and stacks are rows from the start, not a retrofit. Migrations from the first commit. The application is database-driven, working on repos — like Lightsprint, whose data
+  model we're reconstructing from its public docs and open-source plugins to design ours properly before
+  writing engine code (`research/parallel-engine.md`).
+
 ## Positioning (Sandy, 2026-10-20)
 
 Lightsprint reads as **an extension of Linear** (tickets in, code out), and Linear is its natural competitor.
