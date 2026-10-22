@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { Badge, type Tone } from '../components/Badge'
 import { PlanGraphView } from '../components/PlanGraphView'
-import { API, engine, EVENT_TYPES, type App, type GraphPhase } from '../engine'
+import { API, EVENT_TYPES, type App, type GraphPhase } from '../engine'
+import { useCurrentApp } from '../current-app'
 
 interface AppGraphData {
   app: App
@@ -26,15 +27,14 @@ async function fetchAppGraph(appId: string): Promise<AppGraphData> {
 
 export function AppGraph() {
   const [params, setParams] = useSearchParams()
-  const [apps, setApps] = useState<App[]>([])
-  const appId = params.get('app') ?? undefined
-  const setAppId = (id: string | undefined) => { if (id) setParams({ app: id }, { replace: true }) }
+  const { app } = useCurrentApp()
+  const appId = app?.id
   const [data, setData] = useState<AppGraphData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string>()
   const timer = useRef<number | undefined>(undefined)
 
-  useEffect(() => { engine.apps().then((a) => { setApps(a); if (!params.get('app') && a.length) setAppId(a[a.length - 1].id) }).catch((e) => setError(String(e.message ?? e))) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (appId && params.get('app') !== appId) setParams({ app: appId }, { replace: true }) }, [appId]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!appId) return
     let closed = false
@@ -54,10 +54,9 @@ export function AppGraph() {
     <>
       <div className="page-head">
         <div>
-          <h1>Graph</h1>
+          <h1>Graph{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
           <p className="muted" style={{ margin: '4px 0 0' }}>Every phase of every plan. An arrow is a wait: the phase at its head starts after the one at its tail lands. Phases that touch the same file take turns; that shows on the node when it happens.</p>
         </div>
-        {apps.length > 1 && <select value={appId} onChange={(e) => setAppId(e.target.value)}>{apps.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select>}
       </div>
       {error && !data && <div className="empty">The engine isn't reachable: {error}</div>}
       {data && (

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import type { Module, Status } from '../providers'
 import { Badge, type Tone } from '../components/Badge'
 import { engine, type App, type AppSetup, type Repo } from '../engine'
+import { useCurrentApp } from '../current-app'
 
 const TONE: Record<Status, Tone> = { connected: 'ok', pending: 'warn', 'not connected': 'neutral' }
 
@@ -13,7 +14,8 @@ export function Settings({ modules }: { modules: Module[] }) {
   const [apps, setApps] = useState<App[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState('')
-  const reload = () => engine.apps().then(setApps).catch((e) => setError(String(e.message ?? e)))
+  const { reload: reloadNav } = useCurrentApp()
+  const reload = () => engine.apps().then((a) => { setApps(a); void reloadNav() }).catch((e) => setError(String(e.message ?? e)))
   useEffect(() => { void reload() }, [])
 
   const addApp = async () => {

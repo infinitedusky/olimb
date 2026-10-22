@@ -276,8 +276,8 @@ export async function clearPhases(taskId: string, actor = 'user') {
 }
 
 /** Every plan, newest first, with its app and counts: the Plans page. Superseded plans are hidden unless asked. */
-export async function listPlans(opts: { all?: boolean } = {}) {
-  const plans = (await db.select().from(plan).orderBy(sql`${plan.createdAt} desc`)).filter((p) => opts.all || p.status !== 'superseded')
+export async function listPlans(opts: { all?: boolean; appId?: string } = {}) {
+  const plans = (await db.select().from(plan).orderBy(sql`${plan.createdAt} desc`)).filter((p) => (opts.all || p.status !== 'superseded') && (!opts.appId || p.appId === opts.appId))
   const apps = await db.select().from(app)
   const ids = plans.map((p) => p.id)
   const tasks = ids.length ? await db.select({ planId: task.planId }).from(task).where(inArray(task.planId, ids)) : []

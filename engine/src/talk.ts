@@ -202,12 +202,27 @@ async function handle(sessionId: string, entry: Live, m: SDKMessage) {
   }
 }
 
-export async function say(sessionId: string, text: string, actor = 'user') {
+export interface TalkContext { path: string; label?: string; planId?: string; appId?: string; ideaId?: string }
+
+/** Where the person is, as one line the agent can act on. The transcript keeps the plain text; only the agent sees this. */
+async function describeContext(c?: TalkContext): Promise<string> {
+  if (!c?.path) return ''
+  const bits = [`the page ${c.path}`]
+  if (c.planId) {
+    const g = await planGraph(c.planId).catch(() => null)
+    if (g) bits.push(`plan ${c.planId} "${g.plan.title}" (${g.plan.status}; ${g.tasks.length} task(s), ${g.phases.length} phase(s), ${g.questions.filter((q) => q.status === 'open').length} open question(s))`)
+  }
+  if (c.appId) bits.push(`app ${c.appId}`)
+  if (c.ideaId) bits.push(`idea ${c.ideaId}`)
+  return `(The person is looking at ${bits.join(', ')}. "This" means that unless they say otherwise; use the engine tools for details.)\n\n`
+}
+
+export async function say(sessionId: string, text: string, context?: TalkContext) {
   if (!text.trim()) throw new PlanError('say something')
   const l = await open(sessionId)
-  const row = await record(sessionId, 'user', 'text', text.trim())
+  const row = await record(sessionId, 'user', 'text', text.trim(), context ? { context } : undefined)
   l.busy = true
-  l.push({ type: 'user', message: { role: 'user', content: text.trim() }, parent_tool_use_id: null })
+  l.push({ type: 'user', message: { role: 'user', content: (await describeContext(context)) + text.trim() }, parent_tool_use_id: null })
   return { messageId: row.id }
 }
 

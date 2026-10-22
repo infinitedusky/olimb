@@ -9,7 +9,7 @@ import { appendEvent } from './events.js'
 import { newId } from './ids.js'
 import { createPlan, PlanError } from './plans.js'
 
-export const listIdeas = () => db.select().from(idea).orderBy(desc(idea.number))
+export const listIdeas = (appId?: string) => (appId ? db.select().from(idea).where(eq(idea.appId, appId)) : db.select().from(idea)).orderBy(desc(idea.number))
 
 export async function createIdea(input: { appId: string; title: string; body?: string; actor?: string }) {
   if (!input.title?.trim()) throw new PlanError('an idea needs a title')

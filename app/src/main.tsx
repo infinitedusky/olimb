@@ -5,6 +5,7 @@ import './tokens.css'
 import './app.css'
 import { findIdea, ideas } from './ideas'
 import { modules } from './providers'
+import { CurrentAppProvider } from './current-app'
 import { Shell } from './components/Shell'
 import { Board } from './pages/Board'
 import { IdeaPage } from './pages/IdeaPage'
@@ -21,25 +22,25 @@ function IdeaRoute() {
   return idea ? <IdeaPage idea={idea} /> : <p>No such idea.</p>
 }
 
-const apps = [...new Set(ideas.map((i) => i.app).filter(Boolean))]
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <Shell apps={apps}>
-        <Routes>
-          <Route path="/" element={<Now />} />
-          <Route path="/talk" element={<Talk />} />
-          <Route path="/talk/:id" element={<Talk />} />
-          <Route path="/ideas" element={<Board ideas={ideas} />} />
-          <Route path="/ideas/:slug" element={<IdeaRoute />} />
-          <Route path="/graph" element={<AppGraph />} />
-          <Route path="/plans" element={<Plans />} />
-          <Route path="/plans/new" element={<NewPlan />} />
-          <Route path="/plans/:id" element={<PlanPage />} />
-          <Route path="/settings" element={<Settings modules={modules} />} />
-        </Routes>
-      </Shell>
+      <CurrentAppProvider>
+        <Shell>
+          <Routes>
+            <Route path="/" element={<Now />} />
+            <Route path="/talk" element={<Talk />} />
+            <Route path="/talk/:id" element={<Talk />} />
+            <Route path="/ideas" element={<Board ideas={ideas} />} />
+            <Route path="/ideas/:slug" element={<IdeaRoute />} />
+            <Route path="/graph" element={<AppGraph />} />
+            <Route path="/plans" element={<Plans />} />
+            <Route path="/plans/new" element={<NewPlan />} />
+            <Route path="/plans/:id" element={<PlanPage />} />
+            <Route path="/settings" element={<Settings modules={modules} />} />
+          </Routes>
+        </Shell>
+      </CurrentAppProvider>
     </BrowserRouter>
   </StrictMode>,
 )

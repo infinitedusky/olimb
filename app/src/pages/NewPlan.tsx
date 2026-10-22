@@ -4,7 +4,8 @@
  */
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
-import { engine, type App } from '../engine'
+import { engine } from '../engine'
+import { useCurrentApp } from '../current-app'
 
 interface PhaseRow { key: string; title: string; brief: string; dependsOn: string[]; files: string }
 interface TaskRow { key: string; title: string; brief: string; phases: PhaseRow[] }
@@ -14,7 +15,7 @@ const blankTask = (): TaskRow => ({ key: `t${++seq}`, title: '', brief: '', phas
 
 export function NewPlan() {
   const nav = useNavigate()
-  const [apps, setApps] = useState<App[]>([])
+  const { apps, app } = useCurrentApp()
   const [appId, setAppId] = useState('')
   const [title, setTitle] = useState('')
   const [spec, setSpec] = useState('')
@@ -24,7 +25,6 @@ export function NewPlan() {
   const [params] = useSearchParams()
   const ideaId = params.get('idea') // "Break it down" from the inbox: the idea becomes the plan's title and why, and the first task
   useEffect(() => {
-    engine.apps().then((a) => { setApps(a); if (a.length) setAppId(a[a.length - 1].id) }).catch((e) => setError(String(e.message ?? e)))
     if (ideaId) engine.ideas().then((all) => {
       const i = all.find((x) => x.id === ideaId)
       if (!i) return
@@ -32,6 +32,7 @@ export function NewPlan() {
       setTasks([{ ...blankTask(), title: i.title, brief: i.body ?? '' }])
     }).catch(() => {})
   }, [ideaId])
+  useEffect(() => { if (app && !appId) setAppId(app.id) }, [app, appId])
 
   const updateTask = (ti: number, patch: Partial<TaskRow>) => setTasks((ts) => ts.map((t, j) => (j === ti ? { ...t, ...patch } : t)))
   const updatePhase = (ti: number, pi: number, patch: Partial<PhaseRow>) => updateTask(ti, { phases: tasks[ti].phases.map((p, j) => (j === pi ? { ...p, ...patch } : p)) })

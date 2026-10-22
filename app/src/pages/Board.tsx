@@ -8,23 +8,21 @@ import type { Idea } from '../ideas'
 import { LANES } from '../ideas'
 import { Badge } from '../components/Badge'
 import { LaneColumn } from '../components/LaneColumn'
-import { engine, type App, type IdeaRow, type PlanSummary } from '../engine'
+import { engine, type IdeaRow, type PlanSummary } from '../engine'
+import { useCurrentApp } from '../current-app'
 
 export function Board({ ideas }: { ideas: Idea[] }) {
   const nav = useNavigate()
-  const [apps, setApps] = useState<App[]>([])
-  const [appId, setAppId] = useState('')
+  const { apps, app } = useCurrentApp()
+  const appId = app?.id ?? ''
   const [rows, setRows] = useState<IdeaRow[] | null>(null)
   const [plans, setPlans] = useState<PlanSummary[]>([])
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
-  const reload = () => Promise.all([engine.ideas(), engine.plans()]).then(([i, p]) => { setRows(i); setPlans(p) }).catch((e) => setError(String(e.message ?? e)))
-  useEffect(() => {
-    engine.apps().then((a) => { setApps(a); if (a.length) setAppId(a[a.length - 1].id) }).catch((e) => setError(String(e.message ?? e)))
-    void reload()
-  }, [])
+  const reload = () => Promise.all([engine.ideas(appId || undefined), engine.plans(appId || undefined)]).then(([i, p]) => { setRows(i); setPlans(p) }).catch((e) => setError(String(e.message ?? e)))
+  useEffect(() => { void reload() }, [appId]) // eslint-disable-line react-hooks/exhaustive-deps
   const add = async () => {
     if (!title.trim() || !appId) return
     setBusy('add')
@@ -42,7 +40,7 @@ export function Board({ ideas }: { ideas: Idea[] }) {
     <>
       <div className="page-head">
         <div>
-          <h1>Ideas</h1>
+          <h1>Ideas{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
           <p className="muted" style={{ margin: '4px 0 0' }}>Type it, it's kept. When its time comes, it becomes one task, or a plan of several.</p>
         </div>
         <span className="mono faint">{inbox.length} in the inbox</span>
@@ -52,7 +50,7 @@ export function Board({ ideas }: { ideas: Idea[] }) {
         <div className="form-grid">
           <label style={{ gridColumn: '1 / -1' }}>Idea<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="One line: what should be true?" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) void add() }} /></label>
           <label style={{ gridColumn: '1 / -1' }}>Why, and anything already decided (optional)<textarea value={body} onChange={(e) => setBody(e.target.value)} rows={2} placeholder="This becomes the task's brief when the idea is planned." /></label>
-          <label>App<select value={appId} onChange={(e) => setAppId(e.target.value)}>{apps.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
+          <div className="faint" style={{ alignSelf: 'end', fontSize: 13 }}>For {app?.name ?? '…'} (pick another app in the nav)</div>
           <div style={{ alignSelf: 'end' }}><button className="btn" disabled={!title.trim() || !appId || busy === 'add'} onClick={add}>Keep it</button></div>
         </div>
         {error && <div className="empty bad" style={{ marginTop: 10 }}>{error}</div>}

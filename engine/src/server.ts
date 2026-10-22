@@ -16,7 +16,7 @@ import { app as appTable, PHASE_STATUSES, repo as repoTable, workspace, type Pha
 import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
 import { createIdea, listIdeas, planFromIdea } from './ideas.js'
-import { answerPermission, closeTalks, endTalk, interruptTalk, listTalks, say, startTalk, talkTranscript } from './talk.js'
+import { answerPermission, closeTalks, endTalk, interruptTalk, listTalks, say, startTalk, talkTranscript, type TalkContext } from './talk.js'
 import { now } from './now.js'
 import { answerQuestion, finishPlanning, preparePlanning, recoverPlanning } from './planner.js'
 import { addPhases, appGraph, clearPhases, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
@@ -53,7 +53,7 @@ export function buildApp(bus: EventBus) {
   }))
 
   api.get('/health', async (c) => { await db.execute('select 1'); return c.json({ ok: true }) })
-  api.get('/now', async (c) => c.json(await now())) // the front door: running, needs you, recent
+  api.get('/now', async (c) => c.json(await now(c.req.query('app') || undefined))) // the front door: running, needs you, recent
 
   api.post('/workspaces', async (c) => {
     const { name } = await c.req.json<{ name: string }>()
@@ -104,8 +104,8 @@ export function buildApp(bus: EventBus) {
   })
   api.get('/talks/:id', async (c) => { try { return c.json(await talkTranscript(c.req.param('id'))) } catch (err) { return planError(c, err, 404) } })
   api.post('/talks/:id/say', async (c) => {
-    const { text } = await c.req.json<{ text: string }>()
-    try { return c.json(await say(c.req.param('id'), text), 202) } catch (err) { return planError(c, err) }
+    const { text, context } = await c.req.json<{ text: string; context?: TalkContext }>()
+    try { return c.json(await say(c.req.param('id'), text, context), 202) } catch (err) { return planError(c, err) }
   })
   api.post('/talks/:id/permission', async (c) => {
     const { requestId, allow, always } = await c.req.json<{ requestId: string; allow: boolean; always?: boolean }>()
@@ -115,7 +115,7 @@ export function buildApp(bus: EventBus) {
   api.post('/talks/:id/end', async (c) => c.json(await endTalk(c.req.param('id'))))
 
   // The inbox: capture an idea in a moment; make it a plan when its time comes.
-  api.get('/ideas', async (c) => c.json(await listIdeas()))
+  api.get('/ideas', async (c) => c.json(await listIdeas(c.req.query('app') || undefined)))
   api.post('/ideas', async (c) => {
     try { return c.json(await createIdea({ ...(await c.req.json()), actor: 'user' }), 201) } catch (err) { return planError(c, err) }
   })
@@ -124,7 +124,7 @@ export function buildApp(bus: EventBus) {
     try { return c.json(await planFromIdea(c.req.param('id'), body.tasks), 201) } catch (err) { return planError(c, err) }
   })
 
-  api.get('/plans', async (c) => c.json(await listPlans({ all: c.req.query('all') === '1' })))
+  api.get('/plans', async (c) => c.json(await listPlans({ all: c.req.query('all') === '1', appId: c.req.query('app') || undefined })))
   api.post('/plans', async (c) => {
     try { return c.json(await createPlan(await c.req.json()), 201) } catch (err) { return planError(c, err) }
   })

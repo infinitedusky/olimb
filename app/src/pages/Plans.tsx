@@ -3,18 +3,20 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Badge, type Tone } from '../components/Badge'
 import { engine, type PlanSummary } from '../engine'
+import { useCurrentApp } from '../current-app'
 
 const TONE: Record<string, Tone> = { running: 'accent', landed: 'ok', drafting: 'neutral' }
 
 export function Plans() {
+  const { app } = useCurrentApp()
   const [plans, setPlans] = useState<PlanSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => { engine.plans().then(setPlans).catch((e) => setError(String(e.message ?? e))) }, [])
+  useEffect(() => { engine.plans(app?.id).then(setPlans).catch((e) => setError(String(e.message ?? e))) }, [app?.id])
   return (
     <>
       <div className="page-head">
         <div>
-          <h1>Plans</h1>
+          <h1>Plans{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
           <p className="muted" style={{ margin: '4px 0 0' }}>A plan is tasks in order; each task becomes phases; the phases are the graph the engine runs.</p>
         </div>
         <Link to="/plans/new" className="btn">New plan</Link>

@@ -6,24 +6,26 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { Badge, type Tone } from '../components/Badge'
 import { API, engine, EVENT_TYPES, type Attention, type Event, type Now as NowData, type RunningPlan } from '../engine'
+import { useCurrentApp } from '../current-app'
 
 const COST_TONE: Record<string, Tone> = { cheap: 'neutral', moderate: 'warn', expensive: 'bad' }
 
 export function Now() {
+  const { app } = useCurrentApp()
   const [data, setData] = useState<NowData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const timer = useRef<number | undefined>(undefined)
   useEffect(() => {
     let closed = false
-    const refresh = () => engine.now().then((d) => { if (!closed) { setData(d); setError(null) } }).catch((e) => setError(String(e.message ?? e)))
+    const refresh = () => engine.now(app?.id).then((d) => { if (!closed) { setData(d); setError(null) } }).catch((e) => setError(String(e.message ?? e)))
     void refresh()
-    const es = new EventSource(`${API}/events?since=-1`)
+    const es = new EventSource(`${API}/events?since=-1${app ? `&app=${app.id}` : ''}`)
     const bump = () => { window.clearTimeout(timer.current); timer.current = window.setTimeout(refresh, 250) }
     for (const type of EVENT_TYPES) if (!type.startsWith('run.tool') && type !== 'run.message') es.addEventListener(type, bump)
     es.onerror = () => setError('event stream disconnected; retrying')
     return () => { closed = true; es.close(); window.clearTimeout(timer.current) }
-  }, [])
+  }, [app?.id])
   const act = async (key: string, fn: () => Promise<unknown>) => { setBusy(key); try { await fn() } catch (e: any) { setError(String(e.message ?? e)) } finally { setBusy(null) } }
 
   if (error && !data) return <div className="empty">The engine isn't reachable: {error}. Run <code>pnpm dev</code> at the repo root.</div>
@@ -32,7 +34,7 @@ export function Now() {
     <>
       <div className="page-head">
         <div>
-          <h1>Now</h1>
+          <h1>Now{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
           <p className="muted" style={{ margin: '4px 0 0' }}>{data.counts.running} running · {data.counts.needsYou} need{data.counts.needsYou === 1 ? 's' : ''} you · {data.counts.plans} plan{data.counts.plans === 1 ? '' : 's'}</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

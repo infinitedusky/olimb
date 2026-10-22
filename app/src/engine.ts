@@ -65,17 +65,18 @@ export interface Now { running: RunningPlan[]; needsYou: Attention[]; recent: Ev
 export interface TalkSession { id: string; appId: string | null; cwd: string | null; title: string | null; status: string; createdAt: string; lastActiveAt: string | null; live: boolean; busy: boolean }
 export interface TalkMessage { id: number; sessionId: string; author: 'user' | 'agent' | 'tool' | 'engine'; kind: 'text' | 'tool_call' | 'tool_result' | 'permission' | 'result' | 'error'; body: string; payload: Record<string, any> | null; sentAt: string | null }
 export interface Transcript { session: TalkSession; messages: TalkMessage[]; pending: string[] }
+export interface TalkContext { path: string; label?: string; planId?: string; appId?: string; ideaId?: string } // where the person is, sent with each message
 
 export const engine = {
   talks: () => call<TalkSession[]>('GET', '/talks'),
   startTalk: (body: { appId?: string; cwd?: string; title?: string }) => call<TalkSession>('POST', '/talks', body),
   transcript: (id: string) => call<Transcript>('GET', `/talks/${id}`),
-  say: (id: string, text: string) => call<{ messageId: number }>('POST', `/talks/${id}/say`, { text }),
+  say: (id: string, text: string, context?: TalkContext) => call<{ messageId: number }>('POST', `/talks/${id}/say`, { text, context }),
   permission: (id: string, requestId: string, allow: boolean, always = false) => call<unknown>('POST', `/talks/${id}/permission`, { requestId, allow, always }),
   interrupt: (id: string) => call<unknown>('POST', `/talks/${id}/interrupt`),
   endTalk: (id: string) => call<unknown>('POST', `/talks/${id}/end`),
-  now: () => call<Now>('GET', '/now'),
-  ideas: () => call<IdeaRow[]>('GET', '/ideas'),
+  now: (appId?: string) => call<Now>('GET', `/now${appId ? `?app=${appId}` : ''}`),
+  ideas: (appId?: string) => call<IdeaRow[]>('GET', `/ideas${appId ? `?app=${appId}` : ''}`),
   createIdea: (body: { appId: string; title: string; body?: string }) => call<IdeaRow>('POST', '/ideas', body),
   planIdea: (id: string) => call<{ plan: { id: string } }>('POST', `/ideas/${id}/plan`, {}),
   apps: () => call<App[]>('GET', '/apps'),
@@ -85,7 +86,7 @@ export const engine = {
   updateApp: (id: string, body: { name?: string; defaultBranch?: string; setup?: AppSetup }) => call<App>('PATCH', `/apps/${id}`, body),
   createRepo: (body: { appId: string; fullName: string; localPath?: string; baseBranch?: string }) => call<Repo>('POST', '/repos', body),
   updateRepo: (id: string, body: { fullName?: string; localPath?: string | null; baseBranch?: string | null }) => call<Repo>('PATCH', `/repos/${id}`, body),
-  plans: () => call<PlanSummary[]>('GET', '/plans'),
+  plans: (appId?: string) => call<PlanSummary[]>('GET', `/plans${appId ? `?app=${appId}` : ''}`),
   graph: (id: string) => call<Graph>('GET', `/plans/${id}/graph`),
   createPlan: (body: { appId: string; title: string; spec?: string; ideaId?: string; tasks: NewTask[] }) => call<{ plan: { id: string } }>('POST', '/plans', body),
   addPhases: (taskId: string, phases: NewPhase[]) => call<unknown>('POST', `/tasks/${taskId}/phases`, phases),

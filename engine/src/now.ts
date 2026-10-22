@@ -16,8 +16,8 @@ export type Attention =
   | { kind: 'plan_task'; planId: string; planTitle: string; appName: string; taskId: string; taskNumber: number; taskTitle: string }
   | { kind: 'merge_pr'; planId: string; planTitle: string; appName: string; prNumber: number | null; url: string | null }
 
-export async function now() {
-  const plans = await db.select().from(plan).where(ne(plan.status, 'superseded')).orderBy(desc(plan.createdAt))
+export async function now(appId?: string) {
+  const plans = await db.select().from(plan).where(appId ? and(ne(plan.status, 'superseded'), eq(plan.appId, appId)) : ne(plan.status, 'superseded')).orderBy(desc(plan.createdAt))
   const apps = await db.select().from(app)
   const appName = (id: string) => apps.find((a) => a.id === id)?.name ?? '?'
   const planIds = plans.map((p) => p.id)
@@ -28,7 +28,7 @@ export async function now() {
   const phaseIds = phases.map((x) => x.id)
   const runs = phaseIds.length ? await db.select().from(run).where(inArray(run.phaseId, phaseIds)) : []
   const steps = phaseIds.length ? await db.select().from(step).where(inArray(step.phaseId, phaseIds)) : []
-  const recent = await db.select().from(event).where(notInArray(event.type, NOISE)).orderBy(desc(event.seq)).limit(30)
+  const recent = await db.select().from(event).where(appId ? and(notInArray(event.type, NOISE), eq(event.appId, appId)) : notInArray(event.type, NOISE)).orderBy(desc(event.seq)).limit(30)
 
   const lastRun = (phaseId: string) => runs.filter((r) => r.phaseId === phaseId).sort((a, b) => b.attempt - a.attempt)[0]
   const currentStep = (phaseId: string) => {
