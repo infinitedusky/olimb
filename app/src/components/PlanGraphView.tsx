@@ -7,7 +7,7 @@
  * reasons, runs and steps are props on the nodes, so live updates never jump.
  */
 import dagre from '@dagrejs/dagre'
-import { Background, Handle, type Node, type NodeChange, type NodeProps, Panel, Position, ReactFlow, ReactFlowProvider, type Edge, MarkerType, useReactFlow } from '@xyflow/react'
+import { Background, Handle, type Node, type NodeProps, Panel, Position, ReactFlow, ReactFlowProvider, type Edge, MarkerType, useNodesState, useReactFlow } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useEffect, useMemo, useState } from 'react'
 import type { GraphFile, GraphPhase, PhaseStatus } from '../engine'
@@ -109,27 +109,37 @@ export interface PlanGraphViewProps {
 }
 
 export function PlanGraphView({ phases, files = [], onSelect, selectedId, labels, tall, storageKey }: PlanGraphViewProps) {
-  const shared = files.filter((f) => f.phases.filter((id) => phases.some((x) => x.id === id)).length > 1)
+  const shared = useMemo(() => files.filter((f) => f.phases.filter((id) => phases.some((x) => x.id === id)).length > 1), [files, phases])
   const topology = [...phases.map((p) => `${p.id}:${waitsOn(p).join(',')}`), ...shared.map((f) => `${f.path}:${f.heldBy ?? ''}:${f.phases.join(',')}`)].join('|')
   const positions = useMemo(() => layout(phases, shared), [topology]) // eslint-disable-line react-hooks/exhaustive-deps
   // Nodes can be dragged; a dragged node keeps its place through live updates and re-layouts until "Tidy up".
+  // React Flow owns the node state (so a drag never waits on a React round-trip, which showed as flicker); every
+  // live update is merged into it, keeping the place of anything dragged or mid-drag.
   const [moved, setMoved] = useState<Record<string, Pos>>(() => loadMoved(storageKey))
-  const onNodesChange = (changes: NodeChange[]) => {
-    const next = { ...moved }
-    let changed = false
-    for (const c of changes) if (c.type === 'position' && c.position) { next[c.id] = c.position; changed = true }
-    if (changed) { setMoved(next); saveMoved(storageKey, next) }
-  }
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<PhaseNodeData | FileNodeData>>([])
   const tidy = () => { setMoved({}); saveMoved(storageKey, {}) }
-  const at = (id: string) => moved[id] ?? positions.get(id) ?? { x: 0, y: 0 }
-  const nodes: Node<PhaseNodeData | FileNodeData>[] = [
+  const built = useMemo((): Node<PhaseNodeData | FileNodeData>[] => [
     ...phases.map((p): Node<PhaseNodeData> => ({
-      id: p.id, type: 'phase', position: at(p.id), data: { phase: p, label: labels?.[p.id] }, selected: p.id === selectedId,
+      id: p.id, type: 'phase', position: positions.get(p.id) ?? { x: 0, y: 0 }, data: { phase: p, label: labels?.[p.id] }, selected: p.id === selectedId,
     })),
     ...shared.map((f): Node<FileNodeData> => ({
-      id: fileId(f), type: 'file', position: at(fileId(f)), data: { file: f, holder: phases.find((x) => x.id === f.heldBy) }, selectable: false,
+      id: fileId(f), type: 'file', position: positions.get(fileId(f)) ?? { x: 0, y: 0 }, data: { file: f, holder: phases.find((x) => x.id === f.heldBy) }, selectable: false,
     })),
-  ]
+  ], [phases, shared, positions, labels, selectedId])
+  useEffect(() => {
+    setNodes((prev) => {
+      const was = new Map(prev.map((n) => [n.id, n]))
+      let same = prev.length === built.length
+      const next = built.map((n) => {
+        const p = was.get(n.id)
+        const position = p?.dragging ? p.position : moved[n.id] ?? n.position
+        if (p && p.position.x === position.x && p.position.y === position.y && p.data === n.data && p.selected === n.selected) return p
+        same = false
+        return { ...n, ...(p ?? {}), ...n, position }
+      })
+      return same ? prev : next // the same array when nothing changed, or React Flow and this effect would feed each other
+    })
+  }, [built, moved, setNodes])
   const edges: Edge[] = [
     ...phases.flatMap((p) => waitsOn(p).filter((d) => phases.some((x) => x.id === d)).map((d): Edge => ({
       id: `${d}->${p.id}`, source: d, target: p.id, animated: LIVE.includes(p.status),
@@ -146,7 +156,9 @@ export function PlanGraphView({ phases, files = [], onSelect, selectedId, labels
     <div className={`graph-canvas ${tall ? 'tall' : ''}`} data-component="PlanGraphView">
       <ReactFlowProvider>
         <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.2, maxZoom: 1 }} onNodesChange={onNodesChange}
-          onNodeClick={(_, n) => { if (n.type === 'phase') onSelect?.((n.data as PhaseNodeData).phase) }} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
+          onNodeDragStop={(_, n) => { const next = { ...moved, [n.id]: n.position }; setMoved(next); saveMoved(storageKey, next) }}
+          onNodeClick={(_, n) => { if (n.type === 'phase') onSelect?.((n.data as PhaseNodeData).phase) }} nodesConnectable={false} proOptions={{ hideAttribution: true }}
+          panOnScroll zoomOnScroll={false} zoomActivationKeyCode="Meta" panOnDrag={false} selectionOnDrag={false} zoomOnPinch zoomOnDoubleClick={false}>
           <Background gap={20} color="var(--line)" />
           {Object.keys(moved).length > 0 && <Panel position="top-right"><button type="button" className="graph-tidy" onClick={tidy}>Tidy up</button></Panel>}
           <FitOnChange topology={topology} />
