@@ -1,6 +1,6 @@
 ---
 title: Apps as posts
-app: Idea Factory
+app: Self Evident
 lane: parked
 hypothesis: If apps are as cheap to make as posts, a Substack-shaped feed where each post is a small, self-evident app finds readers who subscribe and come back to use them.
 measure: subscribed, post_opened, app_opened, app_returned (same reader, later day); per post, like a read rate.
