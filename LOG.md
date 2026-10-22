@@ -432,6 +432,15 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## The name: Olimb (Sandy, 2026-10-22)
+
+Sandy: "olimb… stands for observe, learn, ideate, mockup, build." The acronym is the thesis in order — Observe
+(telemetry, the floor) → Learn → Ideate (the inbox) → Mockup (decide on something real) → Build (plans, phases,
+PRs) → back to Observe — and it sounds like "climb". Checked the same minute: `olimb` is free on npm and PyPI;
+`olimb.dev`, `olimb.ai`, `olimb.io` have no DNS (confirm at a registrar); `olimb.com` is taken; the GitHub user
+`olimb` exists, `infinitedusky/olimb` is free. Working name from here; the rename (repo, packages, the UI's
+brand, this log) is one PR after the current chain merges, so it doesn't collide with #10–#12.
+
 ## Talk: an agent you can talk to, in the UI (2026-10-22, idea-factory PR #12)
 
 Sandy: "the big missing piece is an agent we can talk to. We need this environment." Built as `engine/src/talk.ts`:
