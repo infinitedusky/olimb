@@ -91,6 +91,7 @@ a.badge { text-decoration: none; }
 .graph-tidy { font: 12px var(--sans); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
 .graph-tidy:hover { color: var(--ink); }
 .react-flow__node { cursor: grab; } .react-flow__node.dragging { cursor: grabbing; }
+.react-flow__pane { cursor: default; } /* the wheel pans, ⌘ + wheel zooms; the background is not a handle */
 
 /* Tasks in order, above a plan's graph */
 .task-strip { list-style: none; margin: 0 0 12px; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; counter-reset: task; }
