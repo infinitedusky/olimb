@@ -328,6 +328,51 @@ and telemetry make it self-evident; its telemetry is the read rate. Counterargum
 (Glitch 2025, Observable, GPT Store) — so a publishing format for sandboxed, browser-run apps, not code hosting.
 Cheapest test: run it on Substack, posts as app links, measure subscribes, clicks, returning use.
 
+### Idea raised: a minimal brand ERP, Lightsprint-style (Sandy, 2026-10-21)
+
+"ERP very lightly": describe a business process in plain English → an agent wires the brand's SaaS tools
+(Shopify, suppliers, inventory, shipping, accounting, email) into a workflow → preview on real data → approve.
+Start with clothing, which Sandy knows. Fit: a second *app* the factory builds (database-driven, working on
+external systems; the brand's own numbers propose and judge changes), not a second engine. Strain: positioned
+as an extension of Shopify, not PostHog — different buyer; crowded (Odoo, ERPNext, Katana, Cin7, n8n agents);
+new part is agent wiring + Sandy's industry knowledge. Decision: capture, don't build before the engine exists
+(the engine builds it). Cheapest test, Sandy's: 3–5 clothing-brand owners, what they'd pay to stop doing by
+hand, kill line set first.
+**Sharpened (Sandy):** focus on manufacturing. The wedge is a **standardized tech pack**: manufacturers accept it
+(or we convert to standards that exist), then advertise on our site. Findings: no open tech-pack schema exists
+(Excel/Illustrator templates, PLM-vendor formats); nearby: ASTM/ISO sizing, GS1; the forcing function is the
+**EU Digital Product Passport for textiles** (ESPR; JRC proposal 49 data points / 4 categories at batch level;
+delegated act ~end 2027) — a DPP-ready tech pack is a standard with regulation behind it. Standards win by
+converter + network: "send any tech pack, get a complete, factory-ready one, missing fields flagged" (agent-shaped
+work); clean packs = fewer rounds for factories; listings bring RFQs; open schema + open converter fits the
+open-source thrust. Counterargument: marketplace graveyard (Zilingo, Fashinza) — trust, MOQs, sampling, payment
+are the hard parts, not formats; supply-side adoption is the risk. Cheapest test (Sandy's): 3–5 manufacturers —
+share of packs needing clarification, would they list free if packs came clean; then a fake door (upload a real
+tech pack). Engine first; the converter is a candidate first idea for the factory to run end to end.
+**Then (Sandy): "It's hard to retrofit any company, easier if you start using this."** Be the default for
+people *starting* a brand — no process to replace, the standard is theirs from the first garment; the converter
+runs outward (our standard → each factory's existing format), so manufacturers change nothing either. Flips the
+cheapest test to the demand side: people starting a clothing line (Shopify communities, print-on-demand
+graduates, fashion-school grads); fake door "build your first tech pack, factory-ready"; a real sign-up is the
+behaviour that costs. Manufacturers second, once packs arrive.
+**Then (Sandy): all communication runs through the system and is recorded.** The communication is the data:
+every factory clarification question = a missing field in the standard (the loop applied to a standard; events:
+rounds per pack, fields questioned, time to first sample); the trust layer the graveyard lacked (what was
+specified, changed, agreed, when); DPP provenance by construction; possible because new brands have no channel
+yet. Counterargument: people route around channels (WhatsApp/WeChat/email; Upwork fights it; Alibaba keeps chat
+because payment runs through it) → communication stays where the *obligation* lives: RFQ, quote, PO, sample
+approval, change request, payment — make the actions happen in the system, let conversation attach, never a
+rule against outside chat. Open (Sandy's): **do payments run through the system?** Decides completeness of the
+record and the business model. Note: tech packs are IP; EU data → retention/consent from day one.
+**Answer (Sandy): payments eventually — the revenue play after adoption. Then factoring, storage, shipping:
+control fulfillment so you can pay against it.** The Faire playbook (marketplace → finance layer by controlling
+the transaction; also Shopify Capital, Alibaba Trade Assurance, Amazon FBA). Sequence: standard → record →
+adoption (free, open) → payments (money keeps communication in-system) → finance + fulfillment, underwritable
+only because the record exists (what was specified, agreed, accepted) and delivery is controlled. Counterargument:
+capital-heavy and regulated → after adoption, and rented (Stripe Treasury/Capital partners, 3PLs), the data is
+the edge — don't build a bank, be the data banks lend against. Open-source resolved the PostHog way: open
+platform code, the operating company is the business.
+
 ### Ideas raised, not yet decided (2026-10-20)
 
 From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
