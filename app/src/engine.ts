@@ -61,7 +61,19 @@ export interface RunningPlan {
 }
 export interface Now { running: RunningPlan[]; needsYou: Attention[]; recent: Event[]; counts: { plans: number; running: number; needsYou: number } }
 
+// Talk: a conversation with the factory's agent. Messages are rows; talk.* events say when to refetch.
+export interface TalkSession { id: string; appId: string | null; cwd: string | null; title: string | null; status: string; createdAt: string; lastActiveAt: string | null; live: boolean; busy: boolean }
+export interface TalkMessage { id: number; sessionId: string; author: 'user' | 'agent' | 'tool' | 'engine'; kind: 'text' | 'tool_call' | 'tool_result' | 'permission' | 'result' | 'error'; body: string; payload: Record<string, any> | null; sentAt: string | null }
+export interface Transcript { session: TalkSession; messages: TalkMessage[]; pending: string[] }
+
 export const engine = {
+  talks: () => call<TalkSession[]>('GET', '/talks'),
+  startTalk: (body: { appId?: string; cwd?: string; title?: string }) => call<TalkSession>('POST', '/talks', body),
+  transcript: (id: string) => call<Transcript>('GET', `/talks/${id}`),
+  say: (id: string, text: string) => call<{ messageId: number }>('POST', `/talks/${id}/say`, { text }),
+  permission: (id: string, requestId: string, allow: boolean, always = false) => call<unknown>('POST', `/talks/${id}/permission`, { requestId, allow, always }),
+  interrupt: (id: string) => call<unknown>('POST', `/talks/${id}/interrupt`),
+  endTalk: (id: string) => call<unknown>('POST', `/talks/${id}/end`),
   now: () => call<Now>('GET', '/now'),
   ideas: () => call<IdeaRow[]>('GET', '/ideas'),
   createIdea: (body: { appId: string; title: string; body?: string }) => call<IdeaRow>('POST', '/ideas', body),
@@ -89,6 +101,7 @@ export const engine = {
 export const EVENT_TYPES = [
   'plan.created', 'plan.started', 'plan.landed', 'plan.cleaned', 'task.created',
   'task.planning', 'task.planned', 'task.plan_failed', 'task.cleared', 'plan.cancelled', 'question.asked', 'question.answered',
+  'talk.message', 'talk.permission', 'talk.result', 'idea.created',
   'phase.created', 'phase.status', 'phase.held', 'phase.retry', 'phase.failed', 'phase.error', 'phase.interrupted',
   'run.started', 'run.message', 'run.steps', 'run.tool_call', 'run.tool_result', 'run.result', 'run.error', 'run.rate_limit',
   'land.committed', 'land.tested', 'land.landed', 'land.conflict', 'land.retry', 'pr.opened', 'pr.updated', 'pr.error',

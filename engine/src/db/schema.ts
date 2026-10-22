@@ -137,17 +137,22 @@ export const step = pgTable('step', { // how the builder intends to build a phas
   status: text('status').notNull().default('pending'), updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index('step_phase').on(t.phaseId), inList('step_status', t.status, ['pending', 'in_progress', 'completed'])])
 
-export const session = pgTable('session', { // [LS] one shared conversation per phase
-  id: id(), phaseId: text('phase_id').notNull().references(() => phase.id),
+export const session = pgTable('session', { // a conversation with an agent: a talk session (a person and the factory's agent) or, later, one per phase
+  id: id(), kind: text('kind').notNull().default('talk'), phaseId: text('phase_id').references(() => phase.id),
+  appId: text('app_id').references(() => app.id), cwd: text('cwd'), // where the agent works: a repo checkout
+  title: text('title'), agentSessionId: text('agent_session_id'), // the SDK session, for --resume after a restart
   status: text('status').notNull().default('open'), createdBy: text('created_by'), createdAt: createdAt(),
-}, (t) => [inList('session_status', t.status, ['open', 'ended'])])
+  lastActiveAt: timestamp('last_active_at', { withTimezone: true }),
+}, (t) => [inList('session_status', t.status, ['open', 'ended']), inList('session_kind', t.kind, ['talk', 'phase'])])
 
-export const sessionMessage = pgTable('session_message', { // [LS] shared queue; "send now" = interrupt
+export const sessionMessage = pgTable('session_message', { // the transcript: what was said, what the agent did, what it asked
   id: bigserial('id', { mode: 'number' }).primaryKey(), sessionId: text('session_id').notNull().references(() => session.id),
-  author: text('author').notNull(), body: text('body').notNull(), attachments: jsonb('attachments'),
-  status: text('status').notNull().default('queued'),
+  author: text('author').notNull(), // user | agent | tool | engine
+  kind: text('kind').notNull().default('text'), // text | tool_call | tool_result | permission | result | error
+  body: text('body').notNull(), payload: jsonb('payload'), attachments: jsonb('attachments'),
+  status: text('status').notNull().default('sent'),
   queuedAt: timestamp('queued_at', { withTimezone: true }).notNull().defaultNow(), sentAt: timestamp('sent_at', { withTimezone: true }),
-}, (t) => [inList('session_message_status', t.status, ['queued', 'sent', 'interrupted', 'dropped'])])
+}, (t) => [index('session_message_session').on(t.sessionId, t.id), inList('session_message_status', t.status, ['queued', 'sent', 'interrupted', 'dropped'])])
 
 export const run = pgTable('run', { // [LS] agent run; [ID] attempt
   id: id(), phaseId: text('phase_id').references(() => phase.id), taskId: text('task_id').references(() => task.id), // a build run has a phase; a plan run has a task

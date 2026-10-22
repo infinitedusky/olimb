@@ -16,6 +16,7 @@ import { app as appTable, PHASE_STATUSES, repo as repoTable, workspace, type Pha
 import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
 import { createIdea, listIdeas, planFromIdea } from './ideas.js'
+import { answerPermission, closeTalks, endTalk, interruptTalk, listTalks, say, startTalk, talkTranscript } from './talk.js'
 import { now } from './now.js'
 import { answerQuestion, finishPlanning, preparePlanning, recoverPlanning } from './planner.js'
 import { addPhases, appGraph, clearPhases, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
@@ -94,6 +95,24 @@ export function buildApp(bus: EventBus) {
     const [row] = await db.insert(repoTable).values({ id: newId('repo'), appId: body.appId, fullName: body.fullName, localPath: body.localPath ?? null, baseBranch: body.baseBranch ?? null }).returning()
     return c.json(row, 201)
   })
+
+  // Talk: an interactive agent session, the conversation as rows and events, permissions answered from the UI.
+  api.get('/talks', async (c) => c.json(await listTalks()))
+  api.post('/talks', async (c) => {
+    const body = await c.req.json<{ appId?: string; cwd?: string; title?: string }>().catch(() => ({}))
+    try { return c.json(await startTalk({ ...body, actor: 'user' }), 201) } catch (err) { return planError(c, err) }
+  })
+  api.get('/talks/:id', async (c) => { try { return c.json(await talkTranscript(c.req.param('id'))) } catch (err) { return planError(c, err, 404) } })
+  api.post('/talks/:id/say', async (c) => {
+    const { text } = await c.req.json<{ text: string }>()
+    try { return c.json(await say(c.req.param('id'), text), 202) } catch (err) { return planError(c, err) }
+  })
+  api.post('/talks/:id/permission', async (c) => {
+    const { requestId, allow, always } = await c.req.json<{ requestId: string; allow: boolean; always?: boolean }>()
+    try { return c.json(await answerPermission(c.req.param('id'), requestId, allow, always)) } catch (err) { return planError(c, err) }
+  })
+  api.post('/talks/:id/interrupt', async (c) => c.json(await interruptTalk(c.req.param('id'))))
+  api.post('/talks/:id/end', async (c) => c.json(await endTalk(c.req.param('id'))))
 
   // The inbox: capture an idea in a moment; make it a plan when its time comes.
   api.get('/ideas', async (c) => c.json(await listIdeas()))
@@ -202,7 +221,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()
   if (recovered.plans || recovered.phases || recovered.reaped) console.log('recovered:', JSON.stringify(recovered))
   const port = Number(process.env.PORT ?? 4000)
   serve({ fetch: buildApp(bus).fetch, port }, (info) => console.log(`engine listening on http://localhost:${info.port}  (API under /api; UI at / when built)`))
-  const shutdown = async () => { await runner.shutdown(); await bus.stop(); await pool.end(); process.exit(0) }
+  const shutdown = async () => { closeTalks(); await runner.shutdown(); await bus.stop(); await pool.end(); process.exit(0) }
   process.on('SIGINT', shutdown)
   process.on('SIGTERM', shutdown)
 }

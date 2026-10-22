@@ -14,6 +14,7 @@ import { PlanPage } from './pages/PlanPage'
 import { NewPlan } from './pages/NewPlan'
 import { AppGraph } from './pages/AppGraph'
 import { Now } from './pages/Now'
+import { Talk } from './pages/Talk'
 
 function IdeaRoute() {
   const idea = findIdea(useParams().slug ?? '')
@@ -28,6 +29,8 @@ createRoot(document.getElementById('root')!).render(
       <Shell apps={apps}>
         <Routes>
           <Route path="/" element={<Now />} />
+          <Route path="/talk" element={<Talk />} />
+          <Route path="/talk/:id" element={<Talk />} />
           <Route path="/ideas" element={<Board ideas={ideas} />} />
           <Route path="/ideas/:slug" element={<IdeaRoute />} />
           <Route path="/graph" element={<AppGraph />} />
