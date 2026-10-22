@@ -438,8 +438,14 @@ Sandy: "olimb… stands for observe, learn, ideate, mockup, build." The acronym 
 (telemetry, the floor) → Learn → Ideate (the inbox) → Mockup (decide on something real) → Build (plans, phases,
 PRs) → back to Observe — and it sounds like "climb". Checked the same minute: `olimb` is free on npm and PyPI;
 `olimb.dev`, `olimb.ai`, `olimb.io` have no DNS (confirm at a registrar); `olimb.com` is taken; the GitHub user
-`olimb` exists, `infinitedusky/olimb` is free. Working name from here; the rename (repo, packages, the UI's
-brand, this log) is one PR after the current chain merges, so it doesn't collide with #10–#12.
+`olimb` exists, `infinitedusky/olimb` is free. Same day: Sandy renamed the repository to `infinitedusky/olimb` (private still; going public next), and the
+product is renamed in code on PR #12 — brand **O.L.I.M.B** in the UI with the five words under it, packages
+`olimb` / `@olimb/engine`, the CLI `pnpm olimb …` (`if` kept as an alias), the agent introduces itself as
+Olimb's, PR bodies say "Built by Olimb"; the app row inside the factory is now "Olimb". Kept as they were: the
+local folder name (Claude Code's memory is keyed by it), the Postgres user/database/container `ideafactory`
+(renaming would orphan the volume for no gain). "Auto Olimb" (Sandy) is the name for the mode where nothing
+waits for a person: a PR merges itself when its checks hold and rolls back on the signal. SHAPE.md's title
+changes when PR #6 lands.
 
 ## Talk: an agent you can talk to, in the UI (2026-10-22, idea-factory PR #12)
 
