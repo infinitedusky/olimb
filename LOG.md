@@ -459,6 +459,10 @@ folded, results collapsible), permission cards, Stop / End.
   Graph and the agent's working directory follow it (`?app=` on the routes). **The Idea Factory is now an app**
   (repo `infinitedusky/idea-factory`, local checkout, `pnpm -r test`), so it is built through the same
   machinery as Homework Gate — the "build the factory inside the app" loop Sandy asked for.
+- **The app is the conversation** (Sandy: "the app you are on should determine the chat and only one at a time,
+  so we can remove the dropdown"): one open conversation per app (`POST /talks/current` finds or starts it); the
+  drawer and the Talk page show the current app's and switch when the app switches; Start over ends it and begins
+  a new one; earlier conversations about the app are listed, read-only.
 - Next: previews per branch; decisions approvable. With this, the loop closes: work in the UI, talk to the agent
   there, come back to this chat only when the factory itself needs a fix the agent can't make.
 
