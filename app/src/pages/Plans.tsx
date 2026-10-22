@@ -5,7 +5,7 @@ import { Badge, type Tone } from '../components/Badge'
 import { engine, type PlanSummary } from '../engine'
 import { useCurrentApp } from '../current-app'
 
-const TONE: Record<string, Tone> = { running: 'accent', landed: 'ok', drafting: 'neutral' }
+const TONE: Record<string, Tone> = { running: 'accent', landed: 'ok', stopped: 'warn', drafting: 'neutral' }
 const DRAFT = ['drafting', 'proposed', 'approved']
 
 export function Plans({ mode }: { mode: 'plan' | 'build' }) {

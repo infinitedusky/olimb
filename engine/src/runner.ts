@@ -202,7 +202,8 @@ export class Runner {
   }
 
   /**
-   * Stop a plan: abort its live runs, cancel every phase that hasn't landed, mark the plan superseded, remove its
+   * Stop a plan: abort its live runs, cancel every phase that hasn't landed, mark the plan stopped (it stays on the
+   * lists and the graph with what it landed; superseded is for a plan another plan replaced), remove its
    * worktrees. What landed stays on the integration branch (and in its PR, if one was opened).
    */
   async cancelPlan(planId: string, why = 'cancelled by a person') {
@@ -211,7 +212,7 @@ export class Runner {
     const ids = phases.map((x) => x.id)
     const open = phases.filter((x) => x.status !== 'done')
     if (open.length) await db.update(phase).set({ status: 'cancelled', heldReason: why, updatedAt: new Date() }).where(inArray(phase.id, open.map((x) => x.id)))
-    await db.update(plan).set({ status: 'superseded' }).where(eq(plan.id, planId))
+    await db.update(plan).set({ status: 'stopped' }).where(eq(plan.id, planId))
     for (const x of phases) { const ac = this.active.get(x.id); if (ac) { ac.abort(); this.active.delete(x.id) } } // after the status flip: a failed run then sees 'cancelled' and stops
     if (ids.length) await db.update(run).set({ status: 'stopped', endedAt: new Date(), error: why }).where(and(inArray(run.phaseId, ids), eq(run.status, 'working')))
     await this.emit({ ...ctx.base, type: 'plan.cancelled', payload: { why, cancelled: open.length, landed: phases.length - open.length } })
