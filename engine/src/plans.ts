@@ -4,7 +4,7 @@
  * dispatch pass. Task order is an implicit dependency: a phase in a later task starts only after every phase of
  * the earlier tasks has landed. Explicit dependencies and file claims come from the phases themselves.
  */
-import { asc, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, notInArray, sql } from 'drizzle-orm'
 import { db, type Tx } from './db/client.js'
 import { app, decision, phase, phaseDependency, phaseFileClaim, plan, pr, question, run, step, task, type PhaseStatus } from './db/schema.js'
 import { appendEvent } from './events.js'
@@ -246,6 +246,31 @@ export async function setPhaseStatus(phaseId: string, to: PhaseStatus, actor = '
     await tx.update(phase).set({ status: to, heldReason: null, updatedAt: new Date() }).where(eq(phase.id, phaseId))
     await appendEvent(tx, { workspaceId: a.workspaceId, appId: x.appId, planId: x.planId, taskId: x.taskId, phaseId, actor, type: 'phase.status', payload: { from: x.status, to } })
     return { ...x, status: to }
+  })
+}
+
+/** Remove a draft task's phases, and what the planner wrote with them, so the task can be planned again. */
+export async function clearPhases(taskId: string, actor = 'user') {
+  return db.transaction(async (tx) => {
+    const [t] = await tx.select().from(task).where(eq(task.id, taskId))
+    if (!t) throw new PlanError(`no task ${taskId}`)
+    const [p] = await tx.select().from(plan).where(eq(plan.id, t.planId))
+    if (!['drafting', 'proposed', 'approved'].includes(p.status)) throw new PlanError(`plan is ${p.status}; only a draft's phases can be cleared`)
+    const ids = (await tx.select({ id: phase.id }).from(phase).where(eq(phase.taskId, taskId))).map((x) => x.id)
+    if (ids.length) {
+      const dependents = await tx.select().from(phaseDependency).where(and(inArray(phaseDependency.dependsOnPhaseId, ids), notInArray(phaseDependency.phaseId, ids)))
+      if (dependents.length) throw new PlanError(`${dependents.length} phase(s) in other tasks depend on this task's phases; clear those tasks first`)
+      await tx.delete(phaseDependency).where(inArray(phaseDependency.phaseId, ids))
+      await tx.delete(phaseFileClaim).where(inArray(phaseFileClaim.phaseId, ids))
+      await tx.delete(step).where(inArray(step.phaseId, ids))
+      await tx.delete(run).where(inArray(run.phaseId, ids))
+      await tx.delete(phase).where(inArray(phase.id, ids))
+    }
+    await tx.delete(decision).where(eq(decision.taskId, taskId))
+    await tx.delete(question).where(eq(question.taskId, taskId))
+    const [a] = await tx.select().from(app).where(eq(app.id, t.appId))
+    await appendEvent(tx, { workspaceId: a.workspaceId, appId: a.id, planId: t.planId, taskId, actor, type: 'task.cleared', payload: { phases: ids.length, number: t.number } })
+    return { cleared: ids.length }
   })
 }
 

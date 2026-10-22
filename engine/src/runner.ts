@@ -148,6 +148,8 @@ export class Runner {
   }
 
   private async failed(phaseId: string, attempt: number, max: number, why: string, pb: Omit<NewEvent, 'type'>) {
+    const [current] = await db.select({ status: phase.status }).from(phase).where(eq(phase.id, phaseId))
+    if (current?.status === 'cancelled') { this.active.delete(phaseId); return } // the plan was cancelled under this run; nothing to retry
     const again = attempt < max
     await db.update(phase).set({ status: again ? 'queued' : 'failed', heldReason: again ? `attempt ${attempt} failed; will retry` : why.slice(0, 500), updatedAt: new Date() }).where(eq(phase.id, phaseId))
     await this.emit({ ...pb, type: again ? 'phase.retry' : 'phase.failed', payload: { attempt, max, why: why.slice(0, 2000) } })
@@ -197,6 +199,24 @@ export class Runner {
   async shutdown() {
     for (const [, ac] of this.active) ac.abort()
     this.active.clear()
+  }
+
+  /**
+   * Stop a plan: abort its live runs, cancel every phase that hasn't landed, mark the plan superseded, remove its
+   * worktrees. What landed stays on the integration branch (and in its PR, if one was opened).
+   */
+  async cancelPlan(planId: string, why = 'cancelled by a person') {
+    const ctx = await this.context(planId)
+    const phases = await db.select().from(phase).where(eq(phase.planId, planId))
+    const ids = phases.map((x) => x.id)
+    const open = phases.filter((x) => x.status !== 'done')
+    if (open.length) await db.update(phase).set({ status: 'cancelled', heldReason: why, updatedAt: new Date() }).where(inArray(phase.id, open.map((x) => x.id)))
+    await db.update(plan).set({ status: 'superseded' }).where(eq(plan.id, planId))
+    for (const x of phases) { const ac = this.active.get(x.id); if (ac) { ac.abort(); this.active.delete(x.id) } } // after the status flip: a failed run then sees 'cancelled' and stops
+    if (ids.length) await db.update(run).set({ status: 'stopped', endedAt: new Date(), error: why }).where(and(inArray(run.phaseId, ids), eq(run.status, 'working')))
+    await this.emit({ ...ctx.base, type: 'plan.cancelled', payload: { why, cancelled: open.length, landed: phases.length - open.length } })
+    await this.cleanup(planId).catch(() => {}) // a worktree with an agent mid-write may refuse once; recovery handles leftovers
+    return { cancelled: open.length, landed: phases.length - open.length }
   }
 
   private async updatePr(planId: string) {

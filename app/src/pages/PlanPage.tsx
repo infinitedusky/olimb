@@ -3,7 +3,7 @@
  * decisions, the selected phase's detail and steps, the event ticker, the PR.
  */
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { Badge, type Tone } from '../components/Badge'
 import { PlanGraphView, STATUS_TONE } from '../components/PlanGraphView'
 import { engine, useLivePlan, type Decision, type Event, type GraphPhase, type GraphTask, type Question } from '../engine'
@@ -14,6 +14,7 @@ const short = (t: string) => (t.length > 28 ? t.slice(0, 26).trimEnd() + '…' :
 
 export function PlanPage() {
   const { id } = useParams()
+  const nav = useNavigate()
   const { graph, events, error } = useLivePlan(id)
   const [selectedId, setSelectedId] = useState<string>()
   const [busy, setBusy] = useState(false)
@@ -42,6 +43,12 @@ export function PlanPage() {
           {graph.plan.spec && <p className="muted" style={{ margin: '8px 0 0', maxWidth: 720 }}>{graph.plan.spec}</p>}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          {draft && (
+            <button className="btn quiet" disabled={busy} onClick={() => { if (window.confirm('Discard this draft? Its tasks, phases, questions and decisions go with it.')) void act(async () => { await engine.cancelPlan(graph.plan.id); nav('/plans') }) }}>Discard draft</button>
+          )}
+          {graph.plan.status === 'running' && (
+            <button className="btn quiet" disabled={busy} onClick={() => { if (window.confirm('Cancel this plan? Running agents are stopped; what has landed stays on its branch.')) void act(() => engine.cancelPlan(graph.plan.id)) }}>Cancel plan</button>
+          )}
           {draft && graph.phases.length > 0 && (
             <button className="btn" disabled={busy} onClick={() => act(() => engine.start(graph.plan.id))}>Run this plan</button>
           )}
@@ -51,7 +58,9 @@ export function PlanPage() {
       <ol className="task-strip">
         {graph.tasks.map((t) => (
           <TaskChip key={t.id} task={t} phases={graph.phases.filter((p) => p.taskId === t.id)} planning={planning(t.id)}
-            onPlan={draft && !planning(t.id) ? () => act(() => engine.planTask(t.id)) : undefined} busy={busy} />
+            onPlan={draft && !planning(t.id) ? () => act(() => engine.planTask(t.id)) : undefined}
+            onReplan={draft && !planning(t.id) ? () => { if (window.confirm('Remove this task\'s phases, decisions and questions and plan it again?')) void act(async () => { await engine.clearPhases(t.id); await engine.planTask(t.id) }) } : undefined}
+            busy={busy} />
         ))}
       </ol>
 
@@ -88,7 +97,7 @@ export function PlanPage() {
   )
 }
 
-function TaskChip({ task, phases, planning, onPlan, busy }: { task: GraphTask; phases: GraphPhase[]; planning: boolean; onPlan?: () => void; busy: boolean }) {
+function TaskChip({ task, phases, planning, onPlan, onReplan, busy }: { task: GraphTask; phases: GraphPhase[]; planning: boolean; onPlan?: () => void; onReplan?: () => void; busy: boolean }) {
   const done = phases.filter((p) => p.status === 'done').length
   const live = phases.some((p) => ['running', 'merging', 'testing'].includes(p.status))
   const tone: Tone = phases.length && done === phases.length ? 'ok' : live ? 'accent' : 'neutral'
@@ -97,7 +106,7 @@ function TaskChip({ task, phases, planning, onPlan, busy }: { task: GraphTask; p
       <span className="mono faint">task #{task.number}</span>
       <strong>{task.title}</strong>
       {planning ? <Badge tone="accent" dot>planning…</Badge>
-        : phases.length ? <Badge tone={tone} dot={live}>{done}/{phases.length} phases</Badge>
+        : phases.length ? <><Badge tone={tone} dot={live}>{done}/{phases.length} phases</Badge>{onReplan && <button className="btn quiet small" disabled={busy} onClick={onReplan} title="Remove the phases and plan this task again">Re-plan</button>}</>
         : onPlan ? <button className="btn quiet small" disabled={busy} onClick={onPlan}>Plan</button> : <Badge>no phases</Badge>}
     </li>
   )

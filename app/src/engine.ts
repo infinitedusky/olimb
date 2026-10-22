@@ -74,6 +74,8 @@ export const engine = {
   createPlan: (body: { appId: string; title: string; spec?: string; tasks: NewTask[] }) => call<{ plan: { id: string } }>('POST', '/plans', body),
   addPhases: (taskId: string, phases: NewPhase[]) => call<unknown>('POST', `/tasks/${taskId}/phases`, phases),
   planTask: (taskId: string) => call<{ runId: string }>('POST', `/tasks/${taskId}/plan`), // 202; the outcome arrives as task.planned / task.plan_failed
+  clearPhases: (taskId: string) => call<{ cleared: number }>('DELETE', `/tasks/${taskId}/phases`), // a draft task back to its brief
+  cancelPlan: (planId: string) => call<{ cancelled: number; landed: number }>('POST', `/plans/${planId}/cancel`),
   answer: (questionId: string, answer: string) => call<unknown>('POST', `/questions/${questionId}/answer`, { answer }),
   start: (id: string) => call<unknown>('POST', `/plans/${id}/start`),
   tick: (id: string) => call<unknown>('POST', `/plans/${id}/tick`),
@@ -82,7 +84,7 @@ export const engine = {
 
 export const EVENT_TYPES = [
   'plan.created', 'plan.started', 'plan.landed', 'plan.cleaned', 'task.created',
-  'task.planning', 'task.planned', 'task.plan_failed', 'question.asked', 'question.answered',
+  'task.planning', 'task.planned', 'task.plan_failed', 'task.cleared', 'plan.cancelled', 'question.asked', 'question.answered',
   'phase.created', 'phase.status', 'phase.held', 'phase.retry', 'phase.failed', 'phase.error', 'phase.interrupted',
   'run.started', 'run.message', 'run.steps', 'run.tool_call', 'run.tool_result', 'run.result', 'run.error', 'run.rate_limit',
   'land.committed', 'land.tested', 'land.landed', 'land.conflict', 'land.retry', 'pr.opened', 'pr.updated', 'pr.error',

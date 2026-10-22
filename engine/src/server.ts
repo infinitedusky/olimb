@@ -17,7 +17,7 @@ import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
 import { now } from './now.js'
 import { answerQuestion, finishPlanning, preparePlanning, recoverPlanning } from './planner.js'
-import { addPhases, appGraph, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
+import { addPhases, appGraph, clearPhases, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
 import { runner } from './runner.js'
 
 export const SESSIONS_MAX = Number(process.env.SESSIONS_MAX ?? 4)
@@ -112,6 +112,12 @@ export function buildApp(bus: EventBus) {
 
   api.post('/tasks/:id/phases', async (c) => {
     try { return c.json(await addPhases(c.req.param('id'), await c.req.json(), 'user'), 201) } catch (err) { return planError(c, err) }
+  })
+  api.delete('/tasks/:id/phases', async (c) => { // a draft task back to its brief, so it can be planned again
+    try { return c.json(await clearPhases(c.req.param('id'), 'user')) } catch (err) { return planError(c, err) }
+  })
+  api.post('/plans/:id/cancel', async (c) => {
+    try { return c.json(await runner.cancelPlan(c.req.param('id'))) } catch (err) { return planError(c, err, 404) }
   })
 
   // The planner takes minutes: by default the request returns at once and the outcome arrives on the event stream
