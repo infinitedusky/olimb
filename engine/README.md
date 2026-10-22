@@ -12,14 +12,16 @@ UI and the VS Code view are clients; agents report events, they never write stat
 
 ## Run it
 
+From the repo root, one command:
+
 ```bash
-docker compose up -d          # Postgres 17 on localhost:5433
 pnpm install
-pnpm db:migrate               # apply drizzle/ migrations
-pnpm serve                    # http://localhost:4000
+pnpm dev        # Postgres 17 (docker compose, localhost:5433) + the engine on :4000 + the UI with live reload on http://localhost:5180
+pnpm start      # or: the engine alone on http://localhost:4000, serving the built UI (`pnpm build` first)
 ```
 
-Then, from another terminal (`pnpm if …` runs the CLI against `ENGINE_URL`, default `http://localhost:4000`):
+Migrations run when the engine boots. The API is under `/api` (`GET /api` lists the routes); the UI is served at `/`.
+In here, `pnpm serve` runs just the engine and `pnpm if …` is the CLI (against `ENGINE_URL`, default `http://localhost:4000/api`):
 
 ```bash
 pnpm if workspace "My workspace"            # → {"id":"ws_…"}

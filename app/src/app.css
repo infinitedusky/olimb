@@ -110,3 +110,8 @@ a.badge { text-decoration: none; }
 .file-group { width: 100%; height: 100%; border: 1.5px dashed var(--warn); border-radius: 16px; background: color-mix(in srgb, var(--warn) 5%, transparent); position: relative; pointer-events: none; }
 .file-group-label { position: absolute; top: -9px; left: 14px; background: var(--surface); padding: 0 6px; font-size: 11px; color: var(--warn); white-space: nowrap; }
 .react-flow__node[data-id^="area:"] { pointer-events: none; }
+
+/* Now: what needs you */
+.attention { list-style: none; margin: 0; padding: 0; }
+.attention li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.attention li:first-child { border-top: 0; padding-top: 0; }

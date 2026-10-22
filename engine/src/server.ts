@@ -14,6 +14,7 @@ import { db, pool } from './db/client.js'
 import { app as appTable, PHASE_STATUSES, repo as repoTable, workspace, type PhaseStatus } from './db/schema.js'
 import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
+import { now } from './now.js'
 import { answerQuestion, finishPlanning, preparePlanning, recoverPlanning } from './planner.js'
 import { addPhases, appGraph, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
 import { runner } from './runner.js'
@@ -48,6 +49,7 @@ export function buildApp(bus: EventBus) {
   }))
 
   api.get('/health', async (c) => { await db.execute('select 1'); return c.json({ ok: true }) })
+  api.get('/now', async (c) => c.json(await now())) // the front door: running, needs you, recent
 
   api.post('/workspaces', async (c) => {
     const { name } = await c.req.json<{ name: string }>()

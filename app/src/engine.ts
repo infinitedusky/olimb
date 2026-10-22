@@ -41,7 +41,24 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   return JSON.parse(text) as T
 }
 
+// The front door (GET /now): what's running, what needs a person, what just happened.
+export type Attention =
+  | { kind: 'failed_phase'; planId: string; planTitle: string; appName: string; phaseId: string; number: number; title: string; error: string | null }
+  | { kind: 'question'; planId: string; planTitle: string; appName: string; questionId: string; taskNumber: number | null; text: string; cost: string | null; askedAt: string }
+  | { kind: 'run_plan'; planId: string; planTitle: string; appName: string; phases: number }
+  | { kind: 'plan_task'; planId: string; planTitle: string; appName: string; taskId: string; taskNumber: number; taskTitle: string }
+  | { kind: 'merge_pr'; planId: string; planTitle: string; appName: string; prNumber: number | null; url: string | null }
+export interface RunningPlan {
+  planId: string; planTitle: string; appName: string; status: string; integrationBranch: string | null
+  phases: { total: number; done: number; failed: number }
+  live: { id: string; number: number; title: string; status: PhaseStatus; step: string | null }[]
+  held: { id: string; number: number; title: string; reason: string | null }[]
+  pr: { number: number | null; url: string | null; status: string } | null
+}
+export interface Now { running: RunningPlan[]; needsYou: Attention[]; recent: Event[]; counts: { plans: number; running: number; needsYou: number } }
+
 export const engine = {
+  now: () => call<Now>('GET', '/now'),
   apps: () => call<App[]>('GET', '/apps'),
   plans: () => call<PlanSummary[]>('GET', '/plans'),
   graph: (id: string) => call<Graph>('GET', `/plans/${id}/graph`),
