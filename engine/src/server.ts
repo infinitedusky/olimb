@@ -16,7 +16,7 @@ import { app as appTable, PHASE_STATUSES, repo as repoTable, workspace, type Pha
 import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
 import { createIdea, listIdeas, planFromIdea } from './ideas.js'
-import { answerPermission, closeTalks, currentTalk, endTalk, interruptTalk, listTalks, say, startTalk, talkTranscript, type TalkContext } from './talk.js'
+import { answerPermission, closeTalks, currentTalk, endTalk, interruptTalk, listTalks, say, setAutoApprove, startTalk, talkTranscript, type TalkContext } from './talk.js'
 import { now } from './now.js'
 import { answerQuestion, finishPlanning, preparePlanning, recoverPlanning } from './planner.js'
 import { addPhases, appGraph, clearPhases, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
@@ -118,6 +118,10 @@ export function buildApp(bus: EventBus) {
     try { return c.json(await answerPermission(c.req.param('id'), requestId, allow, always)) } catch (err) { return planError(c, err) }
   })
   api.post('/talks/:id/interrupt', async (c) => c.json(await interruptTalk(c.req.param('id'))))
+  api.post('/talks/:id/auto', async (c) => { // the person's threshold: free | cheap | moderate
+    const { level } = await c.req.json<{ level: 'free' | 'cheap' | 'moderate' }>()
+    try { return c.json(await setAutoApprove(c.req.param('id'), level)) } catch (err) { return planError(c, err) }
+  })
   api.post('/talks/:id/end', async (c) => c.json(await endTalk(c.req.param('id'))))
 
   // The inbox: capture an idea in a moment; make it a plan when its time comes.

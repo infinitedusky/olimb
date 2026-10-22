@@ -5,7 +5,9 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { Badge } from './Badge'
-import { API, engine, type TalkContext, type TalkMessage, type Transcript } from '../engine'
+import { API, engine, type Risk, type TalkContext, type TalkMessage, type Transcript } from '../engine'
+
+const RISK_TONE: Record<Risk, 'neutral' | 'ok' | 'warn' | 'bad'> = { free: 'neutral', cheap: 'ok', moderate: 'warn', expensive: 'bad' }
 
 export function Conversation({ sessionId, context, compact, onChanged }: { sessionId: string; context?: TalkContext; compact?: boolean; onChanged?: () => void }) {
   const [t, setT] = useState<Transcript | null>(null)
@@ -69,9 +71,10 @@ export function Message({ m, pending, sessionId }: { m: TalkMessage; pending: bo
     case 'text': return <div className={`msg ${m.author}`}><div className="msg-body">{m.body}</div></div>
     case 'tool_call': return <div className="msg tool mono">{p.tool === 'Bash' ? `$ ${p.input?.command ?? ''}` : `${String(p.tool).replace('mcp__engine__', 'engine · ')} ${p.input?.file ?? p.input?.pattern ?? ''}`}</div>
     case 'tool_result': return <details className="msg tool-result"><summary className="mono faint">{p.ok === false ? 'error' : 'result'}</summary><pre>{m.body}</pre></details>
+    case 'auto': return <div className="msg tool mono faint" title={p.why}>auto · <Badge tone={RISK_TONE[p.risk as Risk] ?? 'neutral'}>{p.risk}</Badge> · {p.tool === 'Bash' ? `$ ${p.input?.command ?? ''}` : `${String(p.tool).replace('mcp__engine__', 'engine · ')} ${p.input?.file ?? ''}`}</div>
     case 'permission': return (
       <div className={`perm ${pending ? 'open' : ''}`}>
-        <div><strong>{p.tool}</strong> {p.tool === 'Bash' ? <code>{p.input?.command}</code> : <span className="mono">{p.input?.file}</span>}
+        <div>{p.risk && <Badge tone={RISK_TONE[p.risk as Risk] ?? 'neutral'}>{p.risk}</Badge>} <strong>{p.tool}</strong> {p.tool === 'Bash' ? <code>{p.input?.command}</code> : <span className="mono">{p.input?.file}</span>}{p.why && <div className="faint" style={{ fontSize: 12 }}>{p.why}</div>}
           {p.tool === 'Edit' && <pre className="diff"><span className="del">- {p.input?.old}</span>{'\n'}<span className="add">+ {p.input?.new}</span></pre>}</div>
         {pending ? (
           <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>

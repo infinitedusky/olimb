@@ -5,12 +5,15 @@
  * the UI, Claude Code's default mode. Development runs on the operator's login, the product on an API key.
  */
 import { createSdkMcpServer, query, tool, type Query, type SDKMessage, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from './db/client.js'
 import { app, repo, session, sessionMessage, workspace } from './db/schema.js'
 import { appendEvent } from './events.js'
 import { newId } from './ids.js'
+import { rank, riskOf, type Risk } from './risk.js'
 import { createIdea, listIdeas } from './ideas.js'
 import { now } from './now.js'
 import { answerQuestion, finishPlanning, preparePlanning } from './planner.js'
@@ -25,11 +28,15 @@ const PERMISSION_TIMEOUT_MS = 10 * 60_000
 const TALK_PROMPT = `You are Self Evident's agent (Self Evident: software that proves itself — observe, learn, ideate, mockup, build), talking with the person who runs it, in its own web UI.
 The factory builds software from ideas: idea → plan (tasks in order) → task (a title and a brief) → phase (one agent, one worktree, one commit) → step. Read CLAUDE.md, LOG.md and SHAPE.md in this checkout when you need the history; LOG.md's top entries are the latest decisions.
 You have the engine as tools (mcp__engine__*): see what needs attention, keep ideas, make plans, run the planner on a task, answer its questions, start or cancel plans, read the event log. Use them rather than describing what the person should click.
-You can read, search and edit files and run commands here, as in any Claude Code session. Every edit and command is shown to the person for approval before it runs; keep them small and say what each is for.
+You can read, search and edit files and run commands here, as in any Claude Code session. The engine rates every action's risk (free, cheap, moderate, expensive); up to the person's threshold it runs without asking and is logged, above it a card asks them. Expensive things (main, force, deletes, merges, publishing, starting a plan) always ask. Work on a branch in a worktree, never in a checkout that is on main; say what each action is for.
 How this person works: PRs only, main is production; short answers that lead with the answer; questions are questions, not instructions to change things; give a recommendation, not a survey; write decisions into LOG.md or SHAPE.md the moment they are made; one git worktree per branch, never the main checkout.`
 
 interface Pending { resolve: (v: { allow: boolean; always?: boolean }) => void; tool: string }
-interface Live { q: Query; push: (m: SDKUserMessage) => void; close: () => void; pending: Map<string, Pending>; always: Set<string>; busy: boolean }
+type Rated = { risk: Risk; why: string }
+interface Live { q: Query; push: (m: SDKUserMessage) => void; close: () => void; pending: Map<string, Pending>; rated: Map<string, Rated>; always: Set<string>; busy: boolean; autoApprove: Risk; cwd: string }
+const execFileP = promisify(execFile)
+const branchOf = (cwd: string) => execFileP('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd }).then((r) => r.stdout.trim()).catch(() => null)
+const key = (tool: string, input: unknown) => tool + JSON.stringify(input).slice(0, 200)
 const live = new Map<string, Live>()
 
 function inputQueue() {
@@ -147,7 +154,7 @@ async function open(sessionId: string): Promise<Live> {
   const [a] = s.appId ? await db.select().from(app).where(eq(app.id, s.appId)) : []
   const setup = (a?.setup ?? {}) as { model?: string }
   const input = inputQueue()
-  const entry: Live = { q: null as unknown as Query, push: input.push, close: input.close, pending: new Map(), always: new Set(), busy: false }
+  const entry: Live = { q: null as unknown as Query, push: input.push, close: input.close, pending: new Map(), rated: new Map(), always: new Set(), busy: false, autoApprove: (s.autoApprove as Risk) ?? 'cheap', cwd: s.cwd! }
   const q = query({
     prompt: input.it,
     options: {
@@ -158,14 +165,28 @@ async function open(sessionId: string): Promise<Live> {
       systemPrompt: { type: 'preset', preset: 'claude_code', append: TALK_PROMPT },
       mcpServers: { engine: engineTools() },
       tools: [...READ_TOOLS, ...ASK_TOOLS],
-      allowedTools: [...READ_TOOLS, 'mcp__engine'],
+      allowedTools: READ_TOOLS, // everything else is rated by the hook (the hook sees every call; allowedTools would not)
       permissionMode: 'default',
+      // The gate: rate the call; up to the person's threshold allow it and log it; above, ask (which lands in canUseTool).
+      hooks: { PreToolUse: [{ hooks: [async (h) => {
+        if (h.hook_event_name !== 'PreToolUse') return { continue: true }
+        const input = (h.tool_input ?? {}) as Record<string, unknown>
+        const branch = ASK_TOOLS.includes(h.tool_name) ? await branchOf(entry.cwd) : undefined
+        const { risk, why } = riskOf(h.tool_name, input, { cwd: entry.cwd, branch })
+        const auto = risk === 'free' || entry.always.has(h.tool_name) || (risk !== 'expensive' && rank(risk) <= rank(entry.autoApprove))
+        if (auto) {
+          if (risk !== 'free') await record(sessionId, 'engine', 'auto', `${h.tool_name} · ${risk}`, { tool: h.tool_name, risk, why, input: summariseInput(h.tool_name, input) })
+          return { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }
+        }
+        entry.rated.set(key(h.tool_name, input), { risk, why })
+        return { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: `${risk}: ${why}` } }
+      }] }] },
       canUseTool: async (toolName, toolInput) => {
-        if (READ_TOOLS.includes(toolName) || toolName.startsWith('mcp__engine__')) return { behavior: 'allow', updatedInput: toolInput }
-        if (entry.always.has(toolName)) return { behavior: 'allow', updatedInput: toolInput }
+        const rated = entry.rated.get(key(toolName, toolInput)) ?? riskOf(toolName, toolInput as Record<string, unknown>, { cwd: entry.cwd, branch: await branchOf(entry.cwd) })
+        entry.rated.delete(key(toolName, toolInput))
         const requestId = newId('run')
         const summary = summariseInput(toolName, toolInput)
-        await record(sessionId, 'engine', 'permission', `${toolName}: may I?`, { requestId, tool: toolName, input: summary })
+        await record(sessionId, 'engine', 'permission', `${toolName}: may I?`, { requestId, tool: toolName, input: summary, risk: rated.risk, why: rated.why })
         const answer = await new Promise<{ allow: boolean; always?: boolean }>((resolveP) => {
           entry.pending.set(requestId, { resolve: resolveP, tool: toolName })
           setTimeout(() => { if (entry.pending.delete(requestId)) resolveP({ allow: false }) }, PERMISSION_TIMEOUT_MS)
@@ -244,6 +265,17 @@ export async function answerPermission(sessionId: string, requestId: string, all
   l.pending.delete(requestId)
   p.resolve({ allow, always })
   return { ok: true }
+}
+
+/** The person's threshold for this conversation: the agent acts without asking up to it. Expensive always asks. */
+export async function setAutoApprove(sessionId: string, level: Risk) {
+  if (!['free', 'cheap', 'moderate'].includes(level)) throw new PlanError('auto-approve is free, cheap or moderate; expensive always asks')
+  const [row] = await db.update(session).set({ autoApprove: level }).where(eq(session.id, sessionId)).returning()
+  if (!row) throw new PlanError(`no session ${sessionId}`)
+  const l = live.get(sessionId)
+  if (l) l.autoApprove = level
+  await record(sessionId, 'user', 'text', level === 'free' ? 'Auto-approve off: ask for everything.' : `Auto-approve up to ${level}.`, { autoApprove: level })
+  return row
 }
 
 export async function interruptTalk(sessionId: string) {

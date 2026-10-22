@@ -160,3 +160,4 @@ a.badge { text-decoration: none; }
 .nav .ico { display: inline-block; width: 1.5em; }
 .nav .link.sub { margin-left: 22px; padding-top: 4px; padding-bottom: 4px; font-size: 13px; }
 .nav-rule { height: 1px; background: var(--line); margin: 10px 10px; }
+.auto-select { font-size: 12px; margin: 0; padding: 3px 6px; max-width: 160px; }
