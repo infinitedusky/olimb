@@ -433,6 +433,24 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## On main: the web UI, the agent, the name (2026-10-22, PR #12 merged, with #10, #11, #5, #13)
+
+Sandy: "anyway merge it you need to or whatever." Merged #13 (MIT license, root README) first because the repo
+was already public without one, then the whole chain as one merge of `web-first` retargeted to `main` (it carried
+#5, #11 and #10; GitHub marked #10 and #11 merged by inclusion, #5 closed with a note). Before merging: the latest
+log merged in, `main` merged in, typecheck, 34 tests, a UI build. The brother's details in this log were softened
+to "a teenager in 8th grade, in Sandy's family" first.
+- **Fresh-clone test** (the thing a stranger does): `git clone … && pnpm install && pnpm dev` → engine and UI
+  answering in 4 s. The README's "Try it" is written from that run, with the honest requirements: Docker, Node
+  24, pnpm, Claude Code signed in.
+- **Nav, final for now** (Sandy: "we don't need a talk page… add plan to the left nav instead of mockup, that is
+  part of building, or planning, maybe we have a validate section: plan, validate, build"): 🔭 Observe · 🧠 Learn ·
+  💡 Ideate · 📋 Plan · 🧪 Validate · 🔨 Build, then Settings. Plan lists the drafts and starts new ones; Validate
+  holds the mock-ups, variants and previews and the checks a build is held to; Build is what runs and what landed,
+  with Graph under it. The Talk page is gone; the agent is the drawer.
+- The dev stack now runs from the main checkout; merged worktrees removed. Doc-only changes like this one go
+  through small PRs I merge myself under the same "merge it if you need to".
+
 ## The name, again: Self Evident (Sandy, 2026-10-22)
 
 Sandy, after a day with Olimb: "less sold on this name" — properplan, buildrite, then "Self Evident is nice too,
