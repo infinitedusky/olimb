@@ -33,7 +33,7 @@ export function Talk() {
           {apps.map((a) => <button key={a.id} className="btn quiet small" disabled={starting} onClick={() => start(a.id)}>New · {a.name}</button>)}
         </div>
         <ul className="list" style={{ margin: 0, padding: 0 }}>
-          {sessions.map((s) => (
+          {sessions.filter((s) => (s.messages ?? 1) > 0 || s.id === id).map((s) => (
             <li key={s.id} className={s.id === id ? 'active' : ''} style={{ padding: '6px 0' }}>
               <Link to={`/talk/${s.id}`} style={{ textDecoration: 'none' }}>{name(s)}</Link>
               <div className="faint" style={{ fontSize: 12 }}>{s.lastActiveAt?.slice(5, 16).replace('T', ' ')} {s.busy ? <Badge tone="accent" dot>working</Badge> : s.status === 'ended' ? <Badge>ended</Badge> : null}</div>

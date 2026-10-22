@@ -5,7 +5,7 @@
  * the UI, Claude Code's default mode. Development runs on the operator's login, the product on an API key.
  */
 import { createSdkMcpServer, query, tool, type Query, type SDKMessage, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, sql } from 'drizzle-orm'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
@@ -115,7 +115,9 @@ export async function startTalk(input: { appId?: string; cwd?: string; title?: s
 
 export const listTalks = async () => {
   const rows = await db.select().from(session).where(eq(session.kind, 'talk')).orderBy(desc(session.lastActiveAt))
-  return rows.map((s) => ({ ...s, live: live.has(s.id), busy: live.get(s.id)?.busy ?? false }))
+  const counts = await db.select({ sessionId: sessionMessage.sessionId, n: sql<number>`count(*)` }).from(sessionMessage).groupBy(sessionMessage.sessionId)
+  const n = new Map(counts.map((c) => [c.sessionId, Number(c.n)]))
+  return rows.map((s) => ({ ...s, live: live.has(s.id), busy: live.get(s.id)?.busy ?? false, messages: n.get(s.id) ?? 0 }))
 }
 
 export async function talkTranscript(sessionId: string) {

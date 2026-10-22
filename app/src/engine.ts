@@ -62,7 +62,7 @@ export interface RunningPlan {
 export interface Now { running: RunningPlan[]; needsYou: Attention[]; recent: Event[]; counts: { plans: number; running: number; needsYou: number } }
 
 // Talk: a conversation with the factory's agent. Messages are rows; talk.* events say when to refetch.
-export interface TalkSession { id: string; appId: string | null; cwd: string | null; title: string | null; status: string; createdAt: string; lastActiveAt: string | null; live: boolean; busy: boolean }
+export interface TalkSession { id: string; appId: string | null; cwd: string | null; title: string | null; status: string; createdAt: string; lastActiveAt: string | null; live: boolean; busy: boolean; messages?: number }
 export interface TalkMessage { id: number; sessionId: string; author: 'user' | 'agent' | 'tool' | 'engine'; kind: 'text' | 'tool_call' | 'tool_result' | 'permission' | 'result' | 'error'; body: string; payload: Record<string, any> | null; sentAt: string | null }
 export interface Transcript { session: TalkSession; messages: TalkMessage[]; pending: string[] }
 export interface TalkContext { path: string; label?: string; planId?: string; appId?: string; ideaId?: string } // where the person is, sent with each message

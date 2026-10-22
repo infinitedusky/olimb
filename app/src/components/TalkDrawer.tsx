@@ -10,6 +10,7 @@ import { engine, type TalkContext, type TalkSession } from '../engine'
 import { useCurrentApp } from '../current-app'
 
 const KEY = 'if.talk'
+let creating: Promise<TalkSession> | null = null // one new conversation at a time, even when React runs an effect twice
 
 function read(): { open: boolean; sessionId: string | null } {
   try { return { open: false, sessionId: null, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') } } catch { return { open: false, sessionId: null } }
@@ -50,11 +51,15 @@ export function TalkDrawer() {
 
   const fresh = async () => {
     setStarting(true)
-    try { const s = await engine.startTalk({ appId: app?.id, title: app ? `Alongside · ${app.name}` : 'Alongside' }); set({ sessionId: s.id }); setSessions(await engine.talks()) } finally { setStarting(false) }
+    try {
+      creating ??= engine.startTalk({ appId: app?.id, title: app ? `Alongside · ${app.name}` : 'Alongside' })
+      const s = await creating
+      set({ sessionId: s.id }); setSessions(await engine.talks())
+    } finally { creating = null; setStarting(false) }
   }
   useEffect(() => { // first open: pick up the latest open conversation, or start one
     if (!state.open || state.sessionId || starting) return
-    engine.talks().then((all) => { const open = all.find((s) => s.status !== 'ended' && s.appId === app?.id) ?? all.find((s) => s.status !== 'ended'); if (open) set({ sessionId: open.id }); else void fresh() }).catch(() => {})
+    engine.talks().then((all) => { const open = all.find((s) => s.status !== 'ended' && s.appId === app?.id) ?? all.find((s) => s.status !== 'ended'); if (open) set({ sessionId: open.id }); else if (!creating) void fresh() }).catch(() => {})
   }, [state.open, state.sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loc.pathname.startsWith('/talk')) return null // the full page is the drawer, there
@@ -64,7 +69,7 @@ export function TalkDrawer() {
     <aside className="talk-drawer" data-component="TalkDrawer">
       <div className="talk-drawer-head">
         <select value={state.sessionId ?? ''} onChange={(e) => set({ sessionId: e.target.value || null })} title="Which conversation">
-          {sessions.filter((s) => s.status !== 'ended' || s.id === state.sessionId).map((s) => <option key={s.id} value={s.id}>{s.title ?? 'The factory'} · {s.lastActiveAt?.slice(5, 16).replace('T', ' ')}</option>)}
+          {sessions.filter((s) => (s.status !== 'ended' && (s.messages ?? 1) > 0) || s.id === state.sessionId).map((s) => <option key={s.id} value={s.id}>{s.title ?? 'The factory'} · {s.lastActiveAt?.slice(5, 16).replace('T', ' ')}</option>)}
         </select>
         <button className="btn quiet small" disabled={starting} onClick={fresh} title="Start a new conversation">New</button>
         {state.sessionId && <Link className="btn quiet small" to={`/talk/${state.sessionId}`} title="Open in full">Full</Link>}
