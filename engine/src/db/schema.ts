@@ -159,8 +159,9 @@ export const step = pgTable('step', { // how the builder intends to build a phas
 
 export const session = pgTable('session', { // a conversation with an agent: a talk session (a person and the app's agent) or, later, one per phase
   id: id(), appId: appId(), kind: text('kind').notNull().default('talk'), phaseId: text('phase_id').references(() => phase.id),
-  cwd: text('cwd'), // where the agent works: the app's repo checkout
-  title: text('title'), agentSessionId: text('agent_session_id'), // the SDK session, for --resume after a restart
+  cwd: text('cwd'), branch: text('branch'), worktreePath: text('worktree_path'), // where the agent works: its own worktree of the app's repo, on its own branch
+  title: text('title'), subject: text('subject'), subjectRef: jsonb('subject_ref'), // what the conversation is about, pinned on first contact: {planId} | {ideaId} | {path}
+  agentSessionId: text('agent_session_id'), // the SDK session, for --resume after a restart
   status: text('status').notNull().default('open'), createdBy: text('created_by'), createdAt: createdAt(),
   lastActiveAt: timestamp('last_active_at', { withTimezone: true }),
   autoApprove: text('auto_approve').notNull().default('cheap'), // the agent acts without asking up to this risk; expensive always asks

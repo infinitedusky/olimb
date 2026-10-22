@@ -16,7 +16,7 @@ import { app as appTable, PHASE_STATUSES, repo as repoTable, workspace, type Pha
 import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
 import { createIdea, listIdeas, planFromIdea } from './ideas.js'
-import { answerPermission, closeTalks, currentTalk, endTalk, interruptTalk, listTalks, say, setAutoApprove, startTalk, talkTranscript, type TalkContext } from './talk.js'
+import { answerPermission, closeTalks, endTalk, interruptTalk, listTalks, renameTalk, say, setAutoApprove, startTalk, talkTranscript, type SubjectRef, type TalkContext } from './talk.js'
 import { now } from './now.js'
 import { answerQuestion, finishPlanning, preparePlanning, recoverPlanning } from './planner.js'
 import { addPhases, appGraph, clearPhases, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
@@ -97,16 +97,15 @@ export function buildApp(bus: EventBus) {
   })
 
   // Talk: an interactive agent session, the conversation as rows and events, permissions answered from the UI.
-  api.get('/talks', async (c) => c.json(await listTalks()))
+  api.get('/talks', async (c) => c.json(await listTalks({ open: c.req.query('open') === '1' })))
   api.post('/talks', async (c) => {
-    const body = await c.req.json<{ appId?: string; cwd?: string; title?: string }>().catch(() => ({} as { appId?: string; cwd?: string; title?: string }))
+    const body = await c.req.json<{ appId?: string; subjectRef?: SubjectRef }>().catch(() => ({} as { appId?: string; subjectRef?: SubjectRef }))
     if (!body.appId) return c.json({ error: 'appId is required: a conversation belongs to an app' }, 400)
-    try { return c.json(await startTalk({ ...body, appId: body.appId, actor: 'user' }), 201) } catch (err) { return planError(c, err) }
+    try { return c.json(await startTalk({ appId: body.appId, subjectRef: body.subjectRef, actor: 'user' }), 201) } catch (err) { return planError(c, err) }
   })
-  api.post('/talks/current', async (c) => { // the app's one open conversation, started if there is none
-    const body = await c.req.json<{ appId?: string }>().catch(() => ({} as { appId?: string }))
-    if (!body.appId) return c.json({ error: 'appId is required: a conversation belongs to an app' }, 400)
-    try { return c.json(await currentTalk(body.appId, 'user')) } catch (err) { return planError(c, err) }
+  api.post('/talks/:id/rename', async (c) => {
+    const { subject } = await c.req.json<{ subject: string }>()
+    try { return c.json(await renameTalk(c.req.param('id'), subject)) } catch (err) { return planError(c, err, 404) }
   })
   api.get('/talks/:id', async (c) => { try { return c.json(await talkTranscript(c.req.param('id'))) } catch (err) { return planError(c, err, 404) } })
   api.post('/talks/:id/say', async (c) => {

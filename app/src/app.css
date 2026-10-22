@@ -161,3 +161,11 @@ a.badge { text-decoration: none; }
 .nav .link.sub { margin-left: 22px; padding-top: 4px; padding-bottom: 4px; font-size: 13px; }
 .nav-rule { height: 1px; background: var(--line); margin: 10px 10px; }
 .auto-select { font-size: 12px; margin: 0; padding: 3px 6px; max-width: 160px; }
+/* Conversations as tabs */
+.talk-tabs { display: flex; gap: 4px; padding: 8px 8px 0; overflow-x: auto; border-bottom: 1px solid var(--line); }
+.talk-tab { flex: 0 0 auto; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 12px var(--sans); padding: 5px 9px; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; background: none; color: var(--ink-soft); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.talk-tab.active { background: var(--surface); border-color: var(--line); color: var(--ink); font-weight: 600; }
+.talk-tab.new, .talk-tab.close { color: var(--ink-faint); font-size: 14px; padding: 4px 8px; }
+.talk-tab.close { margin-left: auto; }
+.talk-tab .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent); }
+.talk-drawer-head input { flex: 1; margin: 0; font-size: 13px; }

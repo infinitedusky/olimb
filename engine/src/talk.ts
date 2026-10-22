@@ -10,7 +10,9 @@ import { promisify } from 'node:util'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from './db/client.js'
-import { app, repo, session, sessionMessage, workspace } from './db/schema.js'
+import { app, idea, plan, repo, session, sessionMessage, workspace } from './db/schema.js'
+import { addWorktree, git, removeWorktree } from './git.js'
+import { withLock } from './landing.js'
 import { appendEvent } from './events.js'
 import { newId } from './ids.js'
 import { rank, riskOf, type Risk } from './risk.js'
@@ -25,10 +27,11 @@ const READ_TOOLS = ['Read', 'Glob', 'Grep', 'LS', 'TodoWrite', 'WebFetch', 'WebS
 const ASK_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash']
 const PERMISSION_TIMEOUT_MS = 10 * 60_000
 
-const TALK_PROMPT = `You are Self Evident's agent (Self Evident: software that proves itself — observe, learn, ideate, mockup, build), talking with the person who runs it, in its own web UI.
+const talkPrompt = (cwd: string, branch: string | null, base: string) => `You are Self Evident's agent (Self Evident: software that proves itself — observe, learn, ideate, mockup, build), talking with the person who runs it, in its own web UI.
 The factory builds software from ideas: idea → plan (tasks in order) → task (a title and a brief) → phase (one agent, one worktree, one commit) → step. Read CLAUDE.md, LOG.md and SHAPE.md in this checkout when you need the history; LOG.md's top entries are the latest decisions.
 You have the engine as tools (mcp__engine__*): see what needs attention, keep ideas, make plans, run the planner on a task, answer its questions, start or cancel plans, read the event log. Use them rather than describing what the person should click.
 You can read, search and edit files and run commands here, as in any Claude Code session. The engine rates every action's risk (free, cheap, moderate, expensive); up to the person's threshold it runs without asking and is logged, above it a card asks them. Expensive things (main, force, deletes, merges, publishing, starting a plan) always ask. Work on a branch in a worktree, never in a checkout that is on main; say what each action is for.
+You work in your own worktree, ${cwd}, on branch ${branch ?? '(none)'} cut from ${base}: edit and commit there; push and open a pull request when the work is ready (both ask).
 How this person works: PRs only, main is production; short answers that lead with the answer; questions are questions, not instructions to change things; give a recommendation, not a survey; write decisions into LOG.md or SHAPE.md the moment they are made; one git worktree per branch, never the main checkout.`
 
 interface Pending { resolve: (v: { allow: boolean; always?: boolean }) => void; tool: string }
@@ -111,26 +114,45 @@ async function record(sessionId: string, author: string, kind: string, body: str
   return row
 }
 
-export async function startTalk(input: { appId: string; cwd?: string; title?: string; actor?: string }) {
+export interface SubjectRef { planId?: string; ideaId?: string; path?: string }
+
+/** What a conversation is about, from where it started: a plan's title, an idea's title, or nothing yet. */
+async function subjectFrom(ref?: SubjectRef): Promise<{ subject: string | null; subjectRef: SubjectRef | null }> {
+  if (ref?.planId) { const [p] = await db.select().from(plan).where(eq(plan.id, ref.planId)); if (p) return { subject: p.title, subjectRef: { planId: p.id } } }
+  if (ref?.ideaId) { const [i] = await db.select().from(idea).where(eq(idea.id, ref.ideaId)); if (i) return { subject: i.title, subjectRef: { ideaId: i.id } } }
+  return { subject: null, subjectRef: ref?.path ? { path: ref.path } : null }
+}
+
+/** A conversation gets its own worktree of the app's repo, on its own branch, so its edits are cheap and a PR is the natural end. */
+export async function startTalk(input: { appId: string; subjectRef?: SubjectRef; actor?: string }) {
   const [a] = await db.select().from(app).where(eq(app.id, input.appId))
   if (!a) throw new PlanError(`no app ${input.appId}`)
-  let cwd = input.cwd
-  if (!cwd) { const [r] = await db.select().from(repo).where(eq(repo.appId, input.appId)); cwd = r?.localPath ?? undefined }
-  if (!cwd) throw new PlanError(`${a.name} has no local checkout yet; add its repo in Settings`)
-  const [row] = await db.insert(session).values({ id: newId('session'), appId: a.id, kind: 'talk', cwd, title: input.title ?? null, createdBy: input.actor ?? 'user', lastActiveAt: new Date() }).returning()
+  const [r] = await db.select().from(repo).where(eq(repo.appId, input.appId))
+  if (!r?.localPath) throw new PlanError(`${a.name} has no local checkout yet; add its repo in Settings`)
+  const id = newId('session')
+  const short = id.slice(-6).toLowerCase()
+  const branch = `talk/${short}`
+  const worktreePath = `${r.localPath}-worktrees/talk-${short}`
+  await withLock(`git:${r.localPath}`, async () => {
+    await git(r.localPath!, ['fetch', '-q', 'origin', a.defaultBranch], { allowFail: true })
+    const base = (await git(r.localPath!, ['rev-parse', '--verify', '--quiet', `origin/${a.defaultBranch}`], { allowFail: true })).code === 0 ? `origin/${a.defaultBranch}` : a.defaultBranch
+    await addWorktree(r.localPath!, worktreePath, branch, base)
+  })
+  const { subject, subjectRef } = await subjectFrom(input.subjectRef)
+  const [row] = await db.insert(session).values({
+    id, appId: a.id, kind: 'talk', cwd: worktreePath, branch, worktreePath, subject, subjectRef, createdBy: input.actor ?? 'user', lastActiveAt: new Date(),
+  }).returning()
   return row
 }
 
-/** The one open conversation for an app: found, or started. */
-export async function currentTalk(appId: string, actor = 'user') {
-  const [row] = await db.select().from(session)
-    .where(and(eq(session.kind, 'talk'), eq(session.status, 'open'), eq(session.appId, appId)))
-    .orderBy(desc(session.lastActiveAt)).limit(1)
-  return row ?? startTalk({ appId, actor })
+export async function renameTalk(sessionId: string, subject: string) {
+  const [row] = await db.update(session).set({ subject: subject.trim() || null }).where(eq(session.id, sessionId)).returning()
+  if (!row) throw new PlanError(`no session ${sessionId}`)
+  return row
 }
 
-export const listTalks = async () => {
-  const rows = await db.select().from(session).where(eq(session.kind, 'talk')).orderBy(desc(session.lastActiveAt))
+export const listTalks = async (opts: { open?: boolean } = {}) => {
+  const rows = await db.select().from(session).where(opts.open ? and(eq(session.kind, 'talk'), eq(session.status, 'open')) : eq(session.kind, 'talk')).orderBy(desc(session.lastActiveAt))
   const counts = await db.select({ sessionId: sessionMessage.sessionId, n: sql<number>`count(*)` }).from(sessionMessage).groupBy(sessionMessage.sessionId)
   const n = new Map(counts.map((c) => [c.sessionId, Number(c.n)]))
   return rows.map((s) => ({ ...s, live: live.has(s.id), busy: live.get(s.id)?.busy ?? false, messages: n.get(s.id) ?? 0 }))
@@ -162,7 +184,7 @@ async function open(sessionId: string): Promise<Live> {
       resume: s.agentSessionId ?? undefined,
       model: setup.model,
       settingSources: ['project'],
-      systemPrompt: { type: 'preset', preset: 'claude_code', append: TALK_PROMPT },
+      systemPrompt: { type: 'preset', preset: 'claude_code', append: talkPrompt(s.cwd!, s.branch, a?.defaultBranch ?? 'main') },
       mcpServers: { engine: engineTools() },
       tools: [...READ_TOOLS, ...ASK_TOOLS],
       allowedTools: READ_TOOLS, // everything else is rated by the hook (the hook sees every call; allowedTools would not)
@@ -251,6 +273,11 @@ async function describeContext(c?: TalkContext): Promise<string> {
 
 export async function say(sessionId: string, text: string, context?: TalkContext) {
   if (!text.trim()) throw new PlanError('say something')
+  const [s] = await db.select().from(session).where(eq(session.id, sessionId))
+  if (s && !s.subject) { // pinned by first contact: the plan or idea in view, else the first thing said
+    const from = await subjectFrom({ planId: context?.planId, ideaId: context?.ideaId })
+    await db.update(session).set({ subject: from.subject ?? text.trim().slice(0, 60), subjectRef: from.subjectRef ?? s.subjectRef }).where(eq(session.id, sessionId))
+  }
   const l = await open(sessionId)
   const row = await record(sessionId, 'user', 'text', text.trim(), context ? { context } : undefined)
   l.busy = true
@@ -289,8 +316,22 @@ export async function interruptTalk(sessionId: string) {
 export async function endTalk(sessionId: string) {
   const l = live.get(sessionId)
   if (l) { l.close(); await l.q.interrupt().catch(() => {}); live.delete(sessionId) }
+  const [s] = await db.select().from(session).where(eq(session.id, sessionId))
+  let branchKept: string | null = null
+  if (s?.worktreePath && s.appId) {
+    const [a] = await db.select().from(app).where(eq(app.id, s.appId))
+    const [r] = await db.select().from(repo).where(eq(repo.appId, s.appId))
+    if (r?.localPath) await withLock(`git:${r.localPath}`, async () => {
+      await removeWorktree(r.localPath!, s.worktreePath!)
+      if (s.branch) {
+        const ahead = await git(r.localPath!, ['rev-list', '--count', `${a?.defaultBranch ?? 'main'}..${s.branch}`], { allowFail: true })
+        if (ahead.code === 0 && Number(ahead.stdout) === 0) await git(r.localPath!, ['branch', '-D', s.branch], { allowFail: true })
+        else branchKept = s.branch
+      }
+    })
+  }
   await db.update(session).set({ status: 'ended' }).where(eq(session.id, sessionId))
-  return { ended: true }
+  return { ended: true, branchKept }
 }
 
 /** On shutdown: close the live conversations; they resume from their SDK session ids on the next message. */
