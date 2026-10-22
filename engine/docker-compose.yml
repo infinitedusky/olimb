@@ -1,0 +1,20 @@
+# Local Postgres for the engine. Same schema and code as a hosted one.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: idea-factory-postgres
+    environment:
+      POSTGRES_USER: ideafactory
+      POSTGRES_PASSWORD: ideafactory
+      POSTGRES_DB: ideafactory
+    ports:
+      - "5433:5432"
+    volumes:
+      - idea-factory-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ideafactory -d ideafactory"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+volumes:
+  idea-factory-pg:
