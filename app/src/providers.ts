@@ -32,6 +32,6 @@ export const modules: Module[] = [
   {
     role: 'Code host',
     why: 'Where PRs live. Work is PRs only; main is production.',
-    providers: [{ name: 'GitHub', does: 'infinitedusky/homework-gate, infinitedusky/idea-factory', status: 'connected' }],
+    providers: [{ name: 'GitHub', does: 'infinitedusky/homework-gate, infinitedusky/olimb', status: 'connected' }],
   },
 ]

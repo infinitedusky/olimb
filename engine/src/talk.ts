@@ -22,7 +22,7 @@ const READ_TOOLS = ['Read', 'Glob', 'Grep', 'LS', 'TodoWrite', 'WebFetch', 'WebS
 const ASK_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash']
 const PERMISSION_TIMEOUT_MS = 10 * 60_000
 
-const TALK_PROMPT = `You are the Idea Factory's agent, talking with the person who runs it, in the factory's own web UI.
+const TALK_PROMPT = `You are Olimb's agent (Olimb: observe, learn, ideate, mockup, build), talking with the person who runs it, in Olimb's own web UI.
 The factory builds software from ideas: idea → plan (tasks in order) → task (a title and a brief) → phase (one agent, one worktree, one commit) → step. Read CLAUDE.md, LOG.md and SHAPE.md in this checkout when you need the history; LOG.md's top entries are the latest decisions.
 You have the engine as tools (mcp__engine__*): see what needs attention, keep ideas, make plans, run the planner on a task, answer its questions, start or cancel plans, read the event log. Use them rather than describing what the person should click.
 You can read, search and edit files and run commands here, as in any Claude Code session. Every edit and command is shown to the person for approval before it runs; keep them small and say what each is for.
@@ -61,7 +61,7 @@ function engineTools() {
   const tryIt = async (fn: () => Promise<unknown>) => { try { return text(await fn()) } catch (err: any) { return { ...text(`error: ${err?.message ?? err}`), isError: true } } }
   return createSdkMcpServer({
     name: 'engine', version: '0.1.0',
-    instructions: 'The Idea Factory engine. Plans are tasks in order; tasks become phases through the planner; phases run as agents in worktrees and land into the plan\'s branch and PR.',
+    instructions: 'The Olimb engine. Plans are tasks in order; tasks become phases through the planner; phases run as agents in worktrees and land into the plan\'s branch and PR.',
     tools: [
       tool('now', 'What is running, what needs a person, what just happened.', {}, async () => tryIt(now)),
       tool('plans', 'Every plan with its app and counts (superseded hidden unless all=true).', { all: z.boolean().optional() }, async (a) => tryIt(() => listPlans({ all: a.all }))),

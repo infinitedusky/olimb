@@ -1,4 +1,4 @@
-# Idea Factory app
+# Olimb app
 
 The minimal UI: the **ideas board** (building / testing / parked), an **idea page** (the bet, its telemetry, the loop
 it ran, its evidence — from the database, once connected), **graph** (the top level: every step of every plan in an app on one canvas, dependencies as edges, dashed

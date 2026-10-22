@@ -152,3 +152,4 @@ a.badge { text-decoration: none; }
 .conversation.compact .talk-input textarea { font-size: 14px; }
 @media (min-width: 1280px) { body.talk-open .main { padding-right: 456px; } }
 .nav .app-pick { display: block; width: 100%; text-align: left; background: none; border: 0; cursor: pointer; font: inherit; color: inherit; }
+.brand-sub { font-size: 10px; letter-spacing: .02em; margin: -6px 10px 10px; }

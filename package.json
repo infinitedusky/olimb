@@ -1,12 +1,12 @@
 {
-  "name": "idea-factory",
+  "name": "olimb",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter @idea-factory/engine db:up && pnpm -r --parallel --stream dev",
+    "dev": "pnpm --filter @olimb/engine db:up && pnpm -r --parallel --stream dev",
     "build": "pnpm --filter app build",
-    "start": "pnpm --filter @idea-factory/engine db:up && pnpm --filter @idea-factory/engine serve",
+    "start": "pnpm --filter @olimb/engine db:up && pnpm --filter @olimb/engine serve",
     "test": "pnpm -r test",
-    "engine": "pnpm --filter @idea-factory/engine",
+    "engine": "pnpm --filter @olimb/engine",
     "app": "pnpm --filter app"
   }
 }

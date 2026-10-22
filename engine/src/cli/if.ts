@@ -16,7 +16,7 @@ async function api<T>(method: string, path: string, body?: unknown): Promise<T> 
   return JSON.parse(text) as T
 }
 
-const program = new Command('if').description('Idea Factory engine: idea → plan (tasks in order) → task → phase → step')
+const program = new Command('olimb').description('Olimb engine: idea → plan (tasks in order) → task → phase → step')
 
 program.command('migrate').description('apply database migrations').action(async () => { await import('../db/migrate.js') })
 
