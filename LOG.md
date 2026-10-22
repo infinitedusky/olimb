@@ -432,6 +432,24 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## Web first: the UI becomes the place Sandy works (2026-10-21, idea-factory PR #12)
+
+Sandy: "I need to get Idea Factory to a place where I can start interacting with it on the web, or else I'm never
+going to know what it's doing… building Homework Gate through there, coming back here when we notice problems to
+fix on Idea Factory." Decision: the web UI is the working surface; this chat is where the factory gets fixed.
+Local only for now. Done tonight on `web-first` (stacked on #11 → #10):
+- **One command, one address**: `pnpm dev` at the root brings up Postgres, the engine and the UI
+  (http://localhost:5180); `pnpm start` serves the built UI from the engine on :4000. API under `/api`,
+  migrations on boot, deep links.
+- **Now** at `/`: needs-you (failed phases, open questions, drafts to plan or run, landed plans with a PR waiting),
+  each with its action; running plans with each live phase's current step and what's held; just-happened. Live.
+- **Settings**: apps and repos (test command, model, budget) edited on the web; add an app. No CLI for setup.
+- **Plan page**: Plan / Re-plan a task (clears the planner's output and runs it again), Discard draft, Cancel plan
+  (agents aborted, landed work kept, worktrees removed; an aborted run no longer re-queues its phase).
+- **Graph**: edges only, left to right by what a phase waits on; the dashed file areas are gone.
+Still to do for "usable for Homework Gate": previews per branch (`preview_cmd`), the ideas inbox, decisions
+approvable. Waiting on Sandy: merge #5 → #11 → #10 (→ #12), and the two POC variants on homework-gate #18.
+
 ## The factory by hand: the spaced-repetition POC (2026-10-21, homework-gate PR #18, draft)
 
 The first task done the thesis's way: a proof of concept to react to *before* planning, instead of decision cards.
