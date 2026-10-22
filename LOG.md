@@ -432,6 +432,21 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## The name, again: Self Evident (Sandy, 2026-10-22)
+
+Sandy, after a day with Olimb: "less sold on this name" — properplan, buildrite, then "Self Evident is nice too,
+the thing proves itself." The test that settled it: the goal is strangers trying it on GitHub, so the name has to
+say the idea before anyone reads a line. Olimb named the loop but needed the five icons to explain itself;
+properplan and buildrite each named one stage (and the last one, ceremony). **Self Evident** names the idea: the
+mock-up makes the decision self-evident, the shipped build proves itself through telemetry, the promises are
+clauses the app asserts about itself. Checked: `selfevident` free on npm and PyPI; `self-evident.dev`,
+`selfevident.dev/.ai/.io` no DNS; three repos on GitHub with the name. Repository renamed to
+`infinitedusky/self-evident` (GitHub redirects `olimb` and `idea-factory`); it is **public** as of today.
+In code: packages `self-evident` / `@self-evident/engine`, CLI `pnpm se …` (`if` kept), wordmark "Self Evident."
+with the accent period, the five icons stay as the nav and the loop; the agent introduces itself as Self Evident's.
+The adverb is the engine's voice ("Landed, self-evidently"). Lesson for the record: a name that needs its logo to
+explain it is a name for people already inside.
+
 ## The name: Olimb (Sandy, 2026-10-22)
 
 Sandy: "olimb… stands for observe, learn, ideate, mockup, build." The acronym is the thesis in order — Observe
