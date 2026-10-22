@@ -5,7 +5,7 @@
  * the UI, Claude Code's default mode. Development runs on the operator's login, the product on an API key.
  */
 import { createSdkMcpServer, query, tool, type Query, type SDKMessage, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
-import { desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, isNull, sql } from 'drizzle-orm'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
@@ -111,6 +111,14 @@ export async function startTalk(input: { appId?: string; cwd?: string; title?: s
   cwd = cwd ?? FACTORY_ROOT
   const [row] = await db.insert(session).values({ id: newId('session'), kind: 'talk', appId: input.appId ?? null, cwd, title: input.title ?? null, createdBy: input.actor ?? 'user', lastActiveAt: new Date() }).returning()
   return row
+}
+
+/** The one open conversation for an app (or for the factory checkout itself when appId is null): found, or started. */
+export async function currentTalk(appId: string | null, actor = 'user') {
+  const [row] = await db.select().from(session)
+    .where(and(eq(session.kind, 'talk'), eq(session.status, 'open'), appId ? eq(session.appId, appId) : isNull(session.appId)))
+    .orderBy(desc(session.lastActiveAt)).limit(1)
+  return row ?? startTalk({ appId: appId ?? undefined, actor })
 }
 
 export const listTalks = async () => {

@@ -16,7 +16,7 @@ import { app as appTable, PHASE_STATUSES, repo as repoTable, workspace, type Pha
 import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
 import { createIdea, listIdeas, planFromIdea } from './ideas.js'
-import { answerPermission, closeTalks, endTalk, interruptTalk, listTalks, say, startTalk, talkTranscript, type TalkContext } from './talk.js'
+import { answerPermission, closeTalks, currentTalk, endTalk, interruptTalk, listTalks, say, startTalk, talkTranscript, type TalkContext } from './talk.js'
 import { now } from './now.js'
 import { answerQuestion, finishPlanning, preparePlanning, recoverPlanning } from './planner.js'
 import { addPhases, appGraph, clearPhases, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
@@ -101,6 +101,10 @@ export function buildApp(bus: EventBus) {
   api.post('/talks', async (c) => {
     const body = await c.req.json<{ appId?: string; cwd?: string; title?: string }>().catch(() => ({}))
     try { return c.json(await startTalk({ ...body, actor: 'user' }), 201) } catch (err) { return planError(c, err) }
+  })
+  api.post('/talks/current', async (c) => { // the app's one open conversation, started if there is none
+    const body = await c.req.json<{ appId?: string }>().catch(() => ({} as { appId?: string }))
+    try { return c.json(await currentTalk(body.appId ?? null, 'user')) } catch (err) { return planError(c, err) }
   })
   api.get('/talks/:id', async (c) => { try { return c.json(await talkTranscript(c.req.param('id'))) } catch (err) { return planError(c, err, 404) } })
   api.post('/talks/:id/say', async (c) => {
