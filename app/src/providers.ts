@@ -10,8 +10,8 @@ export const modules: Module[] = [
     role: 'Telemetry',
     why: 'Feeds the factory. Every idea is checked against it; every PR is judged by it.',
     providers: [
-      { name: 'PostHog', does: 'What users do: events, flags, experiments, LLM calls', status: 'pending',
-        note: 'Wired in Homework Gate (PR #9); waiting on the project token.' },
+      { name: 'PostHog', does: 'What users do: events, flags, experiments, LLM calls; traces over OTLP', status: 'connected',
+        note: 'Homework Gate sends events (project 677236). Keys live in each app\'s .env and the engine\'s .env, never here.' },
       { name: 'Datadog', does: 'What services do: traces, logs, errors', status: 'not connected' },
     ],
   },

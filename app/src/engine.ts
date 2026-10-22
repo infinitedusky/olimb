@@ -29,7 +29,10 @@ export interface Graph {
   conflicts: [string, string][] // open phases that claim the same path: they take turns
 }
 export interface PlanSummary { id: string; title: string; status: string; createdAt: string; app: { id: string; name: string } | null; taskCount: number; phases: Record<string, number> }
-export interface App { id: string; name: string; defaultBranch: string }
+export interface AppSetup { test_cmd?: string; preview_cmd?: string; model?: string; max_budget_usd?: number; max_turns?: number }
+export interface Repo { id: string; appId: string; fullName: string; localPath: string | null; baseBranch: string | null }
+export interface App { id: string; workspaceId?: string; name: string; defaultBranch: string; setup?: AppSetup; repos?: Repo[] }
+export interface Workspace { id: string; name: string }
 export interface Event { seq: number; ts: string; type: string; actor: string; taskId: string | null; phaseId: string | null; planId: string | null; payload: Record<string, unknown> }
 export interface NewPhase { key: string; title: string; brief?: string; dependsOn?: string[]; files?: string[] }
 export interface NewTask { title: string; brief?: string; phases?: NewPhase[] }
@@ -60,6 +63,12 @@ export interface Now { running: RunningPlan[]; needsYou: Attention[]; recent: Ev
 export const engine = {
   now: () => call<Now>('GET', '/now'),
   apps: () => call<App[]>('GET', '/apps'),
+  workspaces: () => call<Workspace[]>('GET', '/workspaces'),
+  createWorkspace: (name: string) => call<Workspace>('POST', '/workspaces', { name }),
+  createApp: (body: { workspaceId: string; name: string; defaultBranch?: string; setup?: AppSetup }) => call<App>('POST', '/apps', body),
+  updateApp: (id: string, body: { name?: string; defaultBranch?: string; setup?: AppSetup }) => call<App>('PATCH', `/apps/${id}`, body),
+  createRepo: (body: { appId: string; fullName: string; localPath?: string; baseBranch?: string }) => call<Repo>('POST', '/repos', body),
+  updateRepo: (id: string, body: { fullName?: string; localPath?: string | null; baseBranch?: string | null }) => call<Repo>('PATCH', `/repos/${id}`, body),
   plans: () => call<PlanSummary[]>('GET', '/plans'),
   graph: (id: string) => call<Graph>('GET', `/plans/${id}/graph`),
   createPlan: (body: { appId: string; title: string; spec?: string; tasks: NewTask[] }) => call<{ plan: { id: string } }>('POST', '/plans', body),

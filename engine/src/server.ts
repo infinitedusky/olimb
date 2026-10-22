@@ -4,6 +4,7 @@
  */
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
+import { eq } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
@@ -35,7 +36,8 @@ export function buildApp(bus: EventBus) {
     routes: {
       'GET /health': 'database reachable?',
       'POST /workspaces': '{name}', 'POST /apps': '{workspaceId, name, defaultBranch?, setup?}', 'POST /repos': '{appId, fullName, localPath?, baseBranch?}',
-      'GET /apps': 'all apps', 'GET /apps/:id/graph': 'the top-level graph: every phase of every plan in the app',
+      'GET /apps': 'all apps, each with its repos', 'PATCH /apps/:id': '{name?, defaultBranch?, setup?}', 'PATCH /repos/:id': '{fullName?, localPath?, baseBranch?}', 'GET /workspaces': 'all workspaces',
+      'GET /apps/:id/graph': 'the top-level graph: every phase of every plan in the app', 'GET /now': 'the front door: running, needs you, recent',
       'POST /plans': '{appId, title, spec?, tasks: [{title, brief?, phases?: [{key, title, brief?, dependsOn?, files?}]}]}',
       'GET /plans': 'all plans with counts', 'GET /plans/:id/graph': 'tasks in order, phases with edges, claims, held reasons, last run, steps, the PR',
       'POST /tasks/:id/phases': '[{key, title, brief?, dependsOn?, files?}] — add phases to a task by hand',
@@ -57,7 +59,25 @@ export function buildApp(bus: EventBus) {
     return c.json(row, 201)
   })
 
-  api.get('/apps', async (c) => c.json(await db.select().from(appTable)))
+  api.get('/workspaces', async (c) => c.json(await db.select().from(workspace)))
+
+  // Apps carry their repos; setup is the whole object (test_cmd, model, max_budget_usd, max_turns, …).
+  api.get('/apps', async (c) => {
+    const [apps, repos] = await Promise.all([db.select().from(appTable), db.select().from(repoTable)])
+    return c.json(apps.map((a) => ({ ...a, repos: repos.filter((r) => r.appId === a.id) })))
+  })
+  api.patch('/apps/:id', async (c) => {
+    const body = await c.req.json<{ name?: string; defaultBranch?: string; setup?: Record<string, unknown> }>()
+    const [row] = await db.update(appTable).set({ ...(body.name ? { name: body.name } : {}), ...(body.defaultBranch ? { defaultBranch: body.defaultBranch } : {}), ...(body.setup ? { setup: body.setup } : {}) })
+      .where(eq(appTable.id, c.req.param('id'))).returning()
+    return row ? c.json(row) : c.json({ error: 'no such app' }, 404)
+  })
+  api.patch('/repos/:id', async (c) => {
+    const body = await c.req.json<{ fullName?: string; localPath?: string | null; baseBranch?: string | null }>()
+    const [row] = await db.update(repoTable).set({ ...(body.fullName !== undefined ? { fullName: body.fullName } : {}), ...(body.localPath !== undefined ? { localPath: body.localPath } : {}), ...(body.baseBranch !== undefined ? { baseBranch: body.baseBranch } : {}) })
+      .where(eq(repoTable.id, c.req.param('id'))).returning()
+    return row ? c.json(row) : c.json({ error: 'no such repo' }, 404)
+  })
   api.post('/apps', async (c) => {
     const body = await c.req.json<{ workspaceId: string; name: string; defaultBranch?: string; setup?: Record<string, unknown> }>()
     const [row] = await db.insert(appTable).values({ id: newId('app'), workspaceId: body.workspaceId, name: body.name, defaultBranch: body.defaultBranch ?? 'main', setup: body.setup ?? {} }).returning()
