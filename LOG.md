@@ -463,6 +463,14 @@ folded, results collapsible), permission cards, Stop / End.
   so we can remove the dropdown"): one open conversation per app (`POST /talks/current` finds or starts it); the
   drawer and the Talk page show the current app's and switch when the app switches; Start over ends it and begins
   a new one; earlier conversations about the app are listed, read-only.
+- **app_id on every row** (Sandy saw Homework Gate ideas while on the Idea Factory app; asked whether the tenant key
+  belongs on every table or only on the parent — answer: every table, the multi-tenant norm, because derived
+  scoping leaks the first time a join is forgotten, and RLS/sharding need the column). Done: every table below an
+  app carries `app_id`, required; composite foreign keys tie each row to its parent's app (`(plan_id, app_id) →
+  plan(id, app_id)` and likewise task/phase/idea/session); `(app_id, …)` indexes; migration 0003 hand-ordered
+  (add nullable → backfill from the parent → drop development chatter with no app → require → keys). Conversations
+  and events now require an app; a talk session's cwd is the app's checkout. The visible leak was the UI: the
+  design-note idea files were shown regardless of app, and pages fetched once before the current app was known.
 - Next: previews per branch; decisions approvable. With this, the loop closes: work in the UI, talk to the agent
   there, come back to this chat only when the factory itself needs a fix the agent can't make.
 
