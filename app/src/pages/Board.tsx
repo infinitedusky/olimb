@@ -41,7 +41,7 @@ export function Board({ ideas }: { ideas: Idea[] }) {
     <>
       <div className="page-head">
         <div>
-          <h1>Ideas{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
+          <h1>💡 Ideate{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
           <p className="muted" style={{ margin: '4px 0 0' }}>Type it, it's kept. When its time comes, it becomes one task, or a plan of several.</p>
         </div>
         <span className="mono faint">{inbox.length} in the inbox</span>

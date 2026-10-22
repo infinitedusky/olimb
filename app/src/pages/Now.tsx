@@ -36,7 +36,7 @@ export function Now() {
     <>
       <div className="page-head">
         <div>
-          <h1>Now{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
+          <h1>🔭 Observe{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
           <p className="muted" style={{ margin: '4px 0 0' }}>{data.counts.running} running · {data.counts.needsYou} need{data.counts.needsYou === 1 ? 's' : ''} you · {data.counts.plans} plan{data.counts.plans === 1 ? '' : 's'}</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

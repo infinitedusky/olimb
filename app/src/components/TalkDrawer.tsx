@@ -17,12 +17,14 @@ export function contextFor(pathname: string, search: string): TalkContext {
   const app = new URLSearchParams(search).get('app') ?? undefined
   if (plan) return { path: pathname, planId: plan, label: 'this plan' }
   if (pathname === '/plans/new') return { path: pathname, label: 'the plan composer' }
-  if (pathname.startsWith('/plans')) return { path: pathname, label: 'the plans list' }
-  if (pathname.startsWith('/ideas')) return { path: pathname, label: 'the ideas inbox' }
+  if (pathname.startsWith('/plans')) return { path: pathname, label: 'Build' }
+  if (pathname.startsWith('/ideas')) return { path: pathname, label: 'Ideate (the inbox)' }
+  if (pathname.startsWith('/learn')) return { path: pathname, label: 'Learn' }
+  if (pathname.startsWith('/mockups')) return { path: pathname, label: 'Mockup' }
   if (pathname.startsWith('/graph')) return { path: pathname, appId: app, label: 'the graph' }
   if (pathname.startsWith('/settings')) return { path: pathname, label: 'settings' }
   if (pathname.startsWith('/talk')) return { path: pathname, label: 'the Talk page' }
-  return { path: pathname, label: 'the Now page' }
+  return { path: pathname, label: 'Observe' }
 }
 
 /** The current app's conversation, started if there is none; "start over" ends it and begins a new one. */

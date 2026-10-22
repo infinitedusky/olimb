@@ -153,8 +153,10 @@ a.badge { text-decoration: none; }
 @media (min-width: 1280px) { body.talk-open .main { padding-right: 456px; } }
 .nav .app-pick { display: block; width: 100%; text-align: left; background: none; border: 0; cursor: pointer; font: inherit; color: inherit; }
 
-/* The logo: the five steps, as the five emoji, close together */
-.nav .brand { display: block; text-decoration: none; color: var(--ink); }
-.brand-mark { display: block; font-size: 21px; letter-spacing: -0.16em; line-height: 1.2; }
-.brand-name { display: block; font: 700 12px/1 var(--sans); letter-spacing: 0.08em; color: var(--ink-soft); margin-top: 4px; }
-.brand-name::after { content: ''; }
+
+/* The wordmark at the top; the loop as the nav, one icon per step; the emoji row is the logo outside the site */
+.nav .brand { display: block; text-decoration: none; color: var(--ink); font-weight: 800; font-size: 20px; letter-spacing: -0.02em; margin: 0 10px 14px; }
+.nav .brand i { font-style: normal; color: var(--accent); }
+.nav .ico { display: inline-block; width: 1.5em; }
+.nav .link.sub { margin-left: 22px; padding-top: 4px; padding-bottom: 4px; font-size: 13px; }
+.nav-rule { height: 1px; background: var(--line); margin: 10px 10px; }

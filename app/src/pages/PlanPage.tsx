@@ -29,7 +29,7 @@ export function PlanPage() {
   const open = graph.questions.filter((q) => q.status === 'open')
   return (
     <>
-      <p className="mono"><Link to="/plans">← Plans</Link></p>
+      <p className="mono"><Link to="/plans">← Build</Link></p>
       <div className="page-head">
         <div>
           <h1>{graph.plan.title}</h1>

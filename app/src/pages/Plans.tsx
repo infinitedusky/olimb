@@ -16,8 +16,8 @@ export function Plans() {
     <>
       <div className="page-head">
         <div>
-          <h1>Plans{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
-          <p className="muted" style={{ margin: '4px 0 0' }}>A plan is tasks in order; each task becomes phases; the phases are the graph the engine runs.</p>
+          <h1>🔨 Build{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
+          <p className="muted" style={{ margin: '4px 0 0' }}>How Olimb builds: a plan is tasks in order; the planner turns each task into phases; each phase is one agent in one worktree; what lands becomes the plan's PR.</p>
         </div>
         <Link to="/plans/new" className="btn">New plan</Link>
       </div>
