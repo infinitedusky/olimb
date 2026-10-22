@@ -240,15 +240,16 @@ above (20–30 photographed pages).
 ### Audience: teenagers (Sandy, 2026-10-20)
 
 "This really is for teenagers. Young kids are not getting homework and their
-parents can control their devices more." The student is Sandy's **little
-brother**: **13, 8th grade**; plays Fortnite, watches TikTok sports
-videos. Consequences:
+parents can control their devices more." The student is a teenager in
+**8th grade**, in Sandy's family; his interests (a popular battle-royale game, short
+sports videos) shaped the design. Consequences:
 - Nothing that feels like a kids' app (drop/limit handwritten cheer,
   mascots, Khan Kids tone). Heron's grown-up look, the Sprayground shark and
   Brick's self-chosen framing already fit.
-- Borrow from Fortnite: homework steps as daily quests, mastery as tiers,
-  XP across nights, the gate opening as the win screen. From TikTok: help is
-  short and vertical (60-second explanations); tutor examples from sports.
+- Borrow from the games he plays: homework steps as daily quests, mastery as
+  tiers, XP across nights, the gate opening as the win screen. From the short
+  videos he watches: help is short and vertical (60-second explanations);
+  tutor examples from sports.
 - Product: teens have their own phones, so the gate must be something they
   accept — autonomy ("this is mine, it helps me") is the core, not the tone.
 - Open: who is "the parent" in the interview — Sandy, the parents, or both?
@@ -271,7 +272,7 @@ unlocks itself.
 - **Parent-managed** (Sandy): Family Sharing / child authorization, like
   Bark — a parent approves on his phone; he can't turn it off. Apple
   combines all apps' restrictions, so Bark/Downtime blocks still apply;
-  for the demo Homework Gate must be what blocks games/TikTok. Pitch:
+  for the demo Homework Gate must be what blocks games and video apps. Pitch:
   Bark watches and blocks; Homework Gate unlocks when he's earned it.
 - Server: stays on this machine behind a tunnel (Cloudflare Tunnel or
   Tailscale) so the model stays on Sandy's subscription, personal use.
