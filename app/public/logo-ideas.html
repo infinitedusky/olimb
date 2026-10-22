@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Olimb logo ideas</title>
+<style>
+  :root { --bg: #f5f6f9; --ink: #1f2430; --soft: #6b7280; --card: #fff; --line: #e5e7eb; --accent: #c2510a; --leaf: #2f7a4a; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #14171d; --ink: #f1f3f7; --soft: #9aa3b2; --card: #1c2027; --line: #2a303a; --accent: #f0803a; --leaf: #5fb57f; } }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, "Inter", sans-serif; padding: 32px 24px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; } p.lead { color: var(--soft); margin: 0 0 28px; max-width: 70ch; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .card h2 { font-size: 15px; margin: 0 0 4px; } .card p { color: var(--soft); font-size: 13px; margin: 0 0 14px; }
+  .stage { background: var(--bg); border-radius: 10px; padding: 24px; display: flex; align-items: center; justify-content: center; min-height: 170px; }
+  .stage.dark { background: var(--ink); } .stage.dark svg { --ink: #fff; --bg: #1f2430; }
+  svg { width: 100%; max-width: 380px; height: auto; overflow: visible; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .small svg { max-width: 72px; }
+  .wm { font-family: ui-sans-serif, system-ui, -apple-system, "Inter", sans-serif; font-weight: 800; letter-spacing: -0.03em; fill: var(--ink); }
+</style>
+</head>
+<body>
+<h1>Olimb: logo directions</h1>
+<p class="lead">The word is "climb" with the C closed into an O. Four ways to close it. Each shown light and dark; the mark alone at the end is the favicon test.</p>
+
+<div class="grid">
+
+  <div class="card">
+    <h2>A · The pencil closes the C</h2>
+    <p>"climb" set bold; the C is an open stroke, and a pencil stands in the gap and makes it an O. The pencil is the ideate/mockup half of the loop; the climb is the rest.</p>
+    <div class="row">
+      <div class="stage"><svg viewBox="0 0 300 100" aria-label="olimb, with a pencil closing the C">
+        <circle cx="52" cy="54" r="30" fill="none" stroke="var(--ink)" stroke-width="15" stroke-linecap="butt" stroke-dasharray="146.6 41.9" transform="rotate(40 52 54)"/>
+        <g transform="rotate(-8 75 54)">
+          <rect x="68.5" y="24" width="13" height="50" rx="1.5" fill="var(--accent)"/>
+          <rect x="68.5" y="24" width="13" height="8" rx="1.5" fill="#e8a0a0"/>
+          <rect x="68.5" y="32" width="13" height="3" fill="#9aa3b2"/>
+          <polygon points="68.5,74 81.5,74 75,88" fill="#e9c08a"/>
+          <polygon points="72.5,80.5 77.5,80.5 75,86" fill="var(--ink)"/>
+        </g>
+        <text class="wm" x="94" y="79" font-size="74">limb</text>
+      </svg></div>
+      <div class="stage dark"><svg viewBox="0 0 300 100">
+        <circle cx="52" cy="54" r="30" fill="none" stroke="#fff" stroke-width="15" stroke-dasharray="146.6 41.9" transform="rotate(40 52 54)"/>
+        <g transform="rotate(-8 75 54)">
+          <rect x="68.5" y="24" width="13" height="50" rx="1.5" fill="var(--accent)"/>
+          <rect x="68.5" y="24" width="13" height="8" rx="1.5" fill="#e8a0a0"/>
+          <rect x="68.5" y="32" width="13" height="3" fill="#9aa3b2"/>
+          <polygon points="68.5,74 81.5,74 75,88" fill="#e9c08a"/>
+          <polygon points="72.5,80.5 77.5,80.5 75,86" fill="#fff"/>
+        </g>
+        <text class="wm" x="94" y="79" font-size="74" fill="#fff">limb</text>
+      </svg></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>B · The tree: the hollow is the O</h2>
+    <p>A trunk in silhouette with a hollow through it; a figure climbs the trunk and holds the rim of the hollow. The hollow is the O; the rest of the word follows the trunk.</p>
+    <div class="row">
+      <div class="stage"><svg viewBox="0 0 300 110" aria-label="olimb, a climber on a tree whose hollow is the O">
+        <defs><mask id="holeA"><rect width="300" height="110" fill="#fff"/><circle cx="56" cy="58" r="21" fill="#000"/></mask></defs>
+        <path d="M30 110 C 28 70, 30 40, 38 14 Q 56 -4 76 12 C 84 40, 86 72, 84 110 Z" fill="var(--ink)" mask="url(#holeA)"/>
+        <path d="M40 16 C 30 8, 22 10, 14 20 M74 14 C 84 6, 92 8, 100 18" stroke="var(--leaf)" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <!-- the climber: head, torso, arm up to the rim, leg braced on the trunk -->
+        <circle cx="25" cy="52" r="6" fill="var(--ink)"/>
+        <path d="M25 58 L 28 74 M28 74 L 22 92 M28 74 L 34 88 M25 60 L 36 46 L 40 48 M25 62 L 18 70" stroke="var(--ink)" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text class="wm" x="96" y="84" font-size="74">limb</text>
+      </svg></div>
+      <div class="stage dark"><svg viewBox="0 0 300 110">
+        <defs><mask id="holeB"><rect width="300" height="110" fill="#fff"/><circle cx="56" cy="58" r="21" fill="#000"/></mask></defs>
+        <path d="M30 110 C 28 70, 30 40, 38 14 Q 56 -4 76 12 C 84 40, 86 72, 84 110 Z" fill="#fff" mask="url(#holeB)"/>
+        <path d="M40 16 C 30 8, 22 10, 14 20 M74 14 C 84 6, 92 8, 100 18" stroke="var(--leaf)" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <circle cx="25" cy="52" r="6" fill="#fff"/>
+        <path d="M25 58 L 28 74 M28 74 L 22 92 M28 74 L 34 88 M25 60 L 36 46 L 40 48 M25 62 L 18 70" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text class="wm" x="96" y="84" font-size="74" fill="#fff">limb</text>
+      </svg></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>C · The climber is the pencil</h2>
+    <p>Both ideas in one: the C is a hand-drawn stroke, and the figure that closes it is a climber hanging from the top of the C, body straight down like a pencil, feet on the bottom. The person is what closes the loop.</p>
+    <div class="row">
+      <div class="stage"><svg viewBox="0 0 300 100" aria-label="olimb, a climber closing the C">
+        <circle cx="52" cy="54" r="30" fill="none" stroke="var(--ink)" stroke-width="13" stroke-dasharray="151.8 36.7" transform="rotate(35 52 54)"/>
+        <circle cx="75" cy="30" r="6.5" fill="var(--accent)"/>
+        <path d="M75 37 L 75 62 M75 40 L 64 30 M75 40 L 86 31 M75 62 L 69 80 M75 62 L 81 80" stroke="var(--accent)" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text class="wm" x="94" y="79" font-size="74">limb</text>
+      </svg></div>
+      <div class="stage dark"><svg viewBox="0 0 300 100">
+        <circle cx="52" cy="54" r="30" fill="none" stroke="#fff" stroke-width="13" stroke-dasharray="151.8 36.7" transform="rotate(35 52 54)"/>
+        <circle cx="75" cy="30" r="6.5" fill="var(--accent)"/>
+        <path d="M75 37 L 75 62 M75 40 L 64 30 M75 40 L 86 31 M75 62 L 69 80 M75 62 L 81 80" stroke="var(--accent)" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text class="wm" x="94" y="79" font-size="74" fill="#fff">limb</text>
+      </svg></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>D · Quiet version: a pencil line closes the C</h2>
+    <p>The least literal: a heavy C, closed by a single thin pencil stroke in the accent colour. Reads as "olimb" at a glance and survives at 16px.</p>
+    <div class="row">
+      <div class="stage"><svg viewBox="0 0 300 100" aria-label="olimb">
+        <circle cx="52" cy="54" r="30" fill="none" stroke="var(--ink)" stroke-width="15" stroke-dasharray="146.6 41.9" transform="rotate(40 52 54)"/>
+        <path d="M75 28 Q 80 54 75 80" stroke="var(--accent)" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <text class="wm" x="94" y="79" font-size="74">limb</text>
+      </svg></div>
+      <div class="stage dark"><svg viewBox="0 0 300 100">
+        <circle cx="52" cy="54" r="30" fill="none" stroke="#fff" stroke-width="15" stroke-dasharray="146.6 41.9" transform="rotate(40 52 54)"/>
+        <path d="M75 28 Q 80 54 75 80" stroke="var(--accent)" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <text class="wm" x="94" y="79" font-size="74" fill="#fff">limb</text>
+      </svg></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>The mark alone (favicon size)</h2>
+    <p>A, C and D as a mark without the word. B's trunk doesn't survive at 16px; its mark would be the hollow with the climber.</p>
+    <div class="stage small" style="gap:28px">
+      <svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="30" fill="none" stroke="var(--ink)" stroke-width="15" stroke-dasharray="146.6 41.9" transform="rotate(40 50 52)"/><g transform="rotate(-8 73 52)"><rect x="66.5" y="22" width="13" height="50" rx="1.5" fill="var(--accent)"/><rect x="66.5" y="22" width="13" height="8" rx="1.5" fill="#e8a0a0"/><polygon points="66.5,72 79.5,72 73,86" fill="#e9c08a"/></g></svg>
+      <svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="30" fill="none" stroke="var(--ink)" stroke-width="13" stroke-dasharray="151.8 36.7" transform="rotate(35 50 52)"/><circle cx="73" cy="28" r="6.5" fill="var(--accent)"/><path d="M73 35 L 73 60 M73 38 L 62 28 M73 38 L 84 29 M73 60 L 67 78 M73 60 L 79 78" stroke="var(--accent)" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg viewBox="0 0 100 100"><circle cx="50" cy="52" r="30" fill="none" stroke="var(--ink)" stroke-width="15" stroke-dasharray="146.6 41.9" transform="rotate(40 50 52)"/><path d="M73 26 Q 78 52 73 78" stroke="var(--accent)" stroke-width="4" fill="none" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
