@@ -447,8 +447,11 @@ Local only for now. Done tonight on `web-first` (stacked on #11 → #10):
 - **Plan page**: Plan / Re-plan a task (clears the planner's output and runs it again), Discard draft, Cancel plan
   (agents aborted, landed work kept, worktrees removed; an aborted run no longer re-queues its phase).
 - **Graph**: edges only, left to right by what a phase waits on; the dashed file areas are gone.
-Still to do for "usable for Homework Gate": previews per branch (`preview_cmd`), the ideas inbox, decisions
-approvable. Waiting on Sandy: merge #5 → #11 → #10 (→ #12), and the two POC variants on homework-gate #18.
+- **Ideas inbox**: type it, it's kept; "Make it a task" (a plan of one, the body as the brief) or "Break it
+  down" (the composer prefilled). Tonight's two captured ideas went in through it.
+Still to do for "usable for Homework Gate": previews per branch (`preview_cmd`), decisions approvable. Waiting on
+Sandy: merge #5 → #11 → #10 → #12, and the two POC variants on homework-gate #18. The dev stack runs from the
+`web-first` worktree until then: http://localhost:5180.
 
 ## The factory by hand: the spaced-repetition POC (2026-10-21, homework-gate PR #18, draft)
 
