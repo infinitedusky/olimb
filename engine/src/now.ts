@@ -4,7 +4,7 @@
  */
 import { and, desc, eq, inArray, ne, notInArray } from 'drizzle-orm'
 import { db } from './db/client.js'
-import { app, event, phase, project, pr, question, run, step, task } from './db/schema.js'
+import { app, backlogItem, event, phase, project, pr, question, run, step, task } from './db/schema.js'
 
 const LIVE = ['running', 'merging', 'testing', 'awaiting_answer']
 const NOISE = ['run.tool_call', 'run.tool_result', 'run.rate_limit', 'run.message', 'talk.message', 'talk.permission', 'talk.result'] // conversations have their own place
@@ -14,6 +14,7 @@ export type Attention =
   | { kind: 'question'; projectId: string; planTitle: string; appName: string; questionId: string; taskNumber: number | null; text: string; cost: string | null; askedAt: Date }
   | { kind: 'run_project'; projectId: string; planTitle: string; appName: string; phases: number }
   | { kind: 'plan_task'; projectId: string; planTitle: string; appName: string; taskId: string; taskNumber: number; taskTitle: string }
+  | { kind: 'backlog'; projectId: string; planTitle: string; appName: string; open: number; items: string[] }
   | { kind: 'merge_pr'; projectId: string; planTitle: string; appName: string; prNumber: number | null; url: string | null }
 
 export async function now(appId?: string) {
@@ -25,6 +26,7 @@ export async function now(appId?: string) {
   const phases = projectIds.length ? await db.select().from(phase).where(inArray(phase.projectId, projectIds)) : []
   const questions = projectIds.length ? await db.select().from(question).where(and(inArray(question.projectId, projectIds), eq(question.status, 'open'))) : []
   const prs = projectIds.length ? await db.select().from(pr).where(inArray(pr.projectId, projectIds)) : []
+  const openItems = projectIds.length ? await db.select().from(backlogItem).where(and(inArray(backlogItem.projectId, projectIds), eq(backlogItem.state, 'open'))) : []
   const phaseIds = phases.map((x) => x.id)
   const runs = phaseIds.length ? await db.select().from(run).where(inArray(run.phaseId, phaseIds)) : []
   const steps = phaseIds.length ? await db.select().from(step).where(inArray(step.phaseId, phaseIds)) : []
@@ -41,7 +43,7 @@ export async function now(appId?: string) {
     const mine = phases.filter((x) => x.projectId === p.id)
     const thePr = prs.find((q) => q.projectId === p.id)
     return {
-      ...tag(p), status: p.status, integrationBranch: p.integrationBranch,
+      ...tag(p), status: p.status, integrationBranch: p.integrationBranch, backlogOpen: openItems.filter((i) => i.projectId === p.id).length,
       phases: { total: mine.length, done: mine.filter((x) => x.status === 'done').length, failed: mine.filter((x) => x.status === 'failed').length },
       live: mine.filter((x) => LIVE.includes(x.status)).map((x) => ({ id: x.id, number: x.number, title: x.title, status: x.status, step: currentStep(x.id) })),
       held: mine.filter((x) => x.status === 'queued' && x.heldReason).map((x) => ({ id: x.id, number: x.number, title: x.title, reason: x.heldReason })),
@@ -67,6 +69,12 @@ export async function now(appId?: string) {
     const open = questions.filter((q) => q.projectId === p.id).length
     if (!unplanned.length && myTasks.length && !open) needsYou.push({ kind: 'run_project', ...tag(p), phases: phases.filter((x) => x.projectId === p.id).length })
     else if (unplanned.length) needsYou.push({ kind: 'plan_task', ...tag(p), taskId: unplanned[0].id, taskNumber: unplanned[0].number, taskTitle: unplanned[0].title })
+  }
+  for (const p of projects.filter((x) => x.status === 'running')) { // the work is done but the backlog is not: it cannot land until a person covers or drops what is left
+    const mine = phases.filter((x) => x.projectId === p.id)
+    const items = openItems.filter((i) => i.projectId === p.id)
+    const allPlanned = tasks.filter((t) => t.projectId === p.id).every((t) => mine.some((x) => x.taskId === t.id))
+    if (items.length && allPlanned && mine.length && mine.every((x) => x.status === 'done')) needsYou.push({ kind: 'backlog', ...tag(p), open: items.length, items: items.map((i) => i.text).slice(0, 5) })
   }
   for (const p of projects.filter((x) => x.status === 'landed')) {
     const thePr = prs.find((q) => q.projectId === p.id)

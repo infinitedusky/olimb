@@ -15,6 +15,7 @@ import { commitAll, git } from './git.js'
 import { newId } from './ids.js'
 import { createProject, projectGraph } from './projects.js'
 import { Runner } from './runner.js'
+import { addItems, dropItem, itemToTask } from './backlog.js'
 import type { Propose } from './planner.js'
 
 let reachable = true
@@ -206,6 +207,29 @@ describe.skipIf(!reachable)('runner', () => {
     expect(g.phases.map((x) => [g.tasks.find((t) => t.id === x.taskId)!.title, x.status])).toEqual([['First', 'done'], ['Second', 'done']])
     expect(plannedAfter).toEqual(['done']) // the second task was planned once, after the first had landed
     expect(tasks).toHaveLength(2)
+  })
+
+  it('a project with open backlog items waits instead of landing; a builder\'s Later: lines join the backlog', async () => {
+    const { project: p } = await createProject({ appId, title: 'backlog gate', tasks: [one('T', [{ key: 'b', title: 'B', files: ['b.txt'] }])] })
+    const [kept] = await addItems(p.id, [{ text: 'Refunds' }])
+    const runner = new Runner({ execute: async (i) => ({ ...(await commits('bg')(i)), summary: 'did B\n\nLater:\n- The header link 404s' }), sessionsMax: 2 })
+    await runner.startProject(p.id)
+    const waiting = async () => (await db.select().from(event).where(eq(event.projectId, p.id))).some((e) => e.type === 'project.backlog_open')
+    await until(waiting)
+    let g = (await projectGraph(p.id))!
+    expect(g.project.status).toBe('running')
+    expect(g.backlog.map((b) => [b.text, b.source, b.state])).toEqual([['Refunds', 'person', 'open'], ['The header link 404s', 'builder', 'open']])
+    await dropItem(kept.id, 'not in this project')
+    await itemToTask(g.backlog[1].id) // a new task: planned and built before the project lands
+    const propose: Propose = async () => ({ status: 'completed', costUsd: 0, proposal: {
+      phases: [{ key: 'h', title: 'H', description: 'h', summary: 'h', depends_on: [], files: ['h.txt'], steps: [], checks: [], done_when: '' }], decisions: [], questions: [], notes: '' } })
+    const again = new Runner({ execute: commits('bg2'), sessionsMax: 2, propose })
+    await again.dispatch()
+    await until(cleaned(p.id))
+    g = (await projectGraph(p.id))!
+    expect(g.project.status).toBe('landed')
+    expect(g.tasks.map((t) => t.title)).toEqual(['T', 'The header link 404s'])
+    expect(g.phases.map((x) => x.status)).toEqual(['done', 'done'])
   })
 
   it('stores the builder\'s todo list as the phase\'s steps, latest list wins', async () => {

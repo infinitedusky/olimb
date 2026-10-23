@@ -54,7 +54,7 @@ export function Projects({ mode }: { mode: 'project' | 'build' }) {
               <li key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center' }}>
                 <div>
                   <Link to={`/projects/${p.id}`} style={{ fontWeight: 600, textDecoration: 'none' }}>{p.title}</Link>
-                  <div className="faint" style={{ fontSize: 13 }}>{p.taskCount} task{p.taskCount === 1 ? '' : 's'} · {total} phase{total === 1 ? '' : 's'}
+                  <div className="faint" style={{ fontSize: 13 }}>{p.taskCount} task{p.taskCount === 1 ? '' : 's'} · {total} phase{total === 1 ? '' : 's'}{p.backlogOpen ? ` · ${p.backlogOpen} in the backlog` : ''}
                     {p.phases.done ? ` · ${p.phases.done} done` : ''}{p.phases.failed ? ` · ${p.phases.failed} failed` : ''} · <span className="mono">{p.id}</span></div>
                 </div>
                 <Badge tone={TONE[p.status] ?? 'neutral'} dot={p.status === 'running'}>{p.status}</Badge>

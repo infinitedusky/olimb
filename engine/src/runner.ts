@@ -6,8 +6,9 @@
 import { and, asc, desc, eq, inArray } from 'drizzle-orm'
 import { join } from 'node:path'
 import { db } from './db/client.js'
-import { app, event, phase, project, pr as prTable, repo, run, step, task } from './db/schema.js'
+import { app, backlogItem, event, phase, project, pr as prTable, repo, run, step, task } from './db/schema.js'
 import { appendEvent, type NewEvent } from './events.js'
+import { addItems, laterFrom } from './backlog.js'
 import { runTask, type Execute } from './executor.js'
 import { addWorktree, ensureBranch, git, headSha, removeWorktree } from './git.js'
 import { newId } from './ids.js'
@@ -34,6 +35,7 @@ export class Runner {
 
   private propose: Propose | undefined // the planner, for planning a project's next task; the real one unless a test gives one
   private planningTasks = new Set<string>()
+  private backlogWaits = new Set<string>() // project.backlog_open said once per set of open items
 
   constructor(opts: { execute?: Execute; sessionsMax?: number; propose?: Propose } = {}) {
     this.execute = opts.execute ?? runTask
@@ -83,7 +85,12 @@ export class Runner {
         const unplanned = g.tasks.filter((t) => !g.phases.some((x) => x.taskId === t.id)).sort((a, b) => a.position - b.position)
         const next = unplanned[0]
         if (next && g.phases.filter((x) => (pos.get(x.taskId) ?? 0) < next.position).every((x) => x.status === 'done')) await this.planNext(p.id, next.id)
-        if (!unplanned.length && g.phases.length && g.phases.every((x) => x.status === 'done')) {
+        const openItems = g.backlog.filter((i) => i.state === 'open')
+        if (!unplanned.length && g.phases.length && g.phases.every((x) => x.status === 'done') && openItems.length) {
+          // The work is done but the backlog is not: the project waits for a person to cover or drop what is left.
+          const key = `${p.id}:${openItems.map((i) => i.id).join(',')}`
+          if (!this.backlogWaits.has(key)) { this.backlogWaits.add(key); await this.emit({ ...(await this.context(p.id)).base, type: 'project.backlog_open', payload: { open: openItems.length, items: openItems.map((i) => i.text).slice(0, 10) } }) }
+        } else if (!unplanned.length && g.phases.length && g.phases.every((x) => x.status === 'done')) {
           await db.update(project).set({ status: 'landed' }).where(eq(project.id, p.id))
           await this.emit({ ...(await this.context(p.id)).base, type: 'project.landed', payload: {} })
           await this.cleanup(p.id)
@@ -158,6 +165,8 @@ export class Runner {
 
     await db.update(phase).set({ status: 'done', updatedAt: new Date() }).where(eq(phase.id, phaseId))
     await this.emit({ ...rb, type: 'phase.status', payload: { from: 'merging', to: 'done', sha: landed.sha } })
+    const later = laterFrom(result.summary) // what the builder noticed and left for later joins the backlog, once its work has landed
+    if (later.length) await addItems(projectId, later.map((text) => ({ text, source: 'builder' as const, sourceRef: { phaseId, runId } })), `agent:${runId}`).catch((err) => this.emit({ ...rb, type: 'backlog.error', payload: { error: String(err?.message ?? err) } }))
     await withLock(`land:${projectId}`, () => this.updatePr(projectId)).catch((err) => this.emit({ ...rb, type: 'pr.error', payload: { error: String(err?.message ?? err) } }))
     this.active.delete(phaseId)
     await this.dispatch()
@@ -298,7 +307,7 @@ export class Runner {
     return { cancelled: open.length, landed: phases.length - open.length }
   }
 
-  /** Plan a running project's next task, once: not if it is already planning, waiting for the model, or its last planning failed (a person re-projects it). */
+  /** Plan a running project's next task, once: not if it is already planning, waiting for the model, or its last planning failed (a person plans it again). */
   private async planNext(projectId: string, taskId: string) {
     if (this.planningTasks.has(taskId)) return
     const [last] = await db.select().from(event).where(and(eq(event.taskId, taskId), inArray(event.type, ['task.planning', 'task.plan_waiting', 'task.planned', 'task.plan_failed']))).orderBy(desc(event.seq)).limit(1)
@@ -360,7 +369,8 @@ export class Runner {
       const t = tasks.find((q) => q.id === x.taskId)
       return { number: x.number, title: `${x.title}${t ? ` (task #${t.number}: ${t.title})` : ''}`, summary: last?.summary, costUsd: last?.costUsd ? Number(last.costUsd) : null, sha: null }
     })
-    const body = prBody(p, landed, phases.filter((x) => x.status !== 'done').map((x) => ({ number: x.number, title: x.title })))
+    const backlog = await db.select().from(backlogItem).where(eq(backlogItem.projectId, projectId))
+    const body = prBody(p, landed, phases.filter((x) => x.status !== 'done').map((x) => ({ number: x.number, title: x.title })), backlog)
     const result = await ensureProjectPr({ repoPath: r.localPath!, fullName: r.fullName, integrationBranch: p.integrationBranch!, base: a.defaultBranch, title: p.title, body })
     const [existing] = await db.select().from(prTable).where(eq(prTable.projectId, projectId))
     if (!existing) {

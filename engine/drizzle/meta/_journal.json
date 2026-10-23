@@ -71,6 +71,13 @@
       "when": 1792790358360,
       "tag": "0009_projects",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792795042212,
+      "tag": "0010_backlog",
+      "breakpoints": true
     }
   ]
 }

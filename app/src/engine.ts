@@ -18,12 +18,15 @@ export interface GraphTask { id: string; number: number; position: number; title
 // What the planner settled (provisional until a person approves) and what it could not.
 export interface Decision { id: string; taskId: string | null; question: string; options: { key: string; text: string; recommended: boolean }[]; chosen: string | null; provisional: boolean; rationale: string | null }
 export interface Question { id: string; taskId: string | null; text: string; options: { label: string; description: string; changes: string[]; recommended: boolean }[]; reason: string | null; cost: 'cheap' | 'moderate' | 'expensive' | null; status: string; answer: string | null }
+/** A line on a project's backlog: open, covered by a task, or dropped with a reason. */
+export interface BacklogItem { id: string; text: string; body: string | null; source: 'person' | 'agent' | 'idea' | 'planner' | 'builder'; ideaId: string | null; state: 'open' | 'covered' | 'dropped'; taskId: string | null; reason: string | null; createdAt: string }
 export interface Graph {
   project: { id: string; title: string; status: string; integrationBranch: string | null; spec: string | null; createdAt: string }
   app: { id: string; name: string; defaultBranch: string }
   pr: { number: number; url: string; status: string } | null
   tasks: GraphTask[]
   phases: GraphPhase[]
+  backlog: BacklogItem[]
   decisions: Decision[]
   questions: Question[]
   conflicts: [string, string][] // open phases that claim the same path: they take turns
@@ -31,7 +34,7 @@ export interface Graph {
 }
 /** A file on the graph: who claims it, and who has it right now (the phase that is running with it). */
 export interface GraphFile { path: string; phases: string[]; heldBy: string | null }
-export interface ProjectSummary { id: string; title: string; status: string; createdAt: string; ideaId?: string | null; app: { id: string; name: string } | null; taskCount: number; phases: Record<string, number> }
+export interface ProjectSummary { id: string; title: string; status: string; createdAt: string; ideaId?: string | null; app: { id: string; name: string } | null; taskCount: number; backlogOpen?: number; phases: Record<string, number> }
 export interface TaskRow { id: string; number: number; title: string; description: string | null; position: number; project: { id: string; title: string; status: string }; phases: Record<string, number>; planning: string | null }
 export interface IdeaRow { id: string; appId: string; number: number; title: string; body: string | null; lane: string }
 export interface AppSetup { storybook_url?: string; storybook_cmd?: string; test_cmd?: string; preview_cmd?: string; model?: string; max_budget_usd?: number; max_turns?: number }
@@ -55,6 +58,7 @@ export type Attention =
   | { kind: 'question'; projectId: string; planTitle: string; appName: string; questionId: string; taskNumber: number | null; text: string; cost: string | null; askedAt: string }
   | { kind: 'run_project'; projectId: string; planTitle: string; appName: string; phases: number }
   | { kind: 'plan_task'; projectId: string; planTitle: string; appName: string; taskId: string; taskNumber: number; taskTitle: string }
+  | { kind: 'backlog'; projectId: string; planTitle: string; appName: string; open: number; items: string[] }
   | { kind: 'merge_pr'; projectId: string; planTitle: string; appName: string; prNumber: number | null; url: string | null }
 export interface RunningPlan {
   projectId: string; planTitle: string; appName: string; status: string; integrationBranch: string | null
@@ -102,12 +106,18 @@ export const engine = {
   graph: (id: string) => call<Graph>('GET', `/projects/${id}/graph`),
   createProject: (body: { appId: string; title: string; spec?: string; ideaId?: string; tasks: NewTask[] }) => call<{ project: { id: string } }>('POST', '/projects', body),
   addPhases: (taskId: string, phases: NewPhase[]) => call<unknown>('POST', `/tasks/${taskId}/phases`, phases),
-  planTask: (taskId: string) => call<{ runId: string }>('POST', `/tasks/${taskId}/project`), // 202; the outcome arrives as task.planned / task.plan_failed
+  planTask: (taskId: string) => call<{ runId: string }>('POST', `/tasks/${taskId}/plan`), // 202; the outcome arrives as task.planned / task.plan_failed
   clearPhases: (taskId: string) => call<{ cleared: number }>('DELETE', `/tasks/${taskId}/phases`), // a draft task back to its brief
   cancelProject: (projectId: string) => call<{ cancelled: number; landed: number }>('POST', `/projects/${projectId}/cancel`),
   answer: (questionId: string, answer: string) => call<unknown>('POST', `/questions/${questionId}/answer`, { answer }),
   start: (id: string) => call<unknown>('POST', `/projects/${id}/start`),
   tick: (id: string) => call<unknown>('POST', `/projects/${id}/tick`),
+  addBacklog: (projectId: string, text: string, body?: string) => call<BacklogItem[]>('POST', `/projects/${projectId}/backlog`, { text, body }),
+  addIdeaToBacklog: (projectId: string, ideaId: string) => call<BacklogItem>('POST', `/projects/${projectId}/backlog`, { ideaId }),
+  itemToTask: (itemId: string) => call<unknown>('POST', `/backlog/${itemId}/task`, {}),
+  coverItem: (itemId: string, taskId: string) => call<unknown>('POST', `/backlog/${itemId}/cover`, { taskId }),
+  dropItem: (itemId: string, reason: string) => call<unknown>('POST', `/backlog/${itemId}/drop`, { reason }),
+  reopenItem: (itemId: string) => call<unknown>('POST', `/backlog/${itemId}/reopen`, {}),
   pause: (projectId: string) => call<unknown>('POST', `/projects/${projectId}/pause`),
   resume: (projectId: string) => call<unknown>('POST', `/projects/${projectId}/resume`),
   releaseHold: () => call<unknown>('POST', '/engine/release'),
@@ -119,6 +129,7 @@ export const EVENT_TYPES = [
   'project.created', 'project.started', 'project.landed', 'project.cleaned', 'task.created',
   'task.planning', 'task.planned', 'task.plan_failed', 'task.plan_waiting', 'task.cleared', 'project.cancelled', 'question.asked', 'question.answered',
   'talk.message', 'talk.permission', 'talk.result', 'idea.created', 'project.paused', 'project.resumed', 'engine.hold', 'engine.resumed',
+  'backlog.added', 'backlog.covered', 'backlog.dropped', 'backlog.reopened', 'backlog.error', 'project.backlog_open',
   'phase.created', 'phase.status', 'phase.held', 'phase.retry', 'phase.failed', 'phase.error', 'phase.interrupted',
   'run.started', 'run.message', 'run.steps', 'run.tool_call', 'run.tool_result', 'run.result', 'run.error', 'run.rate_limit',
   'land.committed', 'land.tested', 'land.landed', 'land.conflict', 'land.retry', 'pr.opened', 'pr.updated', 'pr.error',

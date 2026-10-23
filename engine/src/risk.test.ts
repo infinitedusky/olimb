@@ -41,6 +41,8 @@ describe('riskOf', () => {
     expect(r('mcp__engine__create_idea', {})).toBe('cheap')
     expect(r('mcp__engine__plan_task', {})).toBe('moderate')
     expect(r('mcp__engine__start_project', {})).toBe('expensive')
+    expect(r('mcp__engine__backlog_add', {})).toBe('cheap')
+    expect(r('mcp__engine__backlog_task', {})).toBe('moderate')
   })
   it('rates a compound command by its worst part; cd and echo are plumbing', () => {
     expect(r('Bash', { command: 'cd engine && pnpm -s typecheck; echo $?' })).toBe('cheap')

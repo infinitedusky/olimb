@@ -18,10 +18,11 @@ import { newId } from './ids.js'
 import { createIdea, listIdeas, projectFromIdea } from './ideas.js'
 import { answerPermission, closeTalks, endTalk, interruptTalk, listTalks, renameTalk, say, setAutoApprove, startTalk, talkTranscript, type SubjectRef, type TalkContext } from './talk.js'
 import { describeProject } from './describe.js'
+import { addIdea, addItems, coverItem, dropItem, itemToTask, listBacklog, reopenItem } from './backlog.js'
 import { now } from './now.js'
 import { startStorybook, stopStorybooks, storybookStatus } from './storybook.js'
 import { answerQuestion, finishPlanning, preparePlanning, recoverPlanning } from './planner.js'
-import { listTasks, addPhases, appGraph, clearPhases, createProject, listProjects, PlanError, projectGraph, setPhaseStatus, tick } from './projects.js'
+import { listTasks, addPhases, addTask, appGraph, clearPhases, createProject, listProjects, PlanError, projectGraph, setPhaseStatus, tick } from './projects.js'
 import { runner } from './runner.js'
 
 export const SESSIONS_MAX = Number(process.env.SESSIONS_MAX ?? 4)
@@ -45,8 +46,11 @@ export function buildApp(bus: EventBus) {
       'POST /projects': '{appId, title, spec?, tasks: [{title, brief?, phases?: [{key, title, brief?, dependsOn?, files?}]}]}',
       'GET /projects': 'all projects with counts', 'GET /projects/:id/graph': 'tasks in order, phases with edges, claims, held reasons, last run, steps, the PR',
       'POST /tasks/:id/phases': '[{key, title, brief?, dependsOn?, files?}] — add phases to a task by hand',
-      'POST /tasks/:id/project?wait=1': 'the planner: the task\'s brief → phases, decisions, questions (one read-only agent run); 202 at once, or wait',
+      'POST /tasks/:id/plan?wait=1': 'the planner: the task\'s brief → phases, decisions, questions (one read-only agent run); 202 at once, or wait',
       'POST /questions/:id/answer': '{answer}',
+      'GET /projects/:id/backlog': 'everything the project has to cover', 'POST /projects/:id/backlog': '{text, body?} | {items: [{text, body?}]} | {ideaId}',
+      'POST /backlog/:id/task': '{title?, brief?} — the item becomes a new task at the end', 'POST /backlog/:id/cover': '{taskId, reason?}', 'POST /backlog/:id/drop': '{reason}', 'POST /backlog/:id/reopen': '',
+      'POST /projects/:id/tasks': '{title, brief?, description?} — a task at the end of the project',
       'POST /projects/:id/start': 'run it: worktrees, agent runs, landing, PR', 'POST /projects/:id/tick?room=N': 'one dispatch pass for a draft (no launching)',
       'POST /phases/:id/status': '{status} — by hand, for drafts',
       'GET /events?since=SEQ&app=&project=&task=&phase=': 'SSE: replay from SEQ, then live',
@@ -169,7 +173,7 @@ export function buildApp(bus: EventBus) {
 
   // The planner takes minutes: by default the request returns at once and the outcome arrives on the event stream
   // (task.planned or task.plan_failed, then the graph has the phases); ?wait=1 holds the request until it is done.
-  api.post('/tasks/:id/project', async (c) => {
+  api.post('/tasks/:id/plan', async (c) => {
     let ctx
     try { ctx = await preparePlanning(c.req.param('id'), { actor: 'user' }) } catch (err) { return planError(c, err) }
     const onPlanned = () => void runner.dispatch() // phases planned into a running project start right away
@@ -177,6 +181,34 @@ export function buildApp(bus: EventBus) {
     void finishPlanning(ctx, { onPlanned })
     return c.json({ runId: ctx.runId }, 202)
   })
+
+  // The backlog: what the project has to cover. Resolving an item can let a waiting project land, or add a task to
+  // plan, so each change is followed by a dispatch pass.
+  const settle = <T>(v: T) => { void runner.dispatch(); return v }
+  api.get('/projects/:id/backlog', async (c) => c.json(await listBacklog(c.req.param('id'))))
+  api.post('/projects/:id/backlog', async (c) => {
+    const body = await c.req.json<{ text?: string; body?: string; items?: { text: string; body?: string }[]; ideaId?: string }>()
+    try {
+      if (body.ideaId) return c.json(await addIdea(c.req.param('id'), body.ideaId, 'user'), 201)
+      return c.json(await addItems(c.req.param('id'), body.items ?? [{ text: body.text ?? '', body: body.body }], 'user'), 201)
+    } catch (err) { return planError(c, err) }
+  })
+  api.post('/projects/:id/tasks', async (c) => {
+    try { return c.json(settle(await addTask(c.req.param('id'), await c.req.json(), 'user')), 201) } catch (err) { return planError(c, err) }
+  })
+  api.post('/backlog/:id/task', async (c) => {
+    const body = await c.req.json<{ title?: string; brief?: string; description?: string }>().catch(() => ({}))
+    try { return c.json(settle(await itemToTask(c.req.param('id'), body, 'user')), 201) } catch (err) { return planError(c, err) }
+  })
+  api.post('/backlog/:id/cover', async (c) => {
+    const { taskId, reason } = await c.req.json<{ taskId: string; reason?: string }>()
+    try { return c.json(settle(await coverItem(c.req.param('id'), taskId, reason, 'user'))) } catch (err) { return planError(c, err) }
+  })
+  api.post('/backlog/:id/drop', async (c) => {
+    const { reason } = await c.req.json<{ reason: string }>()
+    try { return c.json(settle(await dropItem(c.req.param('id'), reason, 'user'))) } catch (err) { return planError(c, err) }
+  })
+  api.post('/backlog/:id/reopen', async (c) => { try { return c.json(await reopenItem(c.req.param('id'), 'user')) } catch (err) { return planError(c, err) } })
 
   api.post('/questions/:id/answer', async (c) => {
     const { answer } = await c.req.json<{ answer: string }>()

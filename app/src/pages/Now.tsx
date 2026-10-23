@@ -90,6 +90,9 @@ function AttentionRow({ a, busy, act }: { a: Attention; busy: string | null; act
     case 'plan_task': return (
       <li><Badge>draft</Badge><div><strong>task #{a.taskNumber} {a.taskTitle}</strong> {where} <span className="faint">· no phases yet</span></div>
         <button className="btn small" disabled={busy === a.taskId} onClick={() => act(a.taskId, () => engine.planTask(a.taskId))}>Plan it</button></li>)
+    case 'backlog': return (
+      <li><Badge tone="warn">backlog</Badge><div><strong>{a.planTitle}</strong> <span className="faint">{a.appName} · the work has landed; {a.open} backlog item{a.open === 1 ? '' : 's'} still open: {a.items.join('; ')}</span></div>
+        <Link className="btn quiet small" to={`/projects/${a.projectId}`}>Settle them</Link></li>)
     case 'merge_pr': return (
       <li><Badge tone="ok">landed</Badge><div><strong>{a.planTitle}</strong> <span className="faint">{a.appName} · every phase landed; the PR is waiting</span></div>
         {a.url ? <a className="btn quiet small" href={a.url} target="_blank" rel="noreferrer">PR #{a.prNumber}</a> : null}</li>)
