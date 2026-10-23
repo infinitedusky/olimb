@@ -4,7 +4,7 @@
  * thing said), works in its own worktree on its own branch, and keeps going while you move around the site.
  * Every message still carries the page you are on.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { Conversation } from './Conversation'
 import { engine, type TalkContext, type TalkSession } from '../engine'
@@ -12,7 +12,7 @@ import { useCurrentApp } from '../current-app'
 
 const OPEN_KEY = 'if.talk.open', SESSION_KEY = 'if.talk.session', POPPED_KEY = 'if.talk.popped'
 // The main window and a popped-out agent window talk over this channel: where the person is, which app, closed.
-type Msg = { type: 'context'; context: TalkContext; appId?: string } | { type: 'hello' } | { type: 'closed' }
+type Msg = { type: 'context'; context: TalkContext; appId?: string } | { type: 'hello' } | { type: 'closed' } | { type: 'ping' }
 const channel = () => (typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('self-evident-agent'))
 let popup: Window | null = null
 
@@ -45,6 +45,7 @@ export function TalkDrawer({ standalone = false }: { standalone?: boolean }) {
   const [open, setOpen] = useState(() => standalone || recall(OPEN_KEY) === '1')
   const [popped, setPopped] = useState(() => !standalone && recall(POPPED_KEY) === '1')
   const [remote, setRemote] = useState<TalkContext | null>(null) // standalone: the main window's page
+  const alive = useRef(false) // the agent window answered
   const [sessions, setSessions] = useState<TalkSession[]>([])
   const [sessionId, setSessionId] = useState<string | null>(() => recall(SESSION_KEY))
   const [problem, setProblem] = useState<string | null>(null)
@@ -56,7 +57,10 @@ export function TalkDrawer({ standalone = false }: { standalone?: boolean }) {
     const ch = channel()
     if (!ch) return
     if (standalone) {
-      ch.onmessage = (e: MessageEvent<Msg>) => { if (e.data.type === 'context') { setRemote(e.data.context); if (e.data.appId && e.data.appId !== app?.id) setAppId(e.data.appId) } }
+      ch.onmessage = (e: MessageEvent<Msg>) => {
+        if (e.data.type === 'context') { setRemote(e.data.context); if (e.data.appId && e.data.appId !== app?.id) setAppId(e.data.appId) }
+        if (e.data.type === 'ping') ch.postMessage({ type: 'hello' } satisfies Msg) // still here
+      }
       ch.postMessage({ type: 'hello' } satisfies Msg)
       const bye = () => ch.postMessage({ type: 'closed' } satisfies Msg)
       window.addEventListener('beforeunload', bye)
@@ -64,11 +68,14 @@ export function TalkDrawer({ standalone = false }: { standalone?: boolean }) {
     }
     const send = () => ch.postMessage({ type: 'context', context: local, appId: app?.id } satisfies Msg)
     send()
-    ch.onmessage = (e: MessageEvent<Msg>) => { if (e.data.type === 'hello') { send(); setPopped(true); remember(POPPED_KEY, '1') } if (e.data.type === 'closed') { setPopped(false); remember(POPPED_KEY, '0') } }
+    // Is the agent window really there? If nothing answers, the drawer comes back: a failed or closed pop-out never strands it.
+    if (recall(POPPED_KEY) === '1') { alive.current = false; ch.postMessage({ type: 'ping' } satisfies Msg); window.setTimeout(() => { if (!alive.current) { setPopped(false); remember(POPPED_KEY, '0') } }, 800) }
+    ch.onmessage = (e: MessageEvent<Msg>) => { if (e.data.type === 'hello') { alive.current = true; send(); setPopped(true); remember(POPPED_KEY, '1') } if (e.data.type === 'closed') { setPopped(false); remember(POPPED_KEY, '0') } }
     return () => ch.close()
   }, [standalone, local.path, local.planId, app?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const popOut = () => {
-    popup = window.open('/agent', 'self-evident-agent', 'popup,width=520,height=900')
+    popup = window.open(`${window.location.origin}/agent`, 'self-evident-agent', 'popup,width=520,height=900')
+    if (!popup) { setProblem('The browser blocked the new window. Allow pop-ups for this site, or keep the agent here.'); return }
     setPopped(true); remember(POPPED_KEY, '1')
   }
   const backIn = () => { channel()?.postMessage({ type: 'closed' } satisfies Msg); window.close() }
@@ -105,7 +112,13 @@ export function TalkDrawer({ standalone = false }: { standalone?: boolean }) {
   }
   const rename = async (subject: string) => { if (current && subject.trim()) { await engine.renameTalk(current.id, subject); await reload() } setRenaming(false) }
 
-  if (popped) return <button className="talk-fab" onClick={() => { if (popup && !popup.closed) popup.focus(); else popOut() }} title="The agent is in its own window" data-component="TalkFab">Agent ↗</button>
+  const bringBack = () => { setPopped(false); remember(POPPED_KEY, '0'); setOpenKeep(true) }
+  if (popped) return (
+    <div className="talk-fab-group" data-component="TalkFab">
+      <button className="talk-fab" onClick={() => { if (popup && !popup.closed) popup.focus(); else bringBack() }} title="The agent is in its own window">Agent ↗</button>
+      <button className="talk-fab back" onClick={() => { if (popup && !popup.closed) popup.close(); bringBack() }} title="Put the agent back in the page">↙</button>
+    </div>
+  )
   if (!open) return <button className="talk-fab" onClick={() => setOpenKeep(true)} title="Talk (⌘J)" data-component="TalkFab">Talk</button>
   const appName = (s: TalkSession) => apps.find((a) => a.id === s.appId)?.name ?? ''
   const label = (s: TalkSession) => s.subject ?? `New · ${appName(s)}`
