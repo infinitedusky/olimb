@@ -1,19 +1,19 @@
 /**
- * The runner: starts plans, dispatches ready phases into worktrees and agent runs (as many as the cap allows,
- * across every running plan), lands what finishes one at a time per plan, retries what doesn't, keeps each plan's
- * PR current, cleans up when a plan lands, and recovers after a restart. One process; all state in Postgres.
+ * The runner: starts projects, dispatches ready phases into worktrees and agent runs (as many as the cap allows,
+ * across every running project), lands what finishes one at a time per project, retries what doesn't, keeps each project's
+ * PR current, cleans up when a project lands, and recovers after a restart. One process; all state in Postgres.
  */
 import { and, asc, desc, eq, inArray } from 'drizzle-orm'
 import { join } from 'node:path'
 import { db } from './db/client.js'
-import { app, event, phase, plan, pr as prTable, repo, run, step, task } from './db/schema.js'
+import { app, event, phase, project, pr as prTable, repo, run, step, task } from './db/schema.js'
 import { appendEvent, type NewEvent } from './events.js'
 import { runTask, type Execute } from './executor.js'
 import { addWorktree, ensureBranch, git, headSha, removeWorktree } from './git.js'
 import { newId } from './ids.js'
 import { land, withLock } from './landing.js'
-import { ensurePlanPr, prBody } from './pr.js'
-import { planGraph, PlanError, tickAll } from './plans.js'
+import { ensureProjectPr, prBody } from './pr.js'
+import { projectGraph, PlanError, tickAll } from './projects.js'
 import { finishPlanning, preparePlanning, type Propose } from './planner.js'
 import { reapAgentProcesses } from './reap.js'
 import { holdMinutes, isOutage } from './outage.js'
@@ -32,7 +32,7 @@ export class Runner {
   private execute: Execute
   private sessionsMax: number
 
-  private propose: Propose | undefined // the planner, for planning a plan's next task; the real one unless a test gives one
+  private propose: Propose | undefined // the planner, for planning a project's next task; the real one unless a test gives one
   private planningTasks = new Set<string>()
 
   constructor(opts: { execute?: Execute; sessionsMax?: number; propose?: Propose } = {}) {
@@ -41,22 +41,22 @@ export class Runner {
     this.propose = opts.propose
   }
 
-  async startPlan(planId: string) {
-    const ctx = await this.context(planId)
+  async startProject(projectId: string) {
+    const ctx = await this.context(projectId)
     const { p, a, r } = ctx
     if (!r) throw new PlanError(`app ${a.name} has no repo with a local path`)
-    const g = (await planGraph(planId))!
-    if (!g.phases.length) throw new PlanError('this plan has no phases yet; plan its tasks first')
+    const g = (await projectGraph(projectId))!
+    if (!g.phases.length) throw new PlanError('this project has no phases yet; project its tasks first')
     const sha = await ensureBranch(r.localPath!, p.integrationBranch!, a.defaultBranch)
-    await db.update(plan).set({ status: 'running' }).where(eq(plan.id, planId))
-    await this.emit({ ...ctx.base, type: 'plan.started', payload: { integrationBranch: p.integrationBranch, from: a.defaultBranch, sha } })
+    await db.update(project).set({ status: 'running' }).where(eq(project.id, projectId))
+    await this.emit({ ...ctx.base, type: 'project.started', payload: { integrationBranch: p.integrationBranch, from: a.defaultBranch, sha } })
     void this.dispatch()
     return { integrationBranch: p.integrationBranch, sha }
   }
 
   /**
-   * One dispatch pass across every running plan, serialized: one tick for all of them, launch whatever became
-   * ready wherever it is, and close any plan whose phases have all landed. Phases from different plans run at
+   * One dispatch pass across every running project, serialized: one tick for all of them, launch whatever became
+   * ready wherever it is, and close any project whose phases have all landed. Phases from different projects run at
    * once; phases that share a file never do.
    */
   dispatch(): Promise<void> {
@@ -64,9 +64,9 @@ export class Runner {
       if (this.hold && this.hold.until.getTime() > Date.now()) return // waiting for the model; the timer dispatches when the hold ends
       const room = Math.max(0, this.sessionsMax - this.active.size)
       await tickAll(room)
-      const running = await db.select().from(plan).where(eq(plan.status, 'running'))
+      const running = await db.select().from(project).where(eq(project.status, 'running'))
       for (const p of running) {
-        const g = (await planGraph(p.id))!
+        const g = (await projectGraph(p.id))!
         for (const x of g.phases) {
           if (x.status === 'ready' && !this.active.has(x.id)) {
             this.active.set(x.id, new AbortController())
@@ -76,29 +76,29 @@ export class Runner {
             })
           }
         }
-        // A plan runs task by task: when every phase of the tasks before it has landed, the next unplanned task is
-        // planned (the planner reads the code that just landed) and its phases join the graph. The plan lands only
+        // A project runs task by task: when every phase of the tasks before it has landed, the next unplanned task is
+        // planned (the planner reads the code that just landed) and its phases join the graph. The project lands only
         // when every task has phases and all of them have landed.
         const pos = new Map(g.tasks.map((t) => [t.id, t.position]))
         const unplanned = g.tasks.filter((t) => !g.phases.some((x) => x.taskId === t.id)).sort((a, b) => a.position - b.position)
         const next = unplanned[0]
         if (next && g.phases.filter((x) => (pos.get(x.taskId) ?? 0) < next.position).every((x) => x.status === 'done')) await this.planNext(p.id, next.id)
         if (!unplanned.length && g.phases.length && g.phases.every((x) => x.status === 'done')) {
-          await db.update(plan).set({ status: 'landed' }).where(eq(plan.id, p.id))
-          await this.emit({ ...(await this.context(p.id)).base, type: 'plan.landed', payload: {} })
+          await db.update(project).set({ status: 'landed' }).where(eq(project.id, p.id))
+          await this.emit({ ...(await this.context(p.id)).base, type: 'project.landed', payload: {} })
           await this.cleanup(p.id)
         }
       }
     })
   }
 
-  private async launch(phaseId: string, planId: string) {
-    const ctx = await this.context(planId)
+  private async launch(phaseId: string, projectId: string) {
+    const ctx = await this.context(projectId)
     const { p, a, r, base } = ctx
     const setup = (a.setup ?? {}) as AppSetup
     const [x] = await db.select().from(phase).where(eq(phase.id, phaseId))
     const [t] = await db.select().from(task).where(eq(task.id, x.taskId))
-    const g = (await planGraph(planId))!
+    const g = (await projectGraph(projectId))!
     const files = g.phases.find((q) => q.id === phaseId)!.files
     const branch = x.branch ?? `phase/${p.id}/${x.number}`
     const worktreePath = x.worktreePath ?? join(`${r!.localPath}-worktrees`, `${p.id}--${x.number}`)
@@ -150,7 +150,7 @@ export class Runner {
 
     await db.update(phase).set({ status: 'merging', updatedAt: new Date() }).where(eq(phase.id, phaseId))
     await this.emit({ ...rb, type: 'phase.status', payload: { from: 'running', to: 'merging' } })
-    const landed = await withLock(`land:${planId}`, () => land({
+    const landed = await withLock(`land:${projectId}`, () => land({
       repoPath: r!.localPath!, worktreePath, integrationBranch: p.integrationBranch!, testCmd: setup.test_cmd,
       onEvent: async (type, payload) => { await this.emit({ ...rb, type, payload }) },
     }))
@@ -158,7 +158,7 @@ export class Runner {
 
     await db.update(phase).set({ status: 'done', updatedAt: new Date() }).where(eq(phase.id, phaseId))
     await this.emit({ ...rb, type: 'phase.status', payload: { from: 'merging', to: 'done', sha: landed.sha } })
-    await withLock(`land:${planId}`, () => this.updatePr(planId)).catch((err) => this.emit({ ...rb, type: 'pr.error', payload: { error: String(err?.message ?? err) } }))
+    await withLock(`land:${projectId}`, () => this.updatePr(projectId)).catch((err) => this.emit({ ...rb, type: 'pr.error', payload: { error: String(err?.message ?? err) } }))
     this.active.delete(phaseId)
     await this.dispatch()
   }
@@ -175,7 +175,7 @@ export class Runner {
 
   private async failed(phaseId: string, attempt: number, max: number, why: string, pb: Omit<NewEvent, 'type'>) {
     const [current] = await db.select({ status: phase.status }).from(phase).where(eq(phase.id, phaseId))
-    if (current?.status === 'cancelled') { this.active.delete(phaseId); return } // the plan was cancelled under this run; nothing to retry
+    if (current?.status === 'cancelled') { this.active.delete(phaseId); return } // the project was cancelled under this run; nothing to retry
     const again = attempt < max
     await db.update(phase).set({ status: again ? 'queued' : 'failed', heldReason: again ? `attempt ${attempt} failed; will retry` : why.slice(0, 500), updatedAt: new Date() }).where(eq(phase.id, phaseId))
     await this.emit({ ...pb, type: again ? 'phase.retry' : 'phase.failed', payload: { attempt, max, why: why.slice(0, 2000) } })
@@ -207,30 +207,30 @@ export class Runner {
   }
 
   /**
-   * Pause a plan: nothing new starts; running agents are stopped but keep their worktrees and conversations; a phase
+   * Pause a project: nothing new starts; running agents are stopped but keep their worktrees and conversations; a phase
    * that is landing finishes landing. Resume picks each stopped one up from its session.
    */
-  async pausePlan(planId: string, actor = 'user') {
-    const ctx = await this.context(planId)
-    if (ctx.p.status !== 'running') throw new PlanError(`plan is ${ctx.p.status}; only a running plan can be paused`)
-    await db.update(plan).set({ status: 'paused' }).where(eq(plan.id, planId))
-    const live = await db.select().from(phase).where(and(eq(phase.planId, planId), eq(phase.status, 'running')))
+  async pauseProject(projectId: string, actor = 'user') {
+    const ctx = await this.context(projectId)
+    if (ctx.p.status !== 'running') throw new PlanError(`project is ${ctx.p.status}; only a running project can be paused`)
+    await db.update(project).set({ status: 'paused' }).where(eq(project.id, projectId))
+    const live = await db.select().from(phase).where(and(eq(phase.projectId, projectId), eq(phase.status, 'running')))
     for (const x of live) {
       this.interrupting.add(x.id)
       await db.update(run).set({ status: 'interrupted', endedAt: new Date(), error: 'paused' }).where(and(eq(run.phaseId, x.id), eq(run.status, 'working')))
       await db.update(phase).set({ status: 'queued', heldReason: 'paused; will resume where it stopped', updatedAt: new Date() }).where(eq(phase.id, x.id))
       this.active.get(x.id)?.abort()
     }
-    await this.emit({ ...ctx.base, actor, type: 'plan.paused', payload: { interrupted: live.map((x) => x.number) } })
+    await this.emit({ ...ctx.base, actor, type: 'project.paused', payload: { interrupted: live.map((x) => x.number) } })
     return { paused: true, interrupted: live.map((x) => x.number) }
   }
 
-  async resumePlan(planId: string, actor = 'user') {
-    const ctx = await this.context(planId)
-    if (ctx.p.status !== 'paused') throw new PlanError(`plan is ${ctx.p.status}; only a paused plan can be resumed`)
-    await db.update(plan).set({ status: 'running' }).where(eq(plan.id, planId))
-    await db.update(phase).set({ heldReason: null, updatedAt: new Date() }).where(and(eq(phase.planId, planId), eq(phase.status, 'queued')))
-    await this.emit({ ...ctx.base, actor, type: 'plan.resumed', payload: {} })
+  async resumeProject(projectId: string, actor = 'user') {
+    const ctx = await this.context(projectId)
+    if (ctx.p.status !== 'paused') throw new PlanError(`project is ${ctx.p.status}; only a paused project can be resumed`)
+    await db.update(project).set({ status: 'running' }).where(eq(project.id, projectId))
+    await db.update(phase).set({ heldReason: null, updatedAt: new Date() }).where(and(eq(phase.projectId, projectId), eq(phase.status, 'queued')))
+    await this.emit({ ...ctx.base, actor, type: 'project.resumed', payload: {} })
     void this.dispatch()
     return { resumed: true }
   }
@@ -241,24 +241,24 @@ export class Runner {
     return e ? String((e.payload as any).why ?? '') : undefined
   }
 
-  /** After a plan lands: remove its phase worktrees and local branches. The integration branch stays (it's the PR). */
-  private async cleanup(planId: string) {
-    const { p, r, base } = await this.context(planId)
+  /** After a project lands: remove its phase worktrees and local branches. The integration branch stays (it's the PR). */
+  private async cleanup(projectId: string) {
+    const { p, r, base } = await this.context(projectId)
     if (!r) return
-    const phases = await db.select().from(phase).where(eq(phase.planId, planId))
+    const phases = await db.select().from(phase).where(eq(phase.projectId, projectId))
     await withLock(`git:${r.localPath}`, async () => {
       for (const x of phases) {
         if (x.worktreePath) await removeWorktree(r.localPath!, x.worktreePath)
         if (x.branch) await git(r.localPath!, ['branch', '-D', x.branch], { allowFail: true })
       }
     })
-    await db.update(phase).set({ worktreePath: null }).where(eq(phase.planId, planId))
-    await this.emit({ ...base, type: 'plan.cleaned', payload: { worktrees: phases.filter((x) => x.worktreePath).length, integrationBranch: p.integrationBranch } })
+    await db.update(phase).set({ worktreePath: null }).where(eq(phase.projectId, projectId))
+    await this.emit({ ...base, type: 'project.cleaned', payload: { worktrees: phases.filter((x) => x.worktreePath).length, integrationBranch: p.integrationBranch } })
   }
 
-  /** On startup: reap stray agents, mark their runs interrupted, re-queue their phases, and resume running plans. */
+  /** On startup: reap stray agents, mark their runs interrupted, re-queue their phases, and resume running projects. */
   async recover() {
-    const running = await db.select().from(plan).where(eq(plan.status, 'running'))
+    const running = await db.select().from(project).where(eq(project.status, 'running'))
     const repos = await db.select().from(repo)
     const roots = repos.filter((q) => q.localPath).map((q) => `${q.localPath}-worktrees`)
     const reaped = await reapAgentProcesses(roots)
@@ -266,11 +266,11 @@ export class Runner {
     for (const x of stuck) {
       await db.update(run).set({ status: 'interrupted', endedAt: new Date(), error: 'engine restarted' }).where(and(eq(run.phaseId, x.id), eq(run.status, 'working')))
       await db.update(phase).set({ status: 'queued', heldReason: 'interrupted by a restart; will resume', updatedAt: new Date() }).where(eq(phase.id, x.id))
-      const { base } = await this.context(x.planId)
+      const { base } = await this.context(x.projectId)
       await this.emit({ ...base, taskId: x.taskId, phaseId: x.id, type: 'phase.interrupted', payload: { was: x.status, reaped: reaped.filter((q) => x.worktreePath && q.cwd.startsWith(x.worktreePath)).map((q) => q.pid) } })
     }
     if (running.length) void this.dispatch()
-    return { plans: running.length, phases: stuck.length, reaped: reaped.length }
+    return { projects: running.length, phases: stuck.length, reaped: reaped.length }
   }
 
   /** On shutdown: abort live runs so the agents stop; recover() picks the phases up next start. */
@@ -280,26 +280,26 @@ export class Runner {
   }
 
   /**
-   * Stop a plan: abort its live runs, cancel every phase that hasn't landed, mark the plan stopped (it stays on the
-   * lists and the graph with what it landed; superseded is for a plan another plan replaced), remove its
+   * Stop a project: abort its live runs, cancel every phase that hasn't landed, mark the project stopped (it stays on the
+   * lists and the graph with what it landed; superseded is for a project another project replaced), remove its
    * worktrees. What landed stays on the integration branch (and in its PR, if one was opened).
    */
-  async cancelPlan(planId: string, why = 'cancelled by a person') {
-    const ctx = await this.context(planId)
-    const phases = await db.select().from(phase).where(eq(phase.planId, planId))
+  async cancelProject(projectId: string, why = 'cancelled by a person') {
+    const ctx = await this.context(projectId)
+    const phases = await db.select().from(phase).where(eq(phase.projectId, projectId))
     const ids = phases.map((x) => x.id)
     const open = phases.filter((x) => x.status !== 'done')
     if (open.length) await db.update(phase).set({ status: 'cancelled', heldReason: why, updatedAt: new Date() }).where(inArray(phase.id, open.map((x) => x.id)))
-    await db.update(plan).set({ status: 'stopped' }).where(eq(plan.id, planId))
+    await db.update(project).set({ status: 'stopped' }).where(eq(project.id, projectId))
     for (const x of phases) { const ac = this.active.get(x.id); if (ac) { ac.abort(); this.active.delete(x.id) } } // after the status flip: a failed run then sees 'cancelled' and stops
     if (ids.length) await db.update(run).set({ status: 'stopped', endedAt: new Date(), error: why }).where(and(inArray(run.phaseId, ids), eq(run.status, 'working')))
-    await this.emit({ ...ctx.base, type: 'plan.cancelled', payload: { why, cancelled: open.length, landed: phases.length - open.length } })
-    await this.cleanup(planId).catch(() => {}) // a worktree with an agent mid-write may refuse once; recovery handles leftovers
+    await this.emit({ ...ctx.base, type: 'project.cancelled', payload: { why, cancelled: open.length, landed: phases.length - open.length } })
+    await this.cleanup(projectId).catch(() => {}) // a worktree with an agent mid-write may refuse once; recovery handles leftovers
     return { cancelled: open.length, landed: phases.length - open.length }
   }
 
-  /** Plan a running plan's next task, once: not if it is already planning, waiting for the model, or its last planning failed (a person re-plans it). */
-  private async planNext(planId: string, taskId: string) {
+  /** Plan a running project's next task, once: not if it is already planning, waiting for the model, or its last planning failed (a person re-projects it). */
+  private async planNext(projectId: string, taskId: string) {
     if (this.planningTasks.has(taskId)) return
     const [last] = await db.select().from(event).where(and(eq(event.taskId, taskId), inArray(event.type, ['task.planning', 'task.plan_waiting', 'task.planned', 'task.plan_failed']))).orderBy(desc(event.seq)).limit(1)
     if (last && ['task.planning', 'task.plan_waiting', 'task.plan_failed'].includes(last.type)) return
@@ -309,20 +309,20 @@ export class Runner {
       void finishPlanning(ctx, { propose: this.propose, onPlanned: () => void this.dispatch() }).finally(() => this.planningTasks.delete(taskId))
     } catch (err: any) {
       this.planningTasks.delete(taskId)
-      await this.emit({ ...(await this.context(planId)).base, taskId, type: 'task.plan_failed', payload: { error: String(err?.message ?? err) } })
+      await this.emit({ ...(await this.context(projectId)).base, taskId, type: 'task.plan_failed', payload: { error: String(err?.message ?? err) } })
     }
   }
 
   /**
    * A person retries a failed (or cancelled) phase: three more attempts, and the builder is told why the last one
    * failed. By default it continues in the same worktree with what the last attempt left; fresh starts over from
-   * the plan's branch. A stopped plan resumes: it runs again, with its other cancelled phases queued too.
+   * the project's branch. A stopped project resumes: it runs again, with its other cancelled phases queued too.
    */
   async retryPhase(phaseId: string, opts: { fresh?: boolean; actor?: string } = {}) {
     const [x] = await db.select().from(phase).where(eq(phase.id, phaseId))
     if (!x) throw new PlanError(`no phase ${phaseId}`)
     if (!['failed', 'cancelled'].includes(x.status)) throw new PlanError(`phase #${x.number} is ${x.status}; only a failed or cancelled phase can be retried`)
-    const ctx = await this.context(x.planId)
+    const ctx = await this.context(x.projectId)
     const { p, a, r } = ctx
     if (!r) throw new PlanError(`app ${a.name} has no repo with a local path`)
     if (opts.fresh && (x.worktreePath || x.branch)) {
@@ -336,22 +336,22 @@ export class Runner {
     const resumed: number[] = []
     if (p.status !== 'running') {
       if (p.status === 'stopped') { // resume: the other cancelled phases come back too
-        const others = (await db.select().from(phase).where(and(eq(phase.planId, p.id), eq(phase.status, 'cancelled')))).filter((o) => o.id !== phaseId)
+        const others = (await db.select().from(phase).where(and(eq(phase.projectId, p.id), eq(phase.status, 'cancelled')))).filter((o) => o.id !== phaseId)
         for (const o of others) { await db.update(phase).set({ status: 'queued', heldReason: null, maxAttempts: o.attempt + 3, updatedAt: new Date() }).where(eq(phase.id, o.id)); resumed.push(o.number) }
       }
       await ensureBranch(r.localPath!, p.integrationBranch!, a.defaultBranch)
-      await db.update(plan).set({ status: 'running' }).where(eq(plan.id, p.id))
+      await db.update(project).set({ status: 'running' }).where(eq(project.id, p.id))
     }
     await this.emit({ ...ctx.base, actor: opts.actor ?? 'user', taskId: x.taskId, phaseId, type: 'phase.status', payload: { from: x.status, to: 'queued', why: `retried by a person${opts.fresh ? ', from scratch' : ''}`, attempts: 3, resumed } })
     void this.dispatch()
     return { phase: x.number, fresh: !!opts.fresh, resumed }
   }
 
-  private async updatePr(planId: string) {
-    const { p, a, r, base } = await this.context(planId)
+  private async updatePr(projectId: string) {
+    const { p, a, r, base } = await this.context(projectId)
     if (!r?.fullName) return
-    const tasks = await db.select().from(task).where(eq(task.planId, planId)).orderBy(asc(task.position))
-    const phases = await db.select().from(phase).where(eq(phase.planId, planId)).orderBy(asc(phase.position))
+    const tasks = await db.select().from(task).where(eq(task.projectId, projectId)).orderBy(asc(task.position))
+    const phases = await db.select().from(phase).where(eq(phase.projectId, projectId)).orderBy(asc(phase.position))
     const done = phases.filter((x) => x.status === 'done')
     const runs = done.length ? await db.select().from(run).where(and(inArray(run.phaseId, done.map((x) => x.id)), eq(run.status, 'completed'))) : []
     const landed = done.map((x) => {
@@ -360,20 +360,20 @@ export class Runner {
       return { number: x.number, title: `${x.title}${t ? ` (task #${t.number}: ${t.title})` : ''}`, summary: last?.summary, costUsd: last?.costUsd ? Number(last.costUsd) : null, sha: null }
     })
     const body = prBody(p, landed, phases.filter((x) => x.status !== 'done').map((x) => ({ number: x.number, title: x.title })))
-    const result = await ensurePlanPr({ repoPath: r.localPath!, fullName: r.fullName, integrationBranch: p.integrationBranch!, base: a.defaultBranch, title: p.title, body })
-    const [existing] = await db.select().from(prTable).where(eq(prTable.planId, planId))
+    const result = await ensureProjectPr({ repoPath: r.localPath!, fullName: r.fullName, integrationBranch: p.integrationBranch!, base: a.defaultBranch, title: p.title, body })
+    const [existing] = await db.select().from(prTable).where(eq(prTable.projectId, projectId))
     if (!existing) {
-      await db.insert(prTable).values({ id: newId('pr'), appId: a.id, planId, repoId: r.id, number: result.number, url: result.url, headBranch: p.integrationBranch, baseBranch: a.defaultBranch, status: 'open', openedAt: new Date() })
+      await db.insert(prTable).values({ id: newId('pr'), appId: a.id, projectId, repoId: r.id, number: result.number, url: result.url, headBranch: p.integrationBranch, baseBranch: a.defaultBranch, status: 'open', openedAt: new Date() })
     }
     await this.emit({ ...base, type: result.created ? 'pr.opened' : 'pr.updated', payload: { number: result.number, url: result.url, landed: landed.length } })
   }
 
-  private async context(planId: string) {
-    const [p] = await db.select().from(plan).where(eq(plan.id, planId))
-    if (!p) throw new PlanError(`no plan ${planId}`)
+  private async context(projectId: string) {
+    const [p] = await db.select().from(project).where(eq(project.id, projectId))
+    if (!p) throw new PlanError(`no project ${projectId}`)
     const [a] = await db.select().from(app).where(eq(app.id, p.appId))
     const [r] = await db.select().from(repo).where(eq(repo.appId, a.id))
-    const base: Omit<NewEvent, 'type'> = { workspaceId: a.workspaceId, appId: a.id, planId, actor: 'engine' }
+    const base: Omit<NewEvent, 'type'> = { workspaceId: a.workspaceId, appId: a.id, projectId, actor: 'engine' }
     return { p, a, r: r?.localPath ? r : null, base }
   }
 

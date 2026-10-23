@@ -1,5 +1,5 @@
 /**
- * The composer: a plan as tasks in order (title + brief, what you author), each with its phases. Phases are what the
+ * The composer: a project as tasks in order (title + brief, what you author), each with its phases. Phases are what the
  * planner will propose from the brief; until it exists you can write them here. Straight into the engine.
  */
 import { useEffect, useState } from 'react'
@@ -13,7 +13,7 @@ let seq = 0
 const blankPhase = (): PhaseRow => ({ key: `p${++seq}`, title: '', description: '', brief: '', dependsOn: [], files: '' })
 const blankTask = (): TaskRow => ({ key: `t${++seq}`, title: '', description: '', brief: '', phases: [] })
 
-export function NewPlan() {
+export function NewProject() {
   const nav = useNavigate()
   const { apps, app } = useCurrentApp()
   const [appId, setAppId] = useState('')
@@ -23,7 +23,7 @@ export function NewPlan() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [params] = useSearchParams()
-  const ideaId = params.get('idea') // "Break it down" from the inbox: the idea becomes the plan's title and why, and the first task
+  const ideaId = params.get('idea') // "Break it down" from the inbox: the idea becomes the project's title and why, and the first task
   useEffect(() => {
     if (ideaId && app) engine.ideas(app.id).then((all) => {
       const i = all.find((x) => x.id === ideaId)
@@ -49,19 +49,19 @@ export function NewPlan() {
         })),
       }))
       if (!body.length) throw new Error('add at least one task with a title')
-      const { plan } = await engine.createPlan({ appId, title: title.trim(), spec: spec.trim() || undefined, ideaId: ideaId ?? undefined, tasks: body })
-      nav(`/plans/${plan.id}`)
+      const { project } = await engine.createProject({ appId, title: title.trim(), spec: spec.trim() || undefined, ideaId: ideaId ?? undefined, tasks: body })
+      nav(`/projects/${project.id}`)
     } catch (e: any) { setError(String(e.message ?? e)) } finally { setBusy(false) }
   }
 
   return (
     <>
-      <p className="mono"><Link to="/plans">← Plans</Link></p>
-      <div className="page-head"><h1>New plan</h1></div>
+      <p className="mono"><Link to="/projects">← Projects</Link></p>
+      <div className="page-head"><h1>New project</h1></div>
       <section className="panel">
         <div className="form-grid">
           <label>App<select value={appId} onChange={(e) => setAppId(e.target.value)}>{apps.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
-          <label>Title<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What this plan changes, in a line" /></label>
+          <label>Title<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What this project changes, in a line" /></label>
           <label style={{ gridColumn: '1 / -1' }}>Why (optional)<textarea value={spec} onChange={(e) => setSpec(e.target.value)} rows={2} placeholder="The idea or hypothesis behind it; goes in the PR" /></label>
         </div>
       </section>
@@ -107,7 +107,7 @@ export function NewPlan() {
         <button className="btn quiet" onClick={() => setTasks((ts) => [...ts, blankTask()])}>+ Add a task</button>
       </section>
       {error && <div className="empty bad">{error}</div>}
-      <p><button className="btn" disabled={busy || !title.trim() || !appId} onClick={submit}>Create plan</button> <span className="faint">You run it from the plan page once it has phases.</span></p>
+      <p><button className="btn" disabled={busy || !title.trim() || !appId} onClick={submit}>Create project</button> <span className="faint">You run it from the project page once it has phases.</span></p>
     </>
   )
 }

@@ -11,9 +11,9 @@ import { AgentWindow } from './components/TalkDrawer'
 import { Board } from './pages/Board'
 import { IdeaPage } from './pages/IdeaPage'
 import { Settings } from './pages/Settings'
-import { Plans } from './pages/Plans'
-import { PlanPage } from './pages/PlanPage'
-import { NewPlan } from './pages/NewPlan'
+import { Projects } from './pages/Projects'
+import { ProjectPage } from './pages/ProjectPage'
+import { NewProject } from './pages/NewProject'
 import { AppGraph } from './pages/AppGraph'
 import { Now } from './pages/Now'
 import { Learn } from './pages/Learn'
@@ -36,17 +36,17 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route path="/" element={<Now />} />
             <Route path="/learn" element={<Learn />} />
-            <Route path="/plans" element={<Plans mode="plan" />} />
-            <Route path="/plan" element={<Navigate to="/plans" replace />} />
+            <Route path="/projects" element={<Projects mode="project" />} />
+            <Route path="/project" element={<Navigate to="/projects" replace />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/validate" element={<Validate />} />
             <Route path="/mockups" element={<Mockups />} />
-            <Route path="/build" element={<Plans mode="build" />} />
+            <Route path="/build" element={<Projects mode="build" />} />
             <Route path="/ideas" element={<Board ideas={ideas} />} />
             <Route path="/ideas/:slug" element={<IdeaRoute />} />
             <Route path="/graph" element={<AppGraph />} />
-            <Route path="/plans/new" element={<NewPlan />} />
-            <Route path="/plans/:id" element={<PlanPage />} />
+            <Route path="/projects/new" element={<NewProject />} />
+            <Route path="/projects/:id" element={<ProjectPage />} />
             <Route path="/settings" element={<Settings modules={modules} />} />
           </Routes>
           </Shell>} />

@@ -16,7 +16,7 @@ async function api<T>(method: string, path: string, body?: unknown): Promise<T> 
   return JSON.parse(text) as T
 }
 
-const program = new Command('se').description('Self Evident engine: idea → plan (tasks in order) → task → phase → step')
+const program = new Command('se').description('Self Evident engine: idea → project (tasks in order) → task → phase → step')
 
 program.command('migrate').description('apply database migrations').action(async () => { await import('../db/migrate.js') })
 
@@ -41,23 +41,23 @@ program.command('repo').argument('<fullName>', 'owner/name on GitHub').requiredO
     console.log(JSON.stringify(await api('POST', '/repos', { appId: o.app, fullName, localPath: o.path })))
   })
 
-const plan = program.command('plan').description('plans are tasks in order; tasks are made of phases')
+const project = program.command('project').description('projects are tasks in order; tasks are made of phases')
 
-plan.command('create').requiredOption('-a, --app <id>').requiredOption('-t, --title <title>').option('-s, --spec <text>', 'why: the idea behind it')
+project.command('create').requiredOption('-a, --app <id>').requiredOption('-t, --title <title>').option('-s, --spec <text>', 'why: the idea behind it')
   .requiredOption('-f, --tasks <file>', 'JSON: [{title, brief?, phases?: [{key, title, brief?, dependsOn?, files?}]}]')
   .action(async (o: { app: string; title: string; spec?: string; tasks: string }) => {
     const tasks = JSON.parse(await readFile(o.tasks, 'utf8'))
-    const out = await api<{ plan: { id: string }; tasks: { id: string; number: number; title: string }[]; phases: { id: string; number: number; title: string; taskId: string }[] }>('POST', '/plans', { appId: o.app, title: o.title, spec: o.spec, tasks })
-    console.log(`plan ${out.plan.id}`)
+    const out = await api<{ project: { id: string }; tasks: { id: string; number: number; title: string }[]; phases: { id: string; number: number; title: string; taskId: string }[] }>('POST', '/projects', { appId: o.app, title: o.title, spec: o.spec, tasks })
+    console.log(`project ${out.project.id}`)
     for (const t of out.tasks) {
       console.log(`  task ${t.id}  #${t.number}  ${t.title}`)
       for (const x of out.phases.filter((q) => q.taskId === t.id)) console.log(`    phase ${x.id}  #${x.number}  ${x.title}`)
     }
   })
 
-plan.command('graph').argument('<planId>').action(async (planId: string) => {
-  const g = await api<{ plan: { title: string; status: string; integrationBranch: string }; pr: { number: number; url: string } | null; tasks: any[]; phases: any[] }>('GET', `/plans/${planId}/graph`)
-  console.log(`${g.plan.title}  [${g.plan.status}]  (${g.plan.integrationBranch})${g.pr ? `  PR #${g.pr.number}` : ''}`)
+project.command('graph').argument('<projectId>').action(async (projectId: string) => {
+  const g = await api<{ project: { title: string; status: string; integrationBranch: string }; pr: { number: number; url: string } | null; tasks: any[]; phases: any[] }>('GET', `/projects/${projectId}/graph`)
+  console.log(`${g.project.title}  [${g.project.status}]  (${g.project.integrationBranch})${g.pr ? `  PR #${g.pr.number}` : ''}`)
   for (const t of g.tasks) {
     console.log(`  task #${t.number} ${t.title}`)
     for (const x of g.phases.filter((q) => q.taskId === t.id)) {
@@ -71,12 +71,12 @@ plan.command('graph').argument('<planId>').action(async (planId: string) => {
   }
 })
 
-plan.command('start').argument('<planId>').description('run the plan: worktrees, agent runs, landing, PR')
-  .action(async (planId: string) => { console.log(JSON.stringify(await api('POST', `/plans/${planId}/start`))) })
+project.command('start').argument('<projectId>').description('run the project: worktrees, agent runs, landing, PR')
+  .action(async (projectId: string) => { console.log(JSON.stringify(await api('POST', `/projects/${projectId}/start`))) })
 
-plan.command('tick').argument('<planId>').option('-r, --room <n>', 'free session slots').description('one dispatch pass (drafts)')
-  .action(async (planId: string, o: { room?: string }) => {
-    console.log(JSON.stringify(await api('POST', `/plans/${planId}/tick${o.room ? `?room=${o.room}` : ''}`), null, 2))
+project.command('tick').argument('<projectId>').option('-r, --room <n>', 'free session slots').description('one dispatch pass (drafts)')
+  .action(async (projectId: string, o: { room?: string }) => {
+    console.log(JSON.stringify(await api('POST', `/projects/${projectId}/tick${o.room ? `?room=${o.room}` : ''}`), null, 2))
   })
 
 const task = program.command('task').description('tasks are authored; the planner (or you) adds their phases')
@@ -87,7 +87,7 @@ task.command('phases').argument('<taskId>').requiredOption('-f, --file <file>', 
   })
 task.command('plan').argument('<taskId>').description("the planner: the task's brief → phases, decisions and questions (one read-only agent run; minutes)")
   .action(async (taskId: string) => {
-    const out = await api<any>('POST', `/tasks/${taskId}/plan?wait=1`)
+    const out = await api<any>('POST', `/tasks/${taskId}/project?wait=1`)
     for (const x of out.phases) console.log(`  phase ${x.id}  #${x.number}  ${x.title}`)
     for (const d of out.decisions) console.log(`  decided  ${d.question} → ${d.options[0]?.text}  (${d.rationale})`)
     for (const q of out.questions) console.log(`  question ${q.id} [${q.cost}]  ${q.text}  (recommends ${q.options.find((o: any) => o.recommended)?.label})`)
@@ -99,10 +99,10 @@ program.command('question').command('answer').argument('<questionId>').argument(
 program.command('phase').command('status').argument('<phaseId>').argument('<status>').description('by hand, for drafts')
   .action(async (phaseId: string, status: string) => { console.log(JSON.stringify(await api('POST', `/phases/${phaseId}/status`, { status }))) })
 
-program.command('watch').option('-s, --since <seq>', 'replay from this sequence number', '0').option('-p, --plan <id>').option('-a, --app <id>').option('-w, --workspace <id>')
-  .description('follow the event log').action(async (o: { since: string; plan?: string; app?: string; workspace?: string }) => {
+program.command('watch').option('-s, --since <seq>', 'replay from this sequence number', '0').option('-p, --project <id>').option('-a, --app <id>').option('-w, --workspace <id>')
+  .description('follow the event log').action(async (o: { since: string; project?: string; app?: string; workspace?: string }) => {
     const q = new URLSearchParams({ since: o.since })
-    if (o.plan) q.set('plan', o.plan)
+    if (o.project) q.set('project', o.project)
     if (o.app) q.set('app', o.app)
     if (o.workspace) q.set('workspace', o.workspace)
     const res = await fetch(`${ENGINE_URL}/events?${q}`)
@@ -120,7 +120,7 @@ program.command('watch').option('-s, --since <seq>', 'replay from this sequence 
         const type = frame.split('\n').find((l) => l.startsWith('event:'))?.slice(6).trim()
         if (type === 'ping' || !data) continue
         const e = JSON.parse(data)
-        const who = e.phaseId ?? e.taskId ?? e.planId ?? e.appId ?? ''
+        const who = e.phaseId ?? e.taskId ?? e.projectId ?? e.appId ?? ''
         console.log(`${String(e.seq).padStart(6)}  ${e.ts.slice(11, 19)}  ${e.type.padEnd(16)} ${who}  ${JSON.stringify(e.payload)}`)
       }
     }

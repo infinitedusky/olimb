@@ -1,5 +1,5 @@
 /**
- * One plan, live: its tasks in order (plan one with a click), the phase graph, the planner's questions and
+ * One project, live: its tasks in order (project one with a click), the phase graph, the planner's questions and
  * decisions, the selected phase's detail and steps, the event ticker, the PR.
  */
 import { useEffect, useRef, useState } from 'react'
@@ -7,24 +7,24 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { Badge, type Tone } from '../components/Badge'
 import { PlanGraphView, STATUS_TONE } from '../components/PlanGraphView'
 import { Brief } from '../components/Brief'
-import { engine, useLivePlan, type Decision, type Event, type GraphPhase, type GraphTask, type Question } from '../engine'
+import { engine, useLiveProject, type Decision, type Event, type GraphPhase, type GraphTask, type Question } from '../engine'
 import { useCurrentApp } from '../current-app'
 
-const PLAN_TONE: Record<string, Tone> = { paused: 'warn', drafting: 'neutral', proposed: 'neutral', approved: 'neutral', running: 'accent', landed: 'ok', stopped: 'warn', superseded: 'neutral' }
+const PROJECT_TONE: Record<string, Tone> = { paused: 'warn', drafting: 'neutral', proposed: 'neutral', approved: 'neutral', running: 'accent', landed: 'ok', stopped: 'warn', superseded: 'neutral' }
 const COST_TONE: Record<string, Tone> = { cheap: 'neutral', moderate: 'warn', expensive: 'bad' }
 const short = (t: string) => (t.length > 28 ? t.slice(0, 26).trimEnd() + '…' : t)
 
-export function PlanPage() {
+export function ProjectPage() {
   const { id } = useParams()
   const nav = useNavigate()
-  const { graph, events, error } = useLivePlan(id)
+  const { graph, events, error } = useLiveProject(id)
   const { app, setAppId } = useCurrentApp()
-  const synced = useRef(false) // one app at a time: the app follows the plan you open; switching apps leaves this plan
+  const synced = useRef(false) // one app at a time: the app follows the project you open; switching apps leaves this project
   useEffect(() => {
     if (!graph || !app) return
     if (app.id === graph.app.id) { synced.current = true; return }
     if (!synced.current) setAppId(graph.app.id)
-    else nav('/plans')
+    else nav('/projects')
   }, [graph?.app.id, app?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const [selectedId, setSelectedId] = useState<string>()
   const [busy, setBusy] = useState(false)
@@ -32,39 +32,39 @@ export function PlanPage() {
   if (!graph) return <p className="muted">Loading…</p>
   const selected = graph.phases.find((p) => p.id === selectedId) ?? null
   const taskOf = (p: GraphPhase) => graph.tasks.find((t) => t.id === p.taskId)
-  const draft = ['drafting', 'proposed', 'approved'].includes(graph.plan.status)
+  const draft = ['drafting', 'proposed', 'approved'].includes(graph.project.status)
   const act = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn() } finally { setBusy(false) } }
   // A task is being planned from its last planning event until the planner reports back.
-  const lastPlanEvent = (taskId: string) => events.filter((e) => e.taskId === taskId && e.type.startsWith('task.plan')).at(-1)?.type
+  const lastPlanEvent = (taskId: string) => events.filter((e) => e.taskId === taskId && e.type.startsWith('task.project')).at(-1)?.type
   const planning = (taskId: string) => ['task.planning', 'task.plan_waiting'].includes(lastPlanEvent(taskId) ?? '')
   const waitingForModel = (taskId: string) => lastPlanEvent(taskId) === 'task.plan_waiting'
   const open = graph.questions.filter((q) => q.status === 'open')
   return (
     <>
-      <p className="mono"><Link to="/plans">← Plans</Link></p>
+      <p className="mono"><Link to="/projects">← Projects</Link></p>
       <div className="page-head">
         <div>
-          <h1>{graph.plan.title}</h1>
+          <h1>{graph.project.title}</h1>
           <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-            <Badge tone={PLAN_TONE[graph.plan.status] ?? 'neutral'} dot={graph.plan.status === 'running'}>{graph.plan.status}</Badge>
+            <Badge tone={PROJECT_TONE[graph.project.status] ?? 'neutral'} dot={graph.project.status === 'running'}>{graph.project.status}</Badge>
             <Badge>{graph.app.name}</Badge>
-            {graph.plan.integrationBranch && <Badge><span className="mono">{graph.plan.integrationBranch}</span></Badge>}
+            {graph.project.integrationBranch && <Badge><span className="mono">{graph.project.integrationBranch}</span></Badge>}
             {graph.pr && <a className="badge accent" href={graph.pr.url} target="_blank" rel="noreferrer">PR #{graph.pr.number} · {graph.pr.status}</a>}
             {error && <Badge tone="warn" dot>{error}</Badge>}
           </div>
-          {graph.plan.spec && <p className="muted" style={{ margin: '8px 0 0', maxWidth: 720 }}>{graph.plan.spec}</p>}
+          {graph.project.spec && <p className="muted" style={{ margin: '8px 0 0', maxWidth: 720 }}>{graph.project.spec}</p>}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {draft && (
-            <button className="btn quiet" disabled={busy} onClick={() => { if (window.confirm('Discard this draft? Its tasks, phases, questions and decisions go with it.')) void act(async () => { await engine.cancelPlan(graph.plan.id); nav('/plans') }) }}>Discard draft</button>
+            <button className="btn quiet" disabled={busy} onClick={() => { if (window.confirm('Discard this draft? Its tasks, phases, questions and decisions go with it.')) void act(async () => { await engine.cancelProject(graph.project.id); nav('/projects') }) }}>Discard draft</button>
           )}
-          {graph.plan.status === 'running' && <button className="btn quiet" disabled={busy} onClick={() => act(() => engine.pause(graph.plan.id))} title="Nothing new starts; running agents stop and resume where they were">Pause</button>}
-          {graph.plan.status === 'paused' && <button className="btn" disabled={busy} onClick={() => act(() => engine.resume(graph.plan.id))}>Resume</button>}
-          {['running', 'paused'].includes(graph.plan.status) && (
-            <button className="btn quiet" disabled={busy} onClick={() => { if (window.confirm('Cancel this plan? Running agents are stopped; what has landed stays on its branch.')) void act(() => engine.cancelPlan(graph.plan.id)) }}>Cancel plan</button>
+          {graph.project.status === 'running' && <button className="btn quiet" disabled={busy} onClick={() => act(() => engine.pause(graph.project.id))} title="Nothing new starts; running agents stop and resume where they were">Pause</button>}
+          {graph.project.status === 'paused' && <button className="btn" disabled={busy} onClick={() => act(() => engine.resume(graph.project.id))}>Resume</button>}
+          {['running', 'paused'].includes(graph.project.status) && (
+            <button className="btn quiet" disabled={busy} onClick={() => { if (window.confirm('Cancel this project? Running agents are stopped; what has landed stays on its branch.')) void act(() => engine.cancelProject(graph.project.id)) }}>Cancel project</button>
           )}
           {draft && graph.phases.length > 0 && (
-            <button className="btn" disabled={busy} onClick={() => act(() => engine.start(graph.plan.id))}>Run this plan</button>
+            <button className="btn" disabled={busy} onClick={() => act(() => engine.start(graph.project.id))}>Run this project</button>
           )}
         </div>
       </div>
@@ -72,18 +72,18 @@ export function PlanPage() {
       <ol className="task-strip">
         {graph.tasks.map((t) => (
           <TaskChip key={t.id} task={t} phases={graph.phases.filter((p) => p.taskId === t.id)} planning={planning(t.id)} waiting={waitingForModel(t.id)}
-            onPlan={!['landed', 'stopped', 'superseded'].includes(graph.plan.status) && !planning(t.id) ? () => act(() => engine.planTask(t.id)) : undefined}
-            onReplan={draft && !planning(t.id) ? () => { if (window.confirm('Remove this task\'s phases, decisions and questions and plan it again?')) void act(async () => { await engine.clearPhases(t.id); await engine.planTask(t.id) }) } : undefined}
+            onPlan={!['landed', 'stopped', 'superseded'].includes(graph.project.status) && !planning(t.id) ? () => act(() => engine.planTask(t.id)) : undefined}
+            onReplan={draft && !planning(t.id) ? () => { if (window.confirm('Remove this task\'s phases, decisions and questions and project it again?')) void act(async () => { await engine.clearPhases(t.id); await engine.planTask(t.id) }) } : undefined}
             busy={busy} />
         ))}
       </ol>
 
       {graph.phases.length
-        ? <PlanGraphView phases={graph.phases} files={graph.files} storageKey={graph.plan.id} labels={Object.fromEntries(graph.phases.map((p) => [p.id, short(taskOf(p)?.title ?? '')]))} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} />
+        ? <PlanGraphView phases={graph.phases} files={graph.files} storageKey={graph.project.id} labels={Object.fromEntries(graph.phases.map((p) => [p.id, short(taskOf(p)?.title ?? '')]))} selectedId={selectedId} onSelect={(p) => setSelectedId(p.id)} />
         : <div className="empty">No phases yet. <strong>Plan</strong> a task above: the planner reads the repo and the task's brief and proposes phases, decisions and questions. Or write phases by hand with <code>pnpm if task phases</code>.</div>}
 
       {(graph.questions.length > 0 || graph.decisions.length > 0) && (
-        <div className="plan-lower">
+        <div className="project-lower">
           <section className="panel">
             <h2>Questions {open.length > 0 && <Badge tone="warn">{open.length} open</Badge>}</h2>
             {graph.questions.length ? <div className="cards">{graph.questions.map((q) => <QuestionCard key={q.id} q={q} task={graph.tasks.find((t) => t.id === q.taskId)} busy={busy} act={act} />)}</div>
@@ -97,9 +97,9 @@ export function PlanPage() {
         </div>
       )}
 
-      <div className="plan-lower">
+      <div className="project-lower">
         <section className="panel">
-          {selected ? <PhaseDetail phase={selected} task={taskOf(selected)} planStatus={graph.plan.status} busy={busy} act={act} />
+          {selected ? <PhaseDetail phase={selected} task={taskOf(selected)} planStatus={graph.project.status} busy={busy} act={act} />
             : <p className="muted" style={{ margin: 0 }}>Click a phase to see its brief, files, dependencies, steps and last run.</p>}
         </section>
         <section className="panel">
@@ -120,7 +120,7 @@ function TaskChip({ task, phases, planning, waiting, onPlan, onReplan, busy }: {
       <span className="mono faint">task #{task.number}</span>
       <strong>{task.title}</strong>
       {planning ? <Badge tone={waiting ? 'warn' : 'accent'} dot>{waiting ? 'waiting for the model' : 'planning…'}</Badge>
-        : phases.length ? <><Badge tone={tone} dot={live}>{done}/{phases.length} phases</Badge>{onReplan && <button className="btn quiet small" disabled={busy} onClick={onReplan} title="Remove the phases and plan this task again">Re-plan</button>}</>
+        : phases.length ? <><Badge tone={tone} dot={live}>{done}/{phases.length} phases</Badge>{onReplan && <button className="btn quiet small" disabled={busy} onClick={onReplan} title="Remove the phases and project this task again">Re-project</button>}</>
         : onPlan ? <button className="btn quiet small" disabled={busy} onClick={onPlan}>Plan</button> : <Badge>no phases</Badge>}
     </li>
   )
@@ -173,7 +173,7 @@ function DecisionCard({ d, task }: { d: Decision; task?: GraphTask }) {
 }
 
 function PhaseDetail({ phase, task, planStatus, busy, act }: { phase: GraphPhase; task?: GraphTask; planStatus: string; busy: boolean; act: (fn: () => Promise<unknown>) => Promise<void> }) {
-  const manual = planStatus !== 'running' // the executor owns running plans; by hand only for drafts and demos
+  const manual = planStatus !== 'running' // the executor owns running projects; by hand only for drafts and demos
   const steps = phase.steps ?? []
   return (
     <>
@@ -199,8 +199,8 @@ function PhaseDetail({ phase, task, planStatus, busy, act }: { phase: GraphPhase
       {['failed', 'cancelled'].includes(phase.status) && (
         <div className="retry-row">
           <button className="btn" disabled={busy} onClick={() => act(() => engine.retry(phase.id))} title="Three more attempts in the same worktree; the builder is told why the last one failed">Retry</button>
-          <button className="btn quiet" disabled={busy} onClick={() => { if (window.confirm(`Start #${phase.number} over from the plan's branch? What the last attempt left in its worktree is thrown away.`)) void act(() => engine.retry(phase.id, true)) }}>Retry from scratch</button>
-          {planStatus === 'stopped' && <span className="faint" style={{ fontSize: 13 }}>The plan is stopped; retrying resumes it, with its other cancelled phases.</span>}
+          <button className="btn quiet" disabled={busy} onClick={() => { if (window.confirm(`Start #${phase.number} over from the project's branch? What the last attempt left in its worktree is thrown away.`)) void act(() => engine.retry(phase.id, true)) }}>Retry from scratch</button>
+          {planStatus === 'stopped' && <span className="faint" style={{ fontSize: 13 }}>The project is stopped; retrying resumes it, with its other cancelled phases.</span>}
         </div>
       )}
       {manual && (

@@ -31,7 +31,7 @@ function PhaseNode({ data }: NodeProps<Node<PhaseNodeData>>) {
     <div className={`task-node ${live ? 'live' : ''} ${phase.status}`} data-component="PhaseNode">
       <Handle type="target" position={Position.Left} />
       <div className="task-node-head">
-        <span className="mono faint">#{phase.number}{data.label ? <span className="task-node-plan"> · {data.label}</span> : null}</span>
+        <span className="mono faint">#{phase.number}{data.label ? <span className="task-node-project"> · {data.label}</span> : null}</span>
         <Badge tone={STATUS_TONE[phase.status]} dot={live}>{phase.status.replace('_', ' ')}</Badge>
       </div>
       <div className="task-node-title">{phase.title}</div>
@@ -123,10 +123,10 @@ const saveMoved = (key: string | undefined, moved: Record<string, Pos>) => { try
 export interface PlanGraphViewProps {
   phases: GraphPhase[]
   files?: GraphFile[] // shared files, drawn as nodes between the phases that claim them
-  storageKey?: string // the plan or app: dragged positions are remembered per key, in this browser
+  storageKey?: string // the project or app: dragged positions are remembered per key, in this browser
   onSelect?: (p: GraphPhase) => void
   selectedId?: string
-  labels?: Record<string, string> // e.g. the task (or plan · task) each phase belongs to
+  labels?: Record<string, string> // e.g. the task (or project · task) each phase belongs to
   tall?: boolean
 }
 
@@ -223,7 +223,7 @@ function FitOnChange({ topology }: { topology: string }) {
 
 /** Why one phase waits on another, in words. */
 function whyEdge(from: GraphPhase, to: GraphPhase, shared: string[]): string[] {
-  const out = [to.dependsOn.includes(from.id) ? `#${to.number} builds on #${from.number}` : `#${to.number} starts after #${from.number}: its task comes later in the plan`]
+  const out = [to.dependsOn.includes(from.id) ? `#${to.number} builds on #${from.number}` : `#${to.number} starts after #${from.number}: its task comes later in the project`]
   if (shared.length) out.push(`both touch ${shared.slice(0, 3).join(', ')}${shared.length > 3 ? ` +${shared.length - 3}` : ''}`)
   return out
 }

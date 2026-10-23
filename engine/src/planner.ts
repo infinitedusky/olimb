@@ -14,13 +14,13 @@ import { handle } from './executor.js'
 import { guardOptions, readerGuard } from './guard.js'
 import { holdMinutes, isOutage } from './outage.js'
 import { newId } from './ids.js'
-import { addPhases, PlanError, planGraph, type NewPhase } from './plans.js'
+import { addPhases, PlanError, projectGraph, type NewPhase } from './projects.js'
 
 export interface ProposeInput {
   repoPath: string
   task: { number: number; title: string; brief: string | null }
-  plan: { title: string; spec: string | null }
-  earlier: { number: number; title: string; phases: { number: number; title: string }[] }[] // tasks before this one in the plan
+  project: { title: string; spec: string | null }
+  earlier: { number: number; title: string; phases: { number: number; title: string }[] }[] // tasks before this one in the project
   testCmd?: string
   model?: string
   maxTurns?: number
@@ -72,12 +72,12 @@ function prompt(i: ProposeInput): string {
     : '  (none: this is the first task)'
   return [
     `You are planning task #${i.task.number}: ${i.task.title}`,
-    `It is part of the plan "${i.plan.title}".`,
+    `It is part of the project "${i.project.title}".`,
     '',
     i.task.brief ?? '(The task has no brief beyond its title.)',
-    i.plan.spec ? `\nWhy the plan exists:\n${i.plan.spec}` : '',
+    i.project.spec ? `\nWhy the project exists:\n${i.project.spec}` : '',
     '',
-    'Tasks earlier in the plan (their phases land before yours start; you need not depend on them explicitly):',
+    'Tasks earlier in the project (their phases land before yours start; you need not depend on them explicitly):',
     earlier,
     '',
     'Read the repository until you understand where this change lives: the files, the tests, the conventions, what already exists. You have read-only tools; you change nothing. Then cut the task into phases.',
@@ -100,7 +100,7 @@ function prompt(i: ProposeInput): string {
     '- A choice the brief does not settle, where the person might reasonably want it either way: ask it as a question. Give at least two options, say which you recommend and why, and for each option say what it changes (brief, promise, look, gate) when it changes what was agreed. Rate the cost of getting it wrong: cheap (easy to undo), moderate, expensive. Plan the phases as if your recommendation were chosen.',
     '- notes: what you assumed, and anything in the brief you could not place in the code.',
     '',
-    'Before you answer, review your own plan once: does it build what the brief asks and nothing it does not? What else would have to change for it to hold? What would the phases do that the brief never asked for? Fix what you find, then answer.',
+    'Before you answer, review your own project once: does it build what the brief asks and nothing it does not? What else would have to change for it to hold? What would the phases do that the brief never asked for? Fix what you find, then answer.',
   ].join('\n')
 }
 
@@ -172,7 +172,7 @@ export function validateProposal(p: Proposal) {
 interface AppSetup { test_cmd?: string; model?: string; max_budget_usd?: number; max_turns?: number }
 
 export interface PlanningContext {
-  runId: string; taskId: string; planId: string; appId: string; attempt: number
+  runId: string; taskId: string; projectId: string; appId: string; attempt: number
   input: Omit<ProposeInput, 'onEvent' | 'abort'>
   base: Omit<NewEvent, 'type'>
 }
@@ -183,10 +183,10 @@ const emit = (e: NewEvent) => db.transaction((tx) => appendEvent(tx, e))
 export async function preparePlanning(taskId: string, opts: { actor?: string } = {}): Promise<PlanningContext> {
   const [t] = await db.select().from(task).where(eq(task.id, taskId))
   if (!t) throw new PlanError(`no task ${taskId}`)
-  const g = (await planGraph(t.planId))!
+  const g = (await projectGraph(t.projectId))!
   const mine = g.phases.filter((x) => x.taskId === taskId)
   if (mine.length) throw new PlanError(`task #${t.number} already has ${mine.length} phase${mine.length > 1 ? 's' : ''}; it is planned`)
-  if (['landed', 'stopped', 'superseded'].includes(g.plan.status)) throw new PlanError(`plan is ${g.plan.status}; it takes no more planning`) // drafts, and running or paused plans planning their next task
+  if (['landed', 'stopped', 'superseded'].includes(g.project.status)) throw new PlanError(`project is ${g.project.status}; it takes no more planning`) // drafts, and running or paused projects planning their next task
   const [a] = await db.select().from(app).where(eq(app.id, t.appId))
   const [r] = await db.select().from(repo).where(eq(repo.appId, t.appId))
   if (!r?.localPath) throw new PlanError(`app ${a.name} has no repo with a local path`)
@@ -195,15 +195,15 @@ export async function preparePlanning(taskId: string, opts: { actor?: string } =
   const attempt = Number(n) + 1
   const runId = newId('run')
   await db.insert(run).values({ id: runId, appId: a.id, taskId, attempt, kind: 'plan', agent: 'claude-code', model: setup.model ?? null, status: 'working', budgetCapUsd: setup.max_budget_usd?.toString() ?? null })
-  const base: Omit<NewEvent, 'type'> = { workspaceId: a.workspaceId, appId: a.id, planId: t.planId, taskId, runId, actor: opts.actor ?? 'engine' }
+  const base: Omit<NewEvent, 'type'> = { workspaceId: a.workspaceId, appId: a.id, projectId: t.projectId, taskId, runId, actor: opts.actor ?? 'engine' }
   await emit({ ...base, type: 'task.planning', payload: { attempt, number: t.number, title: t.title } })
   const earlier = g.tasks.filter((x) => x.position < t.position).map((x) => ({
     number: x.number, title: x.title, phases: g.phases.filter((p) => p.taskId === x.id).map((p) => ({ number: p.number, title: p.title })),
   }))
   return {
-    runId, taskId, planId: t.planId, appId: a.id, attempt, base,
+    runId, taskId, projectId: t.projectId, appId: a.id, attempt, base,
     input: {
-      repoPath: r.localPath, task: { number: t.number, title: t.title, brief: t.brief }, plan: { title: g.plan.title, spec: g.plan.spec }, earlier,
+      repoPath: r.localPath, task: { number: t.number, title: t.title, brief: t.brief }, project: { title: g.project.title, spec: g.project.spec }, earlier,
       testCmd: setup.test_cmd, model: setup.model, maxTurns: setup.max_turns, maxBudgetUsd: setup.max_budget_usd,
     },
   }
@@ -256,12 +256,12 @@ export async function finishPlanning(ctx: PlanningContext, opts: { propose?: Pro
         key: p.key, title: p.title, description: p.description?.trim() || undefined, brief: phaseBrief(p), dependsOn: p.depends_on ?? [], files: p.files ?? [],
       })), 'planner', tx)
       const decisions = proposal.decisions.length ? await tx.insert(decision).values(proposal.decisions.map((d) => ({
-        id: newId('decision'), appId: ctx.appId, planId: ctx.planId, taskId: ctx.taskId, runId: ctx.runId, question: d.title,
+        id: newId('decision'), appId: ctx.appId, projectId: ctx.projectId, taskId: ctx.taskId, runId: ctx.runId, question: d.title,
         options: [{ key: 'A', text: d.chosen, recommended: true }, ...d.rejected.map((r, n) => ({ key: String.fromCharCode(66 + n), text: r, recommended: false }))],
         chosen: 'A', provisional: true, rationale: d.reason,
       }))).returning() : []
       const questions = proposal.questions.length ? await tx.insert(question).values(proposal.questions.map((q) => ({
-        id: newId('question'), appId: ctx.appId, planId: ctx.planId, taskId: ctx.taskId, runId: ctx.runId, text: q.question,
+        id: newId('question'), appId: ctx.appId, projectId: ctx.projectId, taskId: ctx.taskId, runId: ctx.runId, text: q.question,
         options: q.options.map((o) => ({ ...o, recommended: o.label === q.recommended })), reason: q.reason, cost: questionCost(q), status: 'open',
       }))).returning() : []
       for (const q of questions) await appendEvent(tx, { ...ctx.base, type: 'question.asked', payload: { questionId: q.id, text: q.text, cost: q.cost } })
@@ -295,7 +295,7 @@ export async function recoverPlanning() {
     const [t] = r.taskId ? await db.select().from(task).where(eq(task.id, r.taskId)) : []
     if (!t) continue
     const [a] = await db.select().from(app).where(eq(app.id, t.appId))
-    await emit({ workspaceId: a.workspaceId, appId: a.id, planId: t.planId, taskId: t.id, runId: r.id, actor: 'engine', type: 'task.plan_failed', payload: { attempt: r.attempt, error: 'engine restarted while planning' } })
+    await emit({ workspaceId: a.workspaceId, appId: a.id, projectId: t.projectId, taskId: t.id, runId: r.id, actor: 'engine', type: 'task.plan_failed', payload: { attempt: r.attempt, error: 'engine restarted while planning' } })
   }
   return stranded.length
 }
@@ -308,7 +308,7 @@ export async function answerQuestion(questionId: string, answer: string, actor =
   const [t] = q.taskId ? await db.select().from(task).where(eq(task.id, q.taskId)) : []
   if (t) {
     const [a] = await db.select().from(app).where(eq(app.id, t.appId))
-    await emit({ workspaceId: a.workspaceId, appId: a.id, planId: t.planId, taskId: t.id, actor, type: 'question.answered', payload: { questionId, answer } })
+    await emit({ workspaceId: a.workspaceId, appId: a.id, projectId: t.projectId, taskId: t.id, actor, type: 'question.answered', payload: { questionId, answer } })
   }
   return row
 }

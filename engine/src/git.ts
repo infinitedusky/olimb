@@ -1,4 +1,4 @@
-/** Git, as the engine uses it: one worktree per task, an integration branch per plan, fast-forward landings. */
+/** Git, as the engine uses it: one worktree per task, an integration branch per project, fast-forward landings. */
 import { execFile } from 'node:child_process'
 import { realpath } from 'node:fs/promises'
 import { promisify } from 'node:util'

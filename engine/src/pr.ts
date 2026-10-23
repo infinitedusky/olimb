@@ -1,5 +1,5 @@
 /**
- * One PR per plan: the integration branch against the app's default branch, opened at the first landing and
+ * One PR per project: the integration branch against the app's default branch, opened at the first landing and
  * updated as more tasks land. The PR carries the support for the change: each task, its summary, its cost.
  */
 import { execFile } from 'node:child_process'
@@ -17,7 +17,7 @@ export interface PrInput {
   body: string
 }
 
-export async function ensurePlanPr(i: PrInput): Promise<{ number: number; url: string; created: boolean }> {
+export async function ensureProjectPr(i: PrInput): Promise<{ number: number; url: string; created: boolean }> {
   await push(i.repoPath, i.integrationBranch, { setUpstream: true })
   const gh = (args: string[]) => execFileP('gh', args, { cwd: i.repoPath }).then((r) => r.stdout.trim())
   const existing = JSON.parse(await gh(['pr', 'list', '-R', i.fullName, '--head', i.integrationBranch, '--state', 'open', '--json', 'number,url']))
@@ -32,10 +32,10 @@ export async function ensurePlanPr(i: PrInput): Promise<{ number: number; url: s
 
 export interface LandedTask { number: number; title: string; summary?: string | null; costUsd?: number | null; sha?: string | null }
 
-export function prBody(plan: { title: string; spec?: string | null; id: string }, tasks: LandedTask[], pending: { number: number; title: string }[]): string {
+export function prBody(project: { title: string; spec?: string | null; id: string }, tasks: LandedTask[], pending: { number: number; title: string }[]): string {
   const lines = [
-    `Built by Self Evident from plan \`${plan.id}\`: ${plan.title}.`,
-    plan.spec ? `\n${plan.spec}` : '',
+    `Built by Self Evident from project \`${project.id}\`: ${project.title}.`,
+    project.spec ? `\n${project.spec}` : '',
     '',
     '## Tasks landed',
     ...tasks.map((t) => [`### #${t.number} ${t.title}` + (t.sha ? ` (\`${t.sha.slice(0, 7)}\`)` : ''),
@@ -45,7 +45,7 @@ export function prBody(plan: { title: string; spec?: string | null; id: string }
     '',
     'Each task ran in its own worktree, was merged with this branch, tested on the merged commit, and fast-forwarded here, one at a time.',
     '',
-    'Rollback plan: revert this PR. Off switch, guard metric and schema impact per task come in a later step.',
+    'Rollback project: revert this PR. Off switch, guard metric and schema impact per task come in a later step.',
     '',
     '🤖 Generated with [Claude Code](https://claude.com/claude-code) via Self Evident',
   ]

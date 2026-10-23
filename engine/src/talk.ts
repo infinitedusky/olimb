@@ -10,7 +10,7 @@ import { promisify } from 'node:util'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from './db/client.js'
-import { app, idea, phase, plan, question, repo, session, sessionMessage, task, workspace } from './db/schema.js'
+import { app, idea, phase, project, question, repo, session, sessionMessage, task, workspace } from './db/schema.js'
 import { addWorktree, git, removeWorktree } from './git.js'
 import { withLock } from './landing.js'
 import { appendEvent } from './events.js'
@@ -20,7 +20,7 @@ import { holdMinutes, isOutage } from './outage.js'
 import { createIdea, listIdeas } from './ideas.js'
 import { now } from './now.js'
 import { answerQuestion, finishPlanning, preparePlanning } from './planner.js'
-import { createPlan, listPlans, PlanError, planGraph } from './plans.js'
+import { createProject, listProjects, PlanError, projectGraph } from './projects.js'
 import { runner } from './runner.js'
 import { eventsSince } from './events.js'
 
@@ -29,9 +29,9 @@ const ASK_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash']
 const PERMISSION_TIMEOUT_MS = 10 * 60_000
 
 const talkPrompt = (cwd: string, branch: string | null, base: string) => `You are Self Evident's agent (Self Evident: software that proves itself — observe, learn, ideate, mockup, build), talking with the person who runs it, in its own web UI.
-The factory builds software from ideas: idea → plan (tasks in order) → task (a title and a brief) → phase (one agent, one worktree, one commit) → step. Read CLAUDE.md, LOG.md and SHAPE.md in this checkout when you need the history; LOG.md's top entries are the latest decisions.
-You have the engine as tools (mcp__engine__*): see what needs attention, keep ideas, make plans, run the planner on a task, answer its questions, start or cancel plans, read the event log. Use them rather than describing what the person should click.
-You can read, search and edit files and run commands here, as in any Claude Code session. The engine rates every action's risk (free, cheap, moderate, expensive); up to the person's threshold it runs without asking and is logged, above it a card asks them. Expensive things (main, force, deletes, merges, publishing, starting a plan) always ask. Work on a branch in a worktree, never in a checkout that is on main; say what each action is for.
+The factory builds software from ideas: idea → project (tasks in order) → task (a title and a brief) → phase (one agent, one worktree, one commit) → step. Read CLAUDE.md, LOG.md and SHAPE.md in this checkout when you need the history; LOG.md's top entries are the latest decisions.
+You have the engine as tools (mcp__engine__*): see what needs attention, keep ideas, make projects, run the planner on a task, answer its questions, start or cancel projects, read the event log. Use them rather than describing what the person should click.
+You can read, search and edit files and run commands here, as in any Claude Code session. The engine rates every action's risk (free, cheap, moderate, expensive); up to the person's threshold it runs without asking and is logged, above it a card asks them. Expensive things (main, force, deletes, merges, publishing, starting a project) always ask. Work on a branch in a worktree, never in a checkout that is on main; say what each action is for.
 You work in your own worktree, ${cwd}, on branch ${branch ?? '(none)'} cut from ${base}: edit and commit there; push and open a pull request when the work is ready (both ask).
 How this person works: PRs only, main is production; short answers that lead with the answer; questions are questions, not instructions to change things; give a recommendation, not a survey; write decisions into LOG.md or SHAPE.md the moment they are made; one git worktree per branch, never the main checkout.`
 
@@ -72,31 +72,31 @@ function engineTools(appId: string) {
   const tryIt = async (fn: () => Promise<unknown>) => { try { return text(await fn()) } catch (err: any) { return { ...text(`error: ${err?.message ?? err}`), isError: true } } }
   // The wall: this conversation sees and touches only its own app. Anything addressed by id is checked against it.
   const foreign = () => new PlanError('that belongs to another app; this conversation is scoped to its own')
-  const ownPlan = async (planId: string) => { const g = await planGraph(planId); if (!g || g.plan.appId !== appId) throw foreign(); return g }
+  const ownProject = async (projectId: string) => { const g = await projectGraph(projectId); if (!g || g.project.appId !== appId) throw foreign(); return g }
   const ownTask = async (taskId: string) => { const [t] = await db.select().from(task).where(eq(task.id, taskId)); if (!t || t.appId !== appId) throw foreign(); return t }
   const ownQuestion = async (questionId: string) => { const [q] = await db.select().from(question).where(eq(question.id, questionId)); if (!q || q.appId !== appId) throw foreign(); return q }
   return createSdkMcpServer({
     name: 'engine', version: '0.2.0',
-    instructions: 'The Self Evident engine, scoped to this conversation\'s app. Plans are tasks in order; tasks become phases through the planner; phases run as agents in worktrees and land into the plan\'s branch and PR.',
+    instructions: 'The Self Evident engine, scoped to this conversation\'s app. Plans are tasks in order; tasks become phases through the planner; phases run as agents in worktrees and land into the project\'s branch and PR.',
     tools: [
       tool('now', 'What is running, what needs a person, what just happened, in this app.', {}, async () => tryIt(() => now(appId))),
-      tool('plans', 'This app\'s plans with counts (superseded hidden unless all=true).', { all: z.boolean().optional() }, async (a) => tryIt(() => listPlans({ all: a.all, appId }))),
-      tool('plan_graph', 'A plan in full: tasks in order, phases with dependencies, files, held reasons, steps and last run; the planner\'s decisions and questions.', { planId: z.string() }, async (a) => tryIt(() => ownPlan(a.planId))),
+      tool('projects', 'This app\'s projects with counts (superseded hidden unless all=true).', { all: z.boolean().optional() }, async (a) => tryIt(() => listProjects({ all: a.all, appId }))),
+      tool('project_graph', 'A project in full: tasks in order, phases with dependencies, files, held reasons, steps and last run; the planner\'s decisions and questions.', { projectId: z.string() }, async (a) => tryIt(() => ownProject(a.projectId))),
       tool('ideas', 'This app\'s ideas inbox and what left it.', {}, async () => tryIt(() => listIdeas(appId))),
       tool('create_idea', 'Keep an idea in this app: a title and, optionally, why and what is already decided.', { title: z.string(), body: z.string().optional() }, async (a) => tryIt(() => createIdea({ ...a, appId, actor: 'agent' }))),
-      tool('create_plan', 'Create a plan in this app: tasks in order, each a title and a brief. Phases come from the planner (plan_task) or can be given.', {
+      tool('create_project', 'Create a project in this app: tasks in order, each a title and a brief. Phases come from the planner (plan_task) or can be given.', {
         title: z.string(), spec: z.string().optional(), ideaId: z.string().optional(),
         tasks: z.array(z.object({ title: z.string(), description: z.string().optional().describe('one to three plain sentences for a person: what will be different; no file names or code'), brief: z.string().optional().describe('the builder\'s instructions, Markdown, short paragraphs'), phases: z.array(z.object({ key: z.string(), title: z.string(), description: z.string().optional(), brief: z.string().optional(), dependsOn: z.array(z.string()).optional(), files: z.array(z.string()).optional() })).optional() })),
-      }, async (a) => tryIt(() => createPlan({ ...a, appId }))),
+      }, async (a) => tryIt(() => createProject({ ...a, appId }))),
       tool('plan_task', 'Run the planner on a task of this app (minutes): reads the repo and the brief, writes phases, decisions and questions. Returns when done.', { taskId: z.string() }, async (a) => tryIt(async () => { await ownTask(a.taskId); return finishPlanning(await preparePlanning(a.taskId, { actor: 'agent' }), { onPlanned: () => void runner.dispatch() }) })),
       tool('answer_question', 'Answer one of the planner\'s questions on the person\'s behalf; say so to them first.', { questionId: z.string(), answer: z.string() }, async (a) => tryIt(async () => { await ownQuestion(a.questionId); return answerQuestion(a.questionId, a.answer, 'agent') })),
-      tool('start_plan', 'Run a plan of this app: integration branch, a worktree and an agent per phase, landing, PR.', { planId: z.string() }, async (a) => tryIt(async () => { await ownPlan(a.planId); return runner.startPlan(a.planId) })),
-      tool('retry_phase', 'Retry a failed or cancelled phase of this app: three more attempts, told why it failed; fresh=true starts over from the plan\'s branch.', { phaseId: z.string(), fresh: z.boolean().optional() }, async (a) => tryIt(async () => { const [x] = await db.select().from(phase).where(eq(phase.id, a.phaseId)); if (!x || x.appId !== appId) throw foreign(); return runner.retryPhase(a.phaseId, { fresh: a.fresh, actor: 'agent' }) })),
-      tool('pause_plan', 'Pause a running plan of this app: nothing new starts, running agents stop and keep their place.', { planId: z.string() }, async (a) => tryIt(async () => { await ownPlan(a.planId); return runner.pausePlan(a.planId, 'agent') })),
-      tool('resume_plan', 'Resume a paused plan of this app.', { planId: z.string() }, async (a) => tryIt(async () => { await ownPlan(a.planId); return runner.resumePlan(a.planId, 'agent') })),
-      tool('cancel_plan', 'Stop a plan of this app: agents aborted, unlanded phases cancelled, landed work kept.', { planId: z.string() }, async (a) => tryIt(async () => { await ownPlan(a.planId); return runner.cancelPlan(a.planId) })),
-      tool('events', 'This app\'s event log, newest last. Filter by plan or phase; since is a sequence number.', { planId: z.string().optional(), phaseId: z.string().optional(), since: z.number().optional(), limit: z.number().optional() },
-        async (a) => tryIt(async () => (await eventsSince(a.since ?? 0, { appId, planId: a.planId, phaseId: a.phaseId })).slice(-(a.limit ?? 50)))),
+      tool('start_project', 'Run a project of this app: integration branch, a worktree and an agent per phase, landing, PR.', { projectId: z.string() }, async (a) => tryIt(async () => { await ownProject(a.projectId); return runner.startProject(a.projectId) })),
+      tool('retry_phase', 'Retry a failed or cancelled phase of this app: three more attempts, told why it failed; fresh=true starts over from the project\'s branch.', { phaseId: z.string(), fresh: z.boolean().optional() }, async (a) => tryIt(async () => { const [x] = await db.select().from(phase).where(eq(phase.id, a.phaseId)); if (!x || x.appId !== appId) throw foreign(); return runner.retryPhase(a.phaseId, { fresh: a.fresh, actor: 'agent' }) })),
+      tool('pause_project', 'Pause a running project of this app: nothing new starts, running agents stop and keep their place.', { projectId: z.string() }, async (a) => tryIt(async () => { await ownProject(a.projectId); return runner.pauseProject(a.projectId, 'agent') })),
+      tool('resume_project', 'Resume a paused project of this app.', { projectId: z.string() }, async (a) => tryIt(async () => { await ownProject(a.projectId); return runner.resumeProject(a.projectId, 'agent') })),
+      tool('cancel_project', 'Stop a project of this app: agents aborted, unlanded phases cancelled, landed work kept.', { projectId: z.string() }, async (a) => tryIt(async () => { await ownProject(a.projectId); return runner.cancelProject(a.projectId) })),
+      tool('events', 'This app\'s event log, newest last. Filter by project or phase; since is a sequence number.', { projectId: z.string().optional(), phaseId: z.string().optional(), since: z.number().optional(), limit: z.number().optional() },
+        async (a) => tryIt(async () => (await eventsSince(a.since ?? 0, { appId, projectId: a.projectId, phaseId: a.phaseId })).slice(-(a.limit ?? 50)))),
     ],
   })
 }
@@ -123,11 +123,11 @@ async function record(sessionId: string, author: string, kind: string, body: str
   return row
 }
 
-export interface SubjectRef { planId?: string; ideaId?: string; path?: string }
+export interface SubjectRef { projectId?: string; ideaId?: string; path?: string }
 
-/** What a conversation is about, from where it started: a plan's title, an idea's title, or nothing yet. */
+/** What a conversation is about, from where it started: a project's title, an idea's title, or nothing yet. */
 async function subjectFrom(ref?: SubjectRef): Promise<{ subject: string | null; subjectRef: SubjectRef | null }> {
-  if (ref?.planId) { const [p] = await db.select().from(plan).where(eq(plan.id, ref.planId)); if (p) return { subject: p.title, subjectRef: { planId: p.id } } }
+  if (ref?.projectId) { const [p] = await db.select().from(project).where(eq(project.id, ref.projectId)); if (p) return { subject: p.title, subjectRef: { projectId: p.id } } }
   if (ref?.ideaId) { const [i] = await db.select().from(idea).where(eq(idea.id, ref.ideaId)); if (i) return { subject: i.title, subjectRef: { ideaId: i.id } } }
   return { subject: null, subjectRef: ref?.path ? { path: ref.path } : null }
 }
@@ -271,15 +271,15 @@ async function handle(sessionId: string, entry: Live, m: SDKMessage) {
   }
 }
 
-export interface TalkContext { path: string; label?: string; planId?: string; appId?: string; ideaId?: string }
+export interface TalkContext { path: string; label?: string; projectId?: string; appId?: string; ideaId?: string }
 
 /** Where the person is, as one line the agent can act on. The transcript keeps the plain text; only the agent sees this. */
 async function describeContext(c?: TalkContext): Promise<string> {
   if (!c?.path) return ''
   const bits = [`the page ${c.path}`]
-  if (c.planId) {
-    const g = await planGraph(c.planId).catch(() => null)
-    if (g) bits.push(`plan ${c.planId} "${g.plan.title}" (${g.plan.status}; ${g.tasks.length} task(s), ${g.phases.length} phase(s), ${g.questions.filter((q) => q.status === 'open').length} open question(s))`)
+  if (c.projectId) {
+    const g = await projectGraph(c.projectId).catch(() => null)
+    if (g) bits.push(`project ${c.projectId} "${g.project.title}" (${g.project.status}; ${g.tasks.length} task(s), ${g.phases.length} phase(s), ${g.questions.filter((q) => q.status === 'open').length} open question(s))`)
   }
   if (c.appId) bits.push(`app ${c.appId}`)
   if (c.ideaId) bits.push(`idea ${c.ideaId}`)
@@ -289,8 +289,8 @@ async function describeContext(c?: TalkContext): Promise<string> {
 export async function say(sessionId: string, text: string, context?: TalkContext) {
   if (!text.trim()) throw new PlanError('say something')
   const [s] = await db.select().from(session).where(eq(session.id, sessionId))
-  if (s && !s.subject) { // pinned by first contact: the plan or idea in view, else the first thing said
-    const from = await subjectFrom({ planId: context?.planId, ideaId: context?.ideaId })
+  if (s && !s.subject) { // pinned by first contact: the project or idea in view, else the first thing said
+    const from = await subjectFrom({ projectId: context?.projectId, ideaId: context?.ideaId })
     const said = text.trim().replace(/\s+/g, ' ').slice(0, 48).replace(/[\s.,;:!?]+$/, '')
     await db.update(session).set({ subject: from.subject ?? said, subjectRef: from.subjectRef ?? s.subjectRef }).where(eq(session.id, sessionId))
   }

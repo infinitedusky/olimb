@@ -2,10 +2,10 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { PlanGraphView } from './PlanGraphView'
 import type { GraphPhase } from '../engine'
 
-// Sample phases, made up: the hardening plan's shape, in the states worth seeing.
+// Sample phases, made up: the hardening project's shape, in the states worth seeing.
 const ph = (number: number, title: string, status: GraphPhase['status'], extra: Partial<GraphPhase> = {}): GraphPhase => ({
   id: `ph_sample${number}`, number, title, brief: null, status, attempt: status === 'queued' ? 0 : 1, maxAttempts: 3,
-  planId: 'plan_sample', taskId: number <= 4 ? 'task_a' : 'task_b', branch: status === 'queued' ? null : `phase/plan_sample/${number}`,
+  projectId: 'plan_sample', taskId: number <= 4 ? 'task_a' : 'task_b', branch: status === 'queued' ? null : `phase/plan_sample/${number}`,
   heldReason: null, dependsOn: [], files: [], lastRun: null, ...extra,
 })
 const run = (status: string, cost: string) => ({ id: 'run_sample', attempt: 1, status, model: 'claude-opus-5-5', costUsd: cost, summary: null, error: null, startedAt: '', endedAt: null })
@@ -16,7 +16,7 @@ const midRun: GraphPhase[] = [
   ph(2, 'Cache pip in the CI workflow', 'running', { lastRun: run('working', '0.05'), steps }),
   ph(3, 'Index the tables the parent page reads', 'merging', { lastRun: run('completed', '0.22') }),
   ph(4, 'Storybook stories for the parent page', 'queued', { heldReason: 'at the session cap' }),
-  ph(5, 'README: settings are validated', 'queued', { heldReason: 'waiting on phase #2 (task #1, earlier in the plan)' }),
+  ph(5, 'README: settings are validated', 'queued', { heldReason: 'waiting on phase #2 (task #1, earlier in the project)' }),
 ]
 const labels = { ph_sample1: 'Harden the POC', ph_sample2: 'Harden the POC', ph_sample3: 'Harden the POC', ph_sample4: 'Harden the POC', ph_sample5: 'Document it' }
 

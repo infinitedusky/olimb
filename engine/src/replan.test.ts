@@ -2,10 +2,10 @@
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { db, pool } from './db/client.js'
-import { app, decision, plan, question, repo, workspace } from './db/schema.js'
+import { app, decision, project, question, repo, workspace } from './db/schema.js'
 import { newId } from './ids.js'
 import { planTask, type Propose } from './planner.js'
-import { clearPhases, createPlan, PlanError, planGraph } from './plans.js'
+import { clearPhases, createProject, PlanError, projectGraph } from './projects.js'
 
 let reachable = true
 try { await db.execute('select 1') } catch { reachable = false }
@@ -20,7 +20,7 @@ describe.skipIf(!reachable)('clearPhases', () => {
     await db.insert(repo).values({ id: newId('repo'), appId, fullName: '', localPath: '/tmp' })
   })
   afterAll(async () => {
-    await db.update(plan).set({ status: 'superseded' }).where(eq(plan.appId, appId))
+    await db.update(project).set({ status: 'superseded' }).where(eq(project.appId, appId))
     await pool.end()
   })
 
@@ -32,11 +32,11 @@ describe.skipIf(!reachable)('clearPhases', () => {
       questions: [{ question: 'q?', options: [{ label: 'yes', description: '', changes: [] }, { label: 'no', description: '', changes: [] }], recommended: 'yes', reason: 'r', cost: 'cheap' }],
       notes: '',
     } })
-    const { plan: p, tasks } = await createPlan({ appId, title: 'replan', tasks: [{ title: 'T', brief: 'b' }] })
+    const { project: p, tasks } = await createProject({ appId, title: 'replan', tasks: [{ title: 'T', brief: 'b' }] })
     await planTask(tasks[0].id, { propose })
-    expect((await planGraph(p.id))!.phases).toHaveLength(2)
+    expect((await projectGraph(p.id))!.phases).toHaveLength(2)
     expect(await clearPhases(tasks[0].id)).toEqual({ cleared: 2 })
-    const g = (await planGraph(p.id))!
+    const g = (await projectGraph(p.id))!
     expect(g.phases).toHaveLength(0); expect(g.decisions).toHaveLength(0); expect(g.questions).toHaveLength(0)
     expect(await db.select().from(decision).where(eq(decision.taskId, tasks[0].id))).toHaveLength(0)
     expect(await db.select().from(question).where(eq(question.taskId, tasks[0].id))).toHaveLength(0)
@@ -44,14 +44,14 @@ describe.skipIf(!reachable)('clearPhases', () => {
     expect(again.status).toBe('completed')
   })
 
-  it('refuses when another task\'s phases depend on these, and when the plan is not a draft', async () => {
-    const { plan: p, tasks } = await createPlan({ appId, title: 'deps', tasks: [
+  it('refuses when another task\'s phases depend on these, and when the project is not a draft', async () => {
+    const { project: p, tasks } = await createProject({ appId, title: 'deps', tasks: [
       { title: 'T1', phases: [{ key: 'a', title: 'A' }] }, { title: 'T2', phases: [{ key: 'b', title: 'B', dependsOn: ['a'] }] },
     ] })
     await expect(clearPhases(tasks[0].id)).rejects.toThrow(/depend on this task/)
     expect(await clearPhases(tasks[1].id)).toEqual({ cleared: 1 })
     expect(await clearPhases(tasks[0].id)).toEqual({ cleared: 1 })
-    await db.update(plan).set({ status: 'running' }).where(eq(plan.id, p.id))
+    await db.update(project).set({ status: 'running' }).where(eq(project.id, p.id))
     await expect(clearPhases(tasks[0].id)).rejects.toThrow(PlanError)
   })
 })

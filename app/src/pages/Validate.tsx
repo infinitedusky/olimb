@@ -7,7 +7,7 @@ export function Validate() {
     <>
       <div className="page-head"><div>
         <h1>🧪 Validate{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
-        <p className="muted" style={{ margin: '4px 0 0' }}>Decide fast, on something real, then hold the build to it. Mock-ups and variants before a plan runs; stories, tests and clauses while it does.</p>
+        <p className="muted" style={{ margin: '4px 0 0' }}>Decide fast, on something real, then hold the build to it. Mock-ups and variants before a project runs; stories, tests and clauses while it does.</p>
       </div></div>
       <section className="panel">
         <h2>Today</h2>
@@ -20,7 +20,7 @@ export function Validate() {
       <section className="panel">
         <h2>Lands here</h2>
         <ul style={{ margin: 0, paddingLeft: 18 }}>
-          <li><strong>A preview per branch</strong>: the app and its Storybook run from a plan's worktree, linked from the plan.</li>
+          <li><strong>A preview per branch</strong>: the app and its Storybook run from a project's worktree, linked from the project.</li>
           <li><strong>Variants as a first-class thing</strong>: a question is two stories side by side; the pick becomes the decision.</li>
           <li><strong>The decision becomes the checks</strong>: what you agreed to in the mock-up turns into stories, tests and clauses the build is verified against, during and after.</li>
         </ul>

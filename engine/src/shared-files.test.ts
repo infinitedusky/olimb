@@ -1,6 +1,6 @@
 /** The graph's file nodes follow the scheduler's overlap rule, so every file wait is drawn. */
 import { describe, expect, it } from 'vitest'
-import { sharedFiles } from './plans.js'
+import { sharedFiles } from './projects.js'
 
 const ph = (id: string, status: string, files: string[]) => ({ id, status, files })
 

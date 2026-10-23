@@ -9,10 +9,10 @@ import { join } from 'node:path'
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { db, pool } from './db/client.js'
-import { app, event, plan, repo, run, workspace } from './db/schema.js'
+import { app, event, project, repo, run, workspace } from './db/schema.js'
 import { newId } from './ids.js'
 import { phaseBrief, planTask, questionCost, validateProposal, type Proposal, type Propose } from './planner.js'
-import { createPlan, PlanError, planGraph } from './plans.js'
+import { createProject, PlanError, projectGraph } from './projects.js'
 
 let reachable = true
 try { await db.execute('select 1') } catch { reachable = false }
@@ -45,7 +45,7 @@ describe.skipIf(!reachable)('planner', () => {
     await db.insert(repo).values({ id: newId('repo'), appId, fullName: '', localPath: dir })
   })
   afterAll(async () => {
-    await db.update(plan).set({ status: 'superseded' }).where(eq(plan.appId, appId))
+    await db.update(project).set({ status: 'superseded' }).where(eq(project.appId, appId))
     await pool.end()
   })
 
@@ -56,7 +56,7 @@ describe.skipIf(!reachable)('planner', () => {
   }
 
   it('turns a proposal into phases, decisions and questions, and records the run', async () => {
-    const { plan: p, tasks } = await createPlan({ appId, title: 'planned', tasks: [
+    const { project: p, tasks } = await createProject({ appId, title: 'planned', tasks: [
       { title: 'Groundwork', phases: [{ key: 'g', title: 'G', files: ['README.md'] }] },
       { title: 'Settings and the gate', brief: 'Parents set when the gate is open.' },
     ] })
@@ -64,7 +64,7 @@ describe.skipIf(!reachable)('planner', () => {
     expect(out.status).toBe('completed')
     expect(out.phases.map((x) => x.title)).toEqual(['Add the settings table', 'Parent page edits the schedule'])
 
-    const g = (await planGraph(p.id))!
+    const g = (await projectGraph(p.id))!
     const mine = g.phases.filter((x) => x.taskId === tasks[1].id)
     expect(mine).toHaveLength(2)
     const [schema, ui] = mine
@@ -99,10 +99,10 @@ describe.skipIf(!reachable)('planner', () => {
   })
 
   it('a failed proposal is a failed run: no phases, a task.plan_failed event, and the task can be planned again', async () => {
-    const { plan: p, tasks } = await createPlan({ appId, title: 'failing', tasks: [{ title: 'T', brief: 'b' }] })
+    const { project: p, tasks } = await createProject({ appId, title: 'failing', tasks: [{ title: 'T', brief: 'b' }] })
     const out = await planTask(tasks[0].id, { propose: fake(new Error('error_max_turns')) })
     expect(out).toMatchObject({ status: 'failed', error: 'error_max_turns', phases: [] })
-    expect((await planGraph(p.id))!.phases).toHaveLength(0)
+    expect((await projectGraph(p.id))!.phases).toHaveLength(0)
     const [r] = await db.select().from(run).where(eq(run.id, out.runId))
     expect(r).toMatchObject({ status: 'failed', error: 'error_max_turns' })
     const types = (await db.select().from(event).where(eq(event.taskId, tasks[0].id))).map((e) => e.type)
@@ -113,7 +113,7 @@ describe.skipIf(!reachable)('planner', () => {
   })
 
   it('refuses a task that already has phases, and a proposal that does not hold together', async () => {
-    const { tasks } = await createPlan({ appId, title: 'twice', tasks: [{ title: 'T', phases: [{ key: 'x', title: 'X' }] }] })
+    const { tasks } = await createProject({ appId, title: 'twice', tasks: [{ title: 'T', phases: [{ key: 'x', title: 'X' }] }] })
     await expect(planTask(tasks[0].id, { propose: fake(proposal) })).rejects.toThrow(PlanError)
     const bad = (patch: Partial<Proposal>) => () => validateProposal({ ...proposal, ...patch })
     expect(bad({ phases: [] })).toThrow('no phases')
@@ -123,15 +123,15 @@ describe.skipIf(!reachable)('planner', () => {
     expect(bad({ questions: [{ ...proposal.questions[1], options: proposal.questions[1].options.slice(0, 1) }] })).toThrow('at least two options')
   })
 
-  it('losing the model while planning is not a failure: it waits, then plans again by itself', async () => {
-    const { plan: p, tasks } = await createPlan({ appId, title: 'outage while planning', tasks: [{ title: 'T', brief: 'b' }] })
+  it('losing the model while planning is not a failure: it waits, then projects again by itself', async () => {
+    const { project: p, tasks } = await createProject({ appId, title: 'outage while planning', tasks: [{ title: 'T', brief: 'b' }] })
     let calls = 0
     const propose: Propose = async () => (++calls === 1 ? { status: 'failed', error: 'API Error: 529 overloaded_error', costUsd: 0.01 } : { status: 'completed', proposal, costUsd: 0.1 })
     const out = await planTask(tasks[0].id, { propose, retryAfterMs: () => 50 })
     expect(out.status).toBe('waiting')
     expect((await db.select().from(run).where(eq(run.id, out.runId)))[0].status).toBe('interrupted')
     const t0 = Date.now()
-    while ((await planGraph(p.id))!.phases.length === 0) { if (Date.now() - t0 > 10_000) throw new Error('not re-planned'); await new Promise((r) => setTimeout(r, 50)) }
+    while ((await projectGraph(p.id))!.phases.length === 0) { if (Date.now() - t0 > 10_000) throw new Error('not re-planned'); await new Promise((r) => setTimeout(r, 50)) }
     const types = (await db.select().from(event).where(eq(event.taskId, tasks[0].id))).map((e) => e.type)
     expect(types).toContain('task.plan_waiting'); expect(types).not.toContain('task.plan_failed'); expect(types.at(-1)).toBe('task.planned')
   })

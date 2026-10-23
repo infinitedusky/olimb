@@ -61,7 +61,7 @@ export function pickTasksToStart(tasks: SchedTask[], room: number): Pick {
   return { start: start.map((t) => t.id), held }
 }
 
-/** Dependency cycles stop a plan before it runs. Returns one cycle as a path, or null. */
+/** Dependency cycles stop a project before it runs. Returns one cycle as a path, or null. */
 export function findCycle(tasks: SchedTask[]): string[] | null {
   const byId = new Map(tasks.map((t) => [t.id, t]))
   const state = new Map<string, 'visiting' | 'done'>()

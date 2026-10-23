@@ -1,6 +1,6 @@
 /** Task order as drawn edges: finishers of the earlier task → starters of the next; explicit edges not repeated. */
 import { describe, expect, it } from 'vitest'
-import { orderEdges } from './plans.js'
+import { orderEdges } from './projects.js'
 
 const ph = (id: string, taskId: string, dependsOn: string[] = []) => ({ id, taskId, dependsOn })
 const tasks = [{ id: 't1', position: 0 }, { id: 't2', position: 1 }, { id: 't3', position: 2 }]
