@@ -203,3 +203,6 @@ a.badge { text-decoration: none; }
 .talk-fab-group { position: fixed; right: 20px; bottom: 20px; z-index: 40; display: flex; gap: 6px; }
 .talk-fab-group .talk-fab { position: static; }
 .talk-fab.back { background: var(--surface); color: var(--ink); border-color: var(--line); padding: 10px 12px; }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.filter { font: 500 13px var(--sans); padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); cursor: pointer; }
+.filter.active { border-color: var(--accent); color: var(--ink); font-weight: 600; background: var(--accent-wash); }

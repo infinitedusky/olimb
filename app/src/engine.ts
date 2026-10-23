@@ -32,6 +32,7 @@ export interface Graph {
 /** A file on the graph: who claims it, and who has it right now (the phase that is running with it). */
 export interface GraphFile { path: string; phases: string[]; heldBy: string | null }
 export interface PlanSummary { id: string; title: string; status: string; createdAt: string; ideaId?: string | null; app: { id: string; name: string } | null; taskCount: number; phases: Record<string, number> }
+export interface TaskRow { id: string; number: number; title: string; description: string | null; position: number; plan: { id: string; title: string; status: string }; phases: Record<string, number>; planning: string | null }
 export interface IdeaRow { id: string; appId: string; number: number; title: string; body: string | null; lane: string }
 export interface AppSetup { storybook_url?: string; storybook_cmd?: string; test_cmd?: string; preview_cmd?: string; model?: string; max_budget_usd?: number; max_turns?: number }
 export interface Repo { id: string; appId: string; fullName: string; localPath: string | null; baseBranch: string | null }
@@ -96,6 +97,7 @@ export const engine = {
   updateApp: (id: string, body: { name?: string; defaultBranch?: string; setup?: AppSetup }) => call<App>('PATCH', `/apps/${id}`, body),
   createRepo: (body: { appId: string; fullName: string; localPath?: string; baseBranch?: string }) => call<Repo>('POST', '/repos', body),
   updateRepo: (id: string, body: { fullName?: string; localPath?: string | null; baseBranch?: string | null }) => call<Repo>('PATCH', `/repos/${id}`, body),
+  tasks: (appId: string) => call<TaskRow[]>('GET', `/tasks?app=${appId}`),
   plans: (appId?: string) => call<PlanSummary[]>('GET', `/plans${appId ? `?app=${appId}` : ''}`),
   graph: (id: string) => call<Graph>('GET', `/plans/${id}/graph`),
   createPlan: (body: { appId: string; title: string; spec?: string; ideaId?: string; tasks: NewTask[] }) => call<{ plan: { id: string } }>('POST', '/plans', body),

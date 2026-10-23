@@ -21,7 +21,7 @@ import { describePlan } from './describe.js'
 import { now } from './now.js'
 import { startStorybook, stopStorybooks, storybookStatus } from './storybook.js'
 import { answerQuestion, finishPlanning, preparePlanning, recoverPlanning } from './planner.js'
-import { addPhases, appGraph, clearPhases, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
+import { listTasks, addPhases, appGraph, clearPhases, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
 import { runner } from './runner.js'
 
 export const SESSIONS_MAX = Number(process.env.SESSIONS_MAX ?? 4)
@@ -137,6 +137,7 @@ export function buildApp(bus: EventBus) {
     try { return c.json(await planFromIdea(c.req.param('id'), body.tasks), 201) } catch (err) { return planError(c, err) }
   })
 
+  api.get('/tasks', async (c) => { const a = c.req.query('app'); return a ? c.json(await listTasks(a)) : c.json({ error: 'app is required: one app at a time' }, 400) })
   api.get('/plans', async (c) => { const a = c.req.query('app'); return a ? c.json(await listPlans({ all: c.req.query('all') === '1', appId: a })) : c.json({ error: 'app is required: one app at a time' }, 400) })
   api.post('/plans', async (c) => {
     try { return c.json(await createPlan(await c.req.json()), 201) } catch (err) { return planError(c, err) }
