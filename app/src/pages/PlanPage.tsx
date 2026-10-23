@@ -35,7 +35,9 @@ export function PlanPage() {
   const draft = ['drafting', 'proposed', 'approved'].includes(graph.plan.status)
   const act = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn() } finally { setBusy(false) } }
   // A task is being planned from its last planning event until the planner reports back.
-  const planning = (taskId: string) => events.filter((e) => e.taskId === taskId && e.type.startsWith('task.plan')).at(-1)?.type === 'task.planning'
+  const lastPlanEvent = (taskId: string) => events.filter((e) => e.taskId === taskId && e.type.startsWith('task.plan')).at(-1)?.type
+  const planning = (taskId: string) => ['task.planning', 'task.plan_waiting'].includes(lastPlanEvent(taskId) ?? '')
+  const waitingForModel = (taskId: string) => lastPlanEvent(taskId) === 'task.plan_waiting'
   const open = graph.questions.filter((q) => q.status === 'open')
   return (
     <>
@@ -69,7 +71,7 @@ export function PlanPage() {
 
       <ol className="task-strip">
         {graph.tasks.map((t) => (
-          <TaskChip key={t.id} task={t} phases={graph.phases.filter((p) => p.taskId === t.id)} planning={planning(t.id)}
+          <TaskChip key={t.id} task={t} phases={graph.phases.filter((p) => p.taskId === t.id)} planning={planning(t.id)} waiting={waitingForModel(t.id)}
             onPlan={draft && !planning(t.id) ? () => act(() => engine.planTask(t.id)) : undefined}
             onReplan={draft && !planning(t.id) ? () => { if (window.confirm('Remove this task\'s phases, decisions and questions and plan it again?')) void act(async () => { await engine.clearPhases(t.id); await engine.planTask(t.id) }) } : undefined}
             busy={busy} />
@@ -109,7 +111,7 @@ export function PlanPage() {
   )
 }
 
-function TaskChip({ task, phases, planning, onPlan, onReplan, busy }: { task: GraphTask; phases: GraphPhase[]; planning: boolean; onPlan?: () => void; onReplan?: () => void; busy: boolean }) {
+function TaskChip({ task, phases, planning, waiting, onPlan, onReplan, busy }: { task: GraphTask; phases: GraphPhase[]; planning: boolean; waiting?: boolean; onPlan?: () => void; onReplan?: () => void; busy: boolean }) {
   const done = phases.filter((p) => p.status === 'done').length
   const live = phases.some((p) => ['running', 'merging', 'testing'].includes(p.status))
   const tone: Tone = phases.length && done === phases.length ? 'ok' : live ? 'accent' : 'neutral'
@@ -117,7 +119,7 @@ function TaskChip({ task, phases, planning, onPlan, onReplan, busy }: { task: Gr
     <li className="task-chip" data-component="TaskChip" title={task.description ?? task.brief?.slice(0, 300) ?? undefined}>
       <span className="mono faint">task #{task.number}</span>
       <strong>{task.title}</strong>
-      {planning ? <Badge tone="accent" dot>planning…</Badge>
+      {planning ? <Badge tone={waiting ? 'warn' : 'accent'} dot>{waiting ? 'waiting for the model' : 'planning…'}</Badge>
         : phases.length ? <><Badge tone={tone} dot={live}>{done}/{phases.length} phases</Badge>{onReplan && <button className="btn quiet small" disabled={busy} onClick={onReplan} title="Remove the phases and plan this task again">Re-plan</button>}</>
         : onPlan ? <button className="btn quiet small" disabled={busy} onClick={onPlan}>Plan</button> : <Badge>no phases</Badge>}
     </li>

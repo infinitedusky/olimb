@@ -504,6 +504,10 @@ error gives its attempt back, its phase is queued "waiting for the model", and t
 backoff (1, 2, 5, 10, 15 minutes), resuming the same sessions when the model answers; Observe shows the hold with
 "Try now". All three are in the UI and available to the agent (retry_phase, pause_plan, resume_plan). Tests for
 each path; 51 in all.
+- Then the two gaps left (PR #34): **the planner** treats an outage as waiting, not failure (run interrupted,
+  `task.plan_waiting`, plans again by itself after the same backoff; the task chip says "waiting for the model");
+  **a conversation** says it is waiting and sends the person's last message again after the backoff, resuming the
+  same session. 52 tests.
 
 ## The test bench: Corner Shop (Sandy, 2026-10-23)
 
