@@ -186,7 +186,7 @@ export async function preparePlanning(taskId: string, opts: { actor?: string } =
   const g = (await planGraph(t.planId))!
   const mine = g.phases.filter((x) => x.taskId === taskId)
   if (mine.length) throw new PlanError(`task #${t.number} already has ${mine.length} phase${mine.length > 1 ? 's' : ''}; it is planned`)
-  if (!['drafting', 'proposed'].includes(g.plan.status)) throw new PlanError(`plan is ${g.plan.status}; only a draft can be planned`)
+  if (['landed', 'stopped', 'superseded'].includes(g.plan.status)) throw new PlanError(`plan is ${g.plan.status}; it takes no more planning`) // drafts, and running or paused plans planning their next task
   const [a] = await db.select().from(app).where(eq(app.id, t.appId))
   const [r] = await db.select().from(repo).where(eq(repo.appId, t.appId))
   if (!r?.localPath) throw new PlanError(`app ${a.name} has no repo with a local path`)
@@ -219,7 +219,7 @@ export interface PlanningResult {
 /** Runs the planner and writes what it proposed. Never throws: a failure is a failed run and a task.plan_failed event. */
 const outagesByTask = new Map<string, number>() // planner outages in a row, per task: the backoff level
 
-export async function finishPlanning(ctx: PlanningContext, opts: { propose?: Propose; abort?: AbortController; retryAfterMs?: (minutes: number) => number } = {}): Promise<PlanningResult> {
+export async function finishPlanning(ctx: PlanningContext, opts: { propose?: Propose; abort?: AbortController; retryAfterMs?: (minutes: number) => number; onPlanned?: () => void } = {}): Promise<PlanningResult> {
   const propose = opts.propose ?? proposeWithAgent
   const onEvent: ProposeInput['onEvent'] = async (type, payload) => { await emit({ ...ctx.base, actor: `agent:${ctx.runId}`, type, payload }) }
   const failed = async (error: string, out?: ProposeOutput): Promise<PlanningResult> => {
@@ -275,6 +275,7 @@ export async function finishPlanning(ctx: PlanningContext, opts: { propose?: Pro
       } })
       return { phases, decisions, questions }
     })
+    opts.onPlanned?.() // e.g. the runner: the new phases can run now
     return { status: 'completed', runId: ctx.runId, costUsd: out.costUsd, phases: written.phases.map((p) => ({ id: p.id, number: p.number, title: p.title })), decisions: written.decisions, questions: written.questions }
   } catch (err: any) {
     return failed(`the proposal could not be saved: ${err?.message ?? err}`, out)
@@ -282,7 +283,7 @@ export async function finishPlanning(ctx: PlanningContext, opts: { propose?: Pro
 }
 
 /** The whole thing, for the CLI and tests. */
-export async function planTask(taskId: string, opts: { propose?: Propose; actor?: string; retryAfterMs?: (minutes: number) => number } = {}) {
+export async function planTask(taskId: string, opts: { propose?: Propose; actor?: string; retryAfterMs?: (minutes: number) => number; onPlanned?: () => void } = {}) {
   return finishPlanning(await preparePlanning(taskId, opts), opts)
 }
 

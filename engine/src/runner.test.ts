@@ -15,6 +15,7 @@ import { commitAll, git } from './git.js'
 import { newId } from './ids.js'
 import { createPlan, planGraph } from './plans.js'
 import { Runner } from './runner.js'
+import type { Propose } from './planner.js'
 
 let reachable = true
 try { await db.execute('select 1') } catch { reachable = false }
@@ -183,6 +184,28 @@ describe.skipIf(!reachable)('runner', () => {
     await until(cleaned(p.id))
     expect((await planGraph(p.id))!.phases[0].status).toBe('done')
     expect(resumedWith).toEqual([undefined, 'sess-pause'])
+  })
+
+  it('runs task by task: the next task is planned when the earlier ones land, and the plan lands only when every task has', async () => {
+    const { plan: p, tasks } = await createPlan({ appId, title: 'task by task', tasks: [
+      one('First', [{ key: 'f', title: 'F', files: ['f.txt'] }]),
+      { title: 'Second', brief: 'planned after the first lands' },
+    ] })
+    const plannedAfter: string[] = []
+    const propose: Propose = async (i) => {
+      plannedAfter.push((await planGraph(p.id))!.phases.map((x) => x.status).join(','))
+      return { status: 'completed', costUsd: 0, proposal: {
+        phases: [{ key: 's', title: 'S', description: 'second', summary: 's', depends_on: [], files: ['s.txt'], steps: [], checks: [], done_when: '' }],
+        decisions: [], questions: [], notes: '' } }
+    }
+    const runner = new Runner({ execute: commits('tbt'), sessionsMax: 2, propose })
+    await runner.startPlan(p.id)
+    await until(cleaned(p.id))
+    const g = (await planGraph(p.id))!
+    expect(g.plan.status).toBe('landed')
+    expect(g.phases.map((x) => [g.tasks.find((t) => t.id === x.taskId)!.title, x.status])).toEqual([['First', 'done'], ['Second', 'done']])
+    expect(plannedAfter).toEqual(['done']) // the second task was planned once, after the first had landed
+    expect(tasks).toHaveLength(2)
   })
 
   it('stores the builder\'s todo list as the phase\'s steps, latest list wins', async () => {

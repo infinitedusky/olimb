@@ -172,8 +172,9 @@ export function buildApp(bus: EventBus) {
   api.post('/tasks/:id/plan', async (c) => {
     let ctx
     try { ctx = await preparePlanning(c.req.param('id'), { actor: 'user' }) } catch (err) { return planError(c, err) }
-    if (c.req.query('wait') === '1') { const out = await finishPlanning(ctx); return c.json(out, out.status === 'completed' ? 200 : 500) }
-    void finishPlanning(ctx)
+    const onPlanned = () => void runner.dispatch() // phases planned into a running plan start right away
+    if (c.req.query('wait') === '1') { const out = await finishPlanning(ctx, { onPlanned }); return c.json(out, out.status === 'completed' ? 200 : 500) }
+    void finishPlanning(ctx, { onPlanned })
     return c.json({ runId: ctx.runId }, 202)
   })
 

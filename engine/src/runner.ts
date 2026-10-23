@@ -14,6 +14,7 @@ import { newId } from './ids.js'
 import { land, withLock } from './landing.js'
 import { ensurePlanPr, prBody } from './pr.js'
 import { planGraph, PlanError, tickAll } from './plans.js'
+import { finishPlanning, preparePlanning, type Propose } from './planner.js'
 import { reapAgentProcesses } from './reap.js'
 import { holdMinutes, isOutage } from './outage.js'
 
@@ -31,9 +32,13 @@ export class Runner {
   private execute: Execute
   private sessionsMax: number
 
-  constructor(opts: { execute?: Execute; sessionsMax?: number } = {}) {
+  private propose: Propose | undefined // the planner, for planning a plan's next task; the real one unless a test gives one
+  private planningTasks = new Set<string>()
+
+  constructor(opts: { execute?: Execute; sessionsMax?: number; propose?: Propose } = {}) {
     this.execute = opts.execute ?? runTask
     this.sessionsMax = opts.sessionsMax ?? SESSIONS_MAX
+    this.propose = opts.propose
   }
 
   async startPlan(planId: string) {
@@ -71,7 +76,14 @@ export class Runner {
             })
           }
         }
-        if (g.phases.length && g.phases.every((x) => x.status === 'done')) {
+        // A plan runs task by task: when every phase of the tasks before it has landed, the next unplanned task is
+        // planned (the planner reads the code that just landed) and its phases join the graph. The plan lands only
+        // when every task has phases and all of them have landed.
+        const pos = new Map(g.tasks.map((t) => [t.id, t.position]))
+        const unplanned = g.tasks.filter((t) => !g.phases.some((x) => x.taskId === t.id)).sort((a, b) => a.position - b.position)
+        const next = unplanned[0]
+        if (next && g.phases.filter((x) => (pos.get(x.taskId) ?? 0) < next.position).every((x) => x.status === 'done')) await this.planNext(p.id, next.id)
+        if (!unplanned.length && g.phases.length && g.phases.every((x) => x.status === 'done')) {
           await db.update(plan).set({ status: 'landed' }).where(eq(plan.id, p.id))
           await this.emit({ ...(await this.context(p.id)).base, type: 'plan.landed', payload: {} })
           await this.cleanup(p.id)
@@ -284,6 +296,21 @@ export class Runner {
     await this.emit({ ...ctx.base, type: 'plan.cancelled', payload: { why, cancelled: open.length, landed: phases.length - open.length } })
     await this.cleanup(planId).catch(() => {}) // a worktree with an agent mid-write may refuse once; recovery handles leftovers
     return { cancelled: open.length, landed: phases.length - open.length }
+  }
+
+  /** Plan a running plan's next task, once: not if it is already planning, waiting for the model, or its last planning failed (a person re-plans it). */
+  private async planNext(planId: string, taskId: string) {
+    if (this.planningTasks.has(taskId)) return
+    const [last] = await db.select().from(event).where(and(eq(event.taskId, taskId), inArray(event.type, ['task.planning', 'task.plan_waiting', 'task.planned', 'task.plan_failed']))).orderBy(desc(event.seq)).limit(1)
+    if (last && ['task.planning', 'task.plan_waiting', 'task.plan_failed'].includes(last.type)) return
+    this.planningTasks.add(taskId)
+    try {
+      const ctx = await preparePlanning(taskId, { actor: 'engine' })
+      void finishPlanning(ctx, { propose: this.propose, onPlanned: () => void this.dispatch() }).finally(() => this.planningTasks.delete(taskId))
+    } catch (err: any) {
+      this.planningTasks.delete(taskId)
+      await this.emit({ ...(await this.context(planId)).base, taskId, type: 'task.plan_failed', payload: { error: String(err?.message ?? err) } })
+    }
   }
 
   /**
