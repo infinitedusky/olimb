@@ -7,6 +7,7 @@ import { findIdea, ideas } from './ideas'
 import { modules } from './providers'
 import { CurrentAppProvider } from './current-app'
 import { Shell } from './components/Shell'
+import { AgentWindow } from './components/TalkDrawer'
 import { Board } from './pages/Board'
 import { IdeaPage } from './pages/IdeaPage'
 import { Settings } from './pages/Settings'
@@ -28,7 +29,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <CurrentAppProvider>
-        <Shell>
+        <Routes>
+          <Route path="/agent" element={<AgentWindow />} />
+          <Route path="*" element={<Shell>
           <Routes>
             <Route path="/" element={<Now />} />
             <Route path="/learn" element={<Learn />} />
@@ -43,7 +46,8 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/plans/:id" element={<PlanPage />} />
             <Route path="/settings" element={<Settings modules={modules} />} />
           </Routes>
-        </Shell>
+          </Shell>} />
+        </Routes>
       </CurrentAppProvider>
     </BrowserRouter>
   </StrictMode>,

@@ -159,7 +159,12 @@ a.badge { text-decoration: none; }
 .conversation.compact .chat { flex: 1; max-height: none; min-height: 0; padding: 10px; }
 .conversation.compact .msg { max-width: 92%; font-size: 14px; }
 .conversation.compact .talk-input textarea { font-size: 14px; }
-@media (min-width: 1280px) { body.talk-open .main { padding-right: 456px; } }
+/* The drawer takes its room beside the column, never out of it: the column keeps its full width when there is space. */
+@media (min-width: 1280px) { body.talk-open .shell { padding-right: 452px; } }
+.main:has(.mockups), .main:has(.graph-canvas.tall) { max-width: none; } /* full-bleed pages */
+.talk-drawer.standalone { position: fixed; inset: 0; width: auto; max-width: none; border: 0; border-radius: 0; box-shadow: none; }
+.talk-tab.pop { margin-left: auto; color: var(--ink-faint); font-size: 14px; padding: 4px 8px; }
+.talk-tab.pop + .talk-tab.close { margin-left: 0; }
 .nav .app-pick { display: block; width: 100%; text-align: left; background: none; border: 0; cursor: pointer; font: inherit; color: inherit; }
 
 
