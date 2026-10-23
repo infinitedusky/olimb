@@ -191,3 +191,7 @@ a.badge { text-decoration: none; }
 .retry-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .hold-banner { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 14px; margin-bottom: 16px; border: 1px solid var(--warn); background: var(--warn-wash); border-radius: var(--radius); font-size: 14px; }
 .hold-banner .btn { margin-left: auto; }
+/* Mockups: the app's Storybook, inside */
+.mockups { display: flex; flex-direction: column; height: calc(100vh - 64px); }
+.sb-frame { flex: 1; width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; min-height: 480px; }
+.sb-log { font-size: 11px; max-height: 160px; overflow: auto; background: var(--ground); padding: 8px; border-radius: 8px; text-align: left; }

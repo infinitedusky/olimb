@@ -8,7 +8,7 @@ const STAGES: { to: string; icon: string; label: string; also?: RegExp; sub?: { 
   { to: '/learn', icon: '🧠', label: 'Learn' },
   { to: '/ideas', icon: '💡', label: 'Ideate' },
   { to: '/plan', icon: '📋', label: 'Plan', also: /^\/plans/ },
-  { to: '/validate', icon: '🧪', label: 'Validate' },
+  { to: '/validate', icon: '🧪', label: 'Validate', sub: [{ to: '/mockups', label: 'Mockups' }] },
   { to: '/build', icon: '🔨', label: 'Build', also: /^\/graph/, sub: [{ to: '/graph', label: 'Graph' }] },
 ]
 
