@@ -29,7 +29,7 @@ export function Plans({ mode }: { mode: 'plan' | 'build' }) {
     <>
       <div className="page-head">
         <div>
-          <h1>{mode === 'plan' ? '📋 Plan' : '🔨 Build'}{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
+          <h1>{mode === 'plan' ? '📋 Plans' : '🔨 Build'}{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
           <p className="muted" style={{ margin: '4px 0 0' }}>
             {mode === 'plan'
               ? 'A plan is tasks in order, each a title and a brief. The planner turns a task into phases and asks what it cannot settle. When every task has phases and nothing is open, it is ready to build.'

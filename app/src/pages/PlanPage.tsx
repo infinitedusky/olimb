@@ -24,7 +24,7 @@ export function PlanPage() {
     if (!graph || !app) return
     if (app.id === graph.app.id) { synced.current = true; return }
     if (!synced.current) setAppId(graph.app.id)
-    else nav(['drafting', 'proposed', 'approved'].includes(graph.plan.status) ? '/plan' : '/build')
+    else nav('/plans')
   }, [graph?.app.id, app?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const [selectedId, setSelectedId] = useState<string>()
   const [busy, setBusy] = useState(false)
@@ -41,7 +41,7 @@ export function PlanPage() {
   const open = graph.questions.filter((q) => q.status === 'open')
   return (
     <>
-      <p className="mono"><Link to={draft ? '/plan' : '/build'}>← {draft ? 'Plan' : 'Build'}</Link></p>
+      <p className="mono"><Link to="/plans">← Plans</Link></p>
       <div className="page-head">
         <div>
           <h1>{graph.plan.title}</h1>
