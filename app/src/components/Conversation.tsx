@@ -86,7 +86,7 @@ export function Message({ m, pending, sessionId }: { m: TalkMessage; pending: bo
       </div>
     )
     case 'result': return <div className="msg engine faint mono">{m.body}{p.costUsd != null ? ` · $${Number(p.costUsd).toFixed(2)}` : ''}{p.turns ? ` · ${p.turns} turns` : ''}</div>
-    case 'error': return <div className="msg engine bad">{m.body}</div>
+    case 'error': return <div className={`msg engine ${p.waiting ? 'faint' : 'bad'}`}>{m.body}</div>
     default: return null
   }
 }

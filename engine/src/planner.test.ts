@@ -123,6 +123,19 @@ describe.skipIf(!reachable)('planner', () => {
     expect(bad({ questions: [{ ...proposal.questions[1], options: proposal.questions[1].options.slice(0, 1) }] })).toThrow('at least two options')
   })
 
+  it('losing the model while planning is not a failure: it waits, then plans again by itself', async () => {
+    const { plan: p, tasks } = await createPlan({ appId, title: 'outage while planning', tasks: [{ title: 'T', brief: 'b' }] })
+    let calls = 0
+    const propose: Propose = async () => (++calls === 1 ? { status: 'failed', error: 'API Error: 529 overloaded_error', costUsd: 0.01 } : { status: 'completed', proposal, costUsd: 0.1 })
+    const out = await planTask(tasks[0].id, { propose, retryAfterMs: () => 50 })
+    expect(out.status).toBe('waiting')
+    expect((await db.select().from(run).where(eq(run.id, out.runId)))[0].status).toBe('interrupted')
+    const t0 = Date.now()
+    while ((await planGraph(p.id))!.phases.length === 0) { if (Date.now() - t0 > 10_000) throw new Error('not re-planned'); await new Promise((r) => setTimeout(r, 50)) }
+    const types = (await db.select().from(event).where(eq(event.taskId, tasks[0].id))).map((e) => e.type)
+    expect(types).toContain('task.plan_waiting'); expect(types).not.toContain('task.plan_failed'); expect(types.at(-1)).toBe('task.planned')
+  })
+
   it('composes briefs and sets costs', () => {
     expect(phaseBrief({ key: 'k', title: 't', description: 'For a person.', summary: 'Just this.', depends_on: [], files: [], steps: [], checks: [], done_when: '' })).toBe('Just this.')
     expect(questionCost({ ...proposal.questions[1], cost: 'moderate' })).toBe('moderate')

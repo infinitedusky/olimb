@@ -12,6 +12,7 @@ import { app, decision, question, repo, run, task } from './db/schema.js'
 import { appendEvent, type NewEvent } from './events.js'
 import { handle } from './executor.js'
 import { guardOptions, readerGuard } from './guard.js'
+import { holdMinutes, isOutage } from './outage.js'
 import { newId } from './ids.js'
 import { addPhases, PlanError, planGraph, type NewPhase } from './plans.js'
 
@@ -209,14 +210,16 @@ export async function preparePlanning(taskId: string, opts: { actor?: string } =
 }
 
 export interface PlanningResult {
-  status: 'completed' | 'failed'; runId: string; costUsd?: number; error?: string
+  status: 'completed' | 'failed' | 'waiting'; runId: string; costUsd?: number; error?: string; retryAt?: string
   phases: { id: string; number: number; title: string }[]
   decisions: (typeof decision.$inferSelect)[]
   questions: (typeof question.$inferSelect)[]
 }
 
 /** Runs the planner and writes what it proposed. Never throws: a failure is a failed run and a task.plan_failed event. */
-export async function finishPlanning(ctx: PlanningContext, opts: { propose?: Propose; abort?: AbortController } = {}): Promise<PlanningResult> {
+const outagesByTask = new Map<string, number>() // planner outages in a row, per task: the backoff level
+
+export async function finishPlanning(ctx: PlanningContext, opts: { propose?: Propose; abort?: AbortController; retryAfterMs?: (minutes: number) => number } = {}): Promise<PlanningResult> {
   const propose = opts.propose ?? proposeWithAgent
   const onEvent: ProposeInput['onEvent'] = async (type, payload) => { await emit({ ...ctx.base, actor: `agent:${ctx.runId}`, type, payload }) }
   const failed = async (error: string, out?: ProposeOutput): Promise<PlanningResult> => {
@@ -224,9 +227,26 @@ export async function finishPlanning(ctx: PlanningContext, opts: { propose?: Pro
     await emit({ ...ctx.base, type: 'task.plan_failed', payload: { attempt: ctx.attempt, error } })
     return { status: 'failed', runId: ctx.runId, error, costUsd: out?.costUsd, phases: [], decisions: [], questions: [] }
   }
+  // Losing the model is not the planner's failure: the run is interrupted, and planning starts again after a backoff.
+  const waiting = async (error: string, out?: ProposeOutput): Promise<PlanningResult> => {
+    const level = outagesByTask.get(ctx.taskId) ?? 0
+    outagesByTask.set(ctx.taskId, level + 1)
+    const minutes = holdMinutes(level)
+    const ms = opts.retryAfterMs ? opts.retryAfterMs(minutes) : minutes * 60_000
+    const retryAt = new Date(Date.now() + ms).toISOString()
+    await db.update(run).set({ status: 'interrupted', endedAt: new Date(), error: `outage: ${error.slice(0, 400)}`, costUsd: out?.costUsd?.toString() ?? null }).where(eq(run.id, ctx.runId))
+    await emit({ ...ctx.base, type: 'task.plan_waiting', payload: { attempt: ctx.attempt, error: error.slice(0, 400), retryAt, minutes } })
+    setTimeout(() => { void preparePlanning(ctx.taskId, { actor: 'engine' }).then((next) => finishPlanning(next, opts)).catch(() => {}) }, ms)
+    return { status: 'waiting', runId: ctx.runId, error, retryAt, phases: [], decisions: [], questions: [] }
+  }
   let out: ProposeOutput
-  try { out = await propose({ ...ctx.input, abort: opts.abort, onEvent }) } catch (err: any) { return failed(String(err?.message ?? err).slice(0, 1000)) }
+  try { out = await propose({ ...ctx.input, abort: opts.abort, onEvent }) } catch (err: any) {
+    const e = String(err?.message ?? err).slice(0, 1000)
+    return isOutage(e) ? waiting(e) : failed(e)
+  }
+  if (out.status !== 'completed' && isOutage(out.error)) return waiting(out.error!, out)
   if (out.status !== 'completed' || !out.proposal) return failed(out.error ?? 'the planner did not finish', out)
+  outagesByTask.delete(ctx.taskId)
   const proposal = out.proposal
   try { validateProposal(proposal) } catch (err: any) { return failed(err.message, out) }
 
@@ -262,7 +282,7 @@ export async function finishPlanning(ctx: PlanningContext, opts: { propose?: Pro
 }
 
 /** The whole thing, for the CLI and tests. */
-export async function planTask(taskId: string, opts: { propose?: Propose; actor?: string } = {}) {
+export async function planTask(taskId: string, opts: { propose?: Propose; actor?: string; retryAfterMs?: (minutes: number) => number } = {}) {
   return finishPlanning(await preparePlanning(taskId, opts), opts)
 }
 

@@ -16,6 +16,7 @@ import { withLock } from './landing.js'
 import { appendEvent } from './events.js'
 import { newId } from './ids.js'
 import { rank, riskOf, type Risk } from './risk.js'
+import { holdMinutes, isOutage } from './outage.js'
 import { createIdea, listIdeas } from './ideas.js'
 import { now } from './now.js'
 import { answerQuestion, finishPlanning, preparePlanning } from './planner.js'
@@ -36,7 +37,7 @@ How this person works: PRs only, main is production; short answers that lead wit
 
 interface Pending { resolve: (v: { allow: boolean; always?: boolean }) => void; tool: string }
 type Rated = { risk: Risk; why: string }
-interface Live { q: Query; push: (m: SDKUserMessage) => void; close: () => void; pending: Map<string, Pending>; rated: Map<string, Rated>; always: Set<string>; busy: boolean; autoApprove: Risk; cwd: string }
+interface Live { q: Query; push: (m: SDKUserMessage) => void; close: () => void; pending: Map<string, Pending>; rated: Map<string, Rated>; lastPrompt?: string; outages: number; always: Set<string>; busy: boolean; autoApprove: Risk; cwd: string }
 const execFileP = promisify(execFile)
 const branchOf = (cwd: string) => execFileP('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd }).then((r) => r.stdout.trim()).catch(() => null)
 const key = (tool: string, input: unknown) => tool + JSON.stringify(input).slice(0, 200)
@@ -184,7 +185,7 @@ async function open(sessionId: string): Promise<Live> {
   const [a] = s.appId ? await db.select().from(app).where(eq(app.id, s.appId)) : []
   const setup = (a?.setup ?? {}) as { model?: string }
   const input = inputQueue()
-  const entry: Live = { q: null as unknown as Query, push: input.push, close: input.close, pending: new Map(), rated: new Map(), always: new Set(), busy: false, autoApprove: (s.autoApprove as Risk) ?? 'cheap', cwd: s.cwd! }
+  const entry: Live = { q: null as unknown as Query, push: input.push, close: input.close, pending: new Map(), rated: new Map(), outages: 0, always: new Set(), busy: false, autoApprove: (s.autoApprove as Risk) ?? 'cheap', cwd: s.cwd! }
   const q = query({
     prompt: input.it,
     options: {
@@ -231,7 +232,11 @@ async function open(sessionId: string): Promise<Live> {
   live.set(sessionId, entry)
   void (async () => {
     try { for await (const m of q) await handle(sessionId, entry, m) }
-    catch (err: any) { await record(sessionId, 'engine', 'error', clip(err?.message ?? String(err), 1000)).catch(() => {}) }
+    catch (err: any) {
+      const e = String(err?.message ?? err)
+      if (isOutage(e) && entry.lastPrompt) { live.delete(sessionId); await waitAndResend(sessionId, entry, e).catch(() => {}) }
+      else await record(sessionId, 'engine', 'error', clip(e, 1000)).catch(() => {})
+    }
     finally { live.delete(sessionId); entry.busy = false }
   })()
   return entry
@@ -259,6 +264,8 @@ async function handle(sessionId: string, entry: Live, m: SDKMessage) {
       return
     case 'result':
       entry.busy = false
+      if (a.subtype !== 'success' && isOutage(`${a.subtype} ${a.result ?? ''} ${JSON.stringify(a.errors ?? '')} ${a.terminal_reason ?? ''}`)) return waitAndResend(sessionId, entry, String(a.result ?? a.terminal_reason ?? a.subtype))
+      entry.outages = 0
       await record(sessionId, 'engine', 'result', a.subtype === 'success' ? 'done' : `${a.subtype}`, { subtype: a.subtype, costUsd: a.total_cost_usd, turns: a.num_turns, durationMs: a.duration_ms })
       return
   }
@@ -290,7 +297,8 @@ export async function say(sessionId: string, text: string, context?: TalkContext
   const l = await open(sessionId)
   const row = await record(sessionId, 'user', 'text', text.trim(), context ? { context } : undefined)
   l.busy = true
-  l.push({ type: 'user', message: { role: 'user', content: (await describeContext(context)) + text.trim() }, parent_tool_use_id: null })
+  l.lastPrompt = (await describeContext(context)) + text.trim()
+  l.push({ type: 'user', message: { role: 'user', content: l.lastPrompt }, parent_tool_use_id: null })
   return { messageId: row.id }
 }
 
@@ -301,6 +309,18 @@ export async function answerPermission(sessionId: string, requestId: string, all
   l.pending.delete(requestId)
   p.resolve({ allow, always })
   return { ok: true }
+}
+
+/** The model is unavailable: say so, and send the person's last message again after a backoff. Nothing is lost. */
+async function waitAndResend(sessionId: string, entry: Live, error: string) {
+  const minutes = holdMinutes(entry.outages++)
+  const at = new Date(Date.now() + minutes * 60_000)
+  await record(sessionId, 'engine', 'error', `Waiting for the model (${clip(error, 120)}). I'll send your last message again at ${at.toTimeString().slice(0, 5)}.`, { waiting: true, retryAt: at.toISOString() })
+  const prompt = entry.lastPrompt
+  setTimeout(() => {
+    if (!prompt) return
+    void open(sessionId).then((l) => { l.busy = true; l.lastPrompt = prompt; l.outages = entry.outages; l.push({ type: 'user', message: { role: 'user', content: prompt }, parent_tool_use_id: null }) }).catch(() => {})
+  }, minutes * 60_000)
 }
 
 /** The person's threshold for this conversation: the agent acts without asking up to it. Expensive always asks. */

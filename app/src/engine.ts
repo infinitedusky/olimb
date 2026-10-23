@@ -113,7 +113,7 @@ export const engine = {
 
 export const EVENT_TYPES = [
   'plan.created', 'plan.started', 'plan.landed', 'plan.cleaned', 'task.created',
-  'task.planning', 'task.planned', 'task.plan_failed', 'task.cleared', 'plan.cancelled', 'question.asked', 'question.answered',
+  'task.planning', 'task.planned', 'task.plan_failed', 'task.plan_waiting', 'task.cleared', 'plan.cancelled', 'question.asked', 'question.answered',
   'talk.message', 'talk.permission', 'talk.result', 'idea.created', 'plan.paused', 'plan.resumed', 'engine.hold', 'engine.resumed',
   'phase.created', 'phase.status', 'phase.held', 'phase.retry', 'phase.failed', 'phase.error', 'phase.interrupted',
   'run.started', 'run.message', 'run.steps', 'run.tool_call', 'run.tool_result', 'run.result', 'run.error', 'run.rate_limit',
