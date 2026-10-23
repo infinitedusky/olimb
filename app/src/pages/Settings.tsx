@@ -88,6 +88,8 @@ function AppCard({ app, onSaved, onError }: { app: App; onSaved: () => Promise<u
         <label>Default branch<input className="mono" value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="main" /></label>
         <label>GitHub repo<input className="mono" value={repo.fullName ?? ''} onChange={(e) => setRepo({ ...repo, fullName: e.target.value })} placeholder="owner/name (for the PR)" /></label>
         <label>Local checkout<input className="mono" value={repo.localPath ?? ''} onChange={(e) => setRepo({ ...repo, localPath: e.target.value })} placeholder="/absolute/path/to/the/repo, on its default branch" /></label>
+        <label>Storybook URL<input className="mono" value={setup.storybook_url ?? ''} onChange={(e) => setSetup({ ...setup, storybook_url: e.target.value })} placeholder="http://localhost:6006" /></label>
+        <label>Storybook command<input className="mono" value={setup.storybook_cmd ?? ''} onChange={(e) => setSetup({ ...setup, storybook_cmd: e.target.value })} placeholder="cd web && pnpm storybook --no-open" /></label>
         <label style={{ gridColumn: '1 / -1' }}>Test command<input className="mono" value={setup.test_cmd ?? ''} onChange={(e) => setSetup({ ...setup, test_cmd: e.target.value })} placeholder="runs in the worktree on the merged commit; must exit 0 to land" /></label>
         <label>Model<input className="mono" value={setup.model ?? ''} onChange={(e) => setSetup({ ...setup, model: e.target.value })} placeholder="default: the agent's own" /></label>
         <label>Budget per run (USD)<input type="number" min={0} step={1} value={setup.max_budget_usd ?? ''} onChange={(e) => setSetup({ ...setup, max_budget_usd: num(e.target.value) })} placeholder="no cap" /></label>
