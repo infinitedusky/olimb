@@ -321,6 +321,12 @@ iCloud Private Relay's `mask.apple-dns.net`.
 
 ### Idea raised: apps as posts (Sandy, 2026-10-22)
 
+**Reframed (Sandy, later that day): "maybe a better framing is interactive posts."** Content with behaviour,
+not apps to run; a spectrum from a paragraph with one slider to a full tool, so the constrained format is the
+natural case. Precedent that matters: Distill shut down in 2021 because interactive articles cost too much to
+produce; the format never lacked readers. The factory removes the production cost; email stays a teaser + link.
+Idea file renamed to `ideas/interactive-posts.md`.
+
 "If self-evident is the best way to build apps, maybe we add a distribution layer that resembles Substack,
 where posts are not stories but apps. Apps become the way people express concepts." Captured as
 `ideas/apps-as-posts.md`: a feed where each post is a small app that shows itself; the factory's demonstration
