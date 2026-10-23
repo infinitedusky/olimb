@@ -47,6 +47,7 @@ export function builderGuard(worktreePath: string, readTools: string[], editTool
 export function readerGuard(readTools: string[]): Guard {
   return (tool, input) => {
     if (readTools.includes(tool)) return { allow: true }
+    if (tool === 'StructuredOutput') return { allow: true } // how the SDK hands in the planner's answer (outputFormat); it changes nothing
     if (tool === 'Bash' && READ_ONLY_BASH.test(String(input.command ?? ''))) return { allow: true }
     return { allow: false, reason: 'The planner reads; it changes nothing. Use Read, Glob, Grep, or a read-only git, ls, cat, head, tail, wc, find or tree command.' }
   }
