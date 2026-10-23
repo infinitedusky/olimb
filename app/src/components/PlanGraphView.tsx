@@ -7,7 +7,7 @@
  * reasons, runs and steps are props on the nodes, so live updates never jump.
  */
 import dagre from '@dagrejs/dagre'
-import { Background, Handle, type Node, type NodeProps, Panel, Position, ReactFlow, ReactFlowProvider, type Edge, MarkerType, useNodesState, useReactFlow } from '@xyflow/react'
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps, Background, Handle, type Node, type NodeProps, Panel, Position, ReactFlow, ReactFlowProvider, type Edge, MarkerType, useNodesState, useReactFlow } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useEffect, useMemo, useState } from 'react'
 import type { GraphFile, GraphPhase, PhaseStatus } from '../engine'
@@ -64,6 +64,28 @@ function FileNode({ data }: NodeProps<Node<FileNodeData>>) {
 }
 
 const nodeTypes = { phase: PhaseNode, file: FileNode }
+
+/** An arrow that says why on hover: the dependency or task order, and any files the two phases share. */
+function WhyEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd, style, data }: EdgeProps) {
+  const [path, labelX, labelY] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition })
+  const [hover, setHover] = useState(false)
+  const why = (data as { why?: string[] } | undefined)?.why ?? []
+  return (
+    <>
+      <BaseEdge id={id} path={path} markerEnd={markerEnd} style={{ ...style, ...(hover ? { stroke: 'var(--ink)', strokeWidth: 2 } : {}) }} />
+      <path d={path} fill="none" stroke="transparent" strokeWidth={16} style={{ pointerEvents: 'stroke', cursor: 'help' }}
+        onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} />
+      {hover && why.length > 0 && (
+        <EdgeLabelRenderer>
+          <div className="edge-why" style={{ transform: `translate(-50%, -100%) translate(${labelX}px, ${labelY - 8}px)` }}>
+            {why.map((w) => <div key={w}>{w}</div>)}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  )
+}
+const edgeTypes = { why: WhyEdge }
 const W = 240, H = 132 // tall enough for a two-line title, a held reason and the run line
 const FW = 170, FH = 40
 const fileId = (f: GraphFile) => `file:${f.path}`
@@ -109,7 +131,27 @@ export interface PlanGraphViewProps {
 }
 
 export function PlanGraphView({ phases, files = [], onSelect, selectedId, labels, tall, storageKey }: PlanGraphViewProps) {
-  const shared = useMemo(() => files.filter((f) => f.phases.filter((id) => phases.some((x) => x.id === id)).length > 1), [files, phases])
+  // A shared file is drawn only where it is what keeps phases from running side by side: between claimants that no
+  // path of arrows already orders. Where an arrow already connects them, the file is part of that arrow's why.
+  const ancestors = useMemo(() => {
+    const byId = new Map(phases.map((p) => [p.id, p]))
+    const memo = new Map<string, Set<string>>()
+    const up = (id: string): Set<string> => {
+      if (memo.has(id)) return memo.get(id)!
+      const out = new Set<string>(); memo.set(id, out)
+      for (const d of waitsOn(byId.get(id)!)) if (byId.has(d)) { out.add(d); for (const a of up(d)) out.add(a) }
+      return out
+    }
+    for (const p of phases) up(p.id)
+    return memo
+  }, [phases])
+  const ordered = (a: string, b: string) => !!ancestors.get(a)?.has(b) || !!ancestors.get(b)?.has(a)
+  const shared = useMemo(() => files.map((f) => {
+    const mine = f.phases.filter((id) => phases.some((x) => x.id === id))
+    const free = mine.filter((id) => mine.some((o) => o !== id && !ordered(id, o)))
+    return { ...f, phases: free, heldBy: f.heldBy && free.includes(f.heldBy) ? f.heldBy : null }
+  }).filter((f) => f.phases.length > 1), [files, phases, ancestors]) // eslint-disable-line react-hooks/exhaustive-deps
+  const filesBetween = (a: string, b: string) => files.filter((f) => f.phases.includes(a) && f.phases.includes(b)).map((f) => f.path.split('/').pop()!)
   const topology = [...phases.map((p) => `${p.id}:${waitsOn(p).join(',')}`), ...shared.map((f) => `${f.path}:${f.heldBy ?? ''}:${f.phases.join(',')}`)].join('|')
   const positions = useMemo(() => layout(phases, shared), [topology]) // eslint-disable-line react-hooks/exhaustive-deps
   // Nodes can be dragged; a dragged node keeps its place through live updates and re-layouts until "Tidy up".
@@ -142,7 +184,8 @@ export function PlanGraphView({ phases, files = [], onSelect, selectedId, labels
   }, [built, moved, setNodes])
   const edges: Edge[] = [
     ...phases.flatMap((p) => waitsOn(p).filter((d) => phases.some((x) => x.id === d)).map((d): Edge => ({
-      id: `${d}->${p.id}`, source: d, target: p.id, animated: LIVE.includes(p.status),
+      id: `${d}->${p.id}`, source: d, target: p.id, animated: LIVE.includes(p.status), type: 'why',
+      data: { why: whyEdge(phases.find((x) => x.id === d)!, p, filesBetween(d, p.id)) },
       markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: 'var(--ink-faint)' },
     }))),
     // The holder points at the file; the file points at everyone waiting on it. Nobody holding it: claimants hang off it, undecided.
@@ -155,7 +198,7 @@ export function PlanGraphView({ phases, files = [], onSelect, selectedId, labels
   return (
     <div className={`graph-canvas ${tall ? 'tall' : ''}`} data-component="PlanGraphView">
       <ReactFlowProvider>
-        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.2, maxZoom: 1 }} onNodesChange={onNodesChange}
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView fitViewOptions={{ padding: 0.2, maxZoom: 1 }} onNodesChange={onNodesChange}
           onNodeDragStop={(_, n) => { const next = { ...moved, [n.id]: n.position }; setMoved(next); saveMoved(storageKey, next) }}
           onNodeClick={(_, n) => { if (n.type === 'phase') onSelect?.((n.data as PhaseNodeData).phase) }} nodesConnectable={false} proOptions={{ hideAttribution: true }}
           panOnScroll zoomOnScroll={false} zoomActivationKeyCode="Meta" panOnDrag={false} selectionOnDrag={false} zoomOnPinch zoomOnDoubleClick={false}>
@@ -176,4 +219,11 @@ function FitOnChange({ topology }: { topology: string }) {
     return () => window.clearTimeout(id)
   }, [topology, fitView])
   return null
+}
+
+/** Why one phase waits on another, in words. */
+function whyEdge(from: GraphPhase, to: GraphPhase, shared: string[]): string[] {
+  const out = [to.dependsOn.includes(from.id) ? `#${to.number} builds on #${from.number}` : `#${to.number} starts after #${from.number}: its task comes later in the plan`]
+  if (shared.length) out.push(`both touch ${shared.slice(0, 3).join(', ')}${shared.length > 3 ? ` +${shared.length - 3}` : ''}`)
+  return out
 }
