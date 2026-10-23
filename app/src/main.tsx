@@ -19,6 +19,7 @@ import { Now } from './pages/Now'
 import { Learn } from './pages/Learn'
 import { Validate } from './pages/Validate'
 import { Mockups } from './pages/Mockups'
+import { Tasks } from './pages/Tasks'
 
 function IdeaRoute() {
   const idea = findIdea(useParams().slug ?? '')
@@ -36,6 +37,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/" element={<Now />} />
             <Route path="/learn" element={<Learn />} />
             <Route path="/plan" element={<Plans mode="plan" />} />
+            <Route path="/tasks" element={<Tasks />} />
             <Route path="/validate" element={<Validate />} />
             <Route path="/mockups" element={<Mockups />} />
             <Route path="/build" element={<Plans mode="build" />} />

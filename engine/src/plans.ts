@@ -4,9 +4,9 @@
  * dispatch pass. Task order is an implicit dependency: a phase in a later task starts only after every phase of
  * the earlier tasks has landed. Explicit dependencies and file claims come from the phases themselves.
  */
-import { and, asc, eq, inArray, notInArray, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, notInArray, sql } from 'drizzle-orm'
 import { db, type Tx } from './db/client.js'
-import { app, decision, idea, phase, phaseDependency, phaseFileClaim, plan, pr, question, run, step, task, type PhaseStatus } from './db/schema.js'
+import { app, decision, event, idea, phase, phaseDependency, phaseFileClaim, plan, pr, question, run, step, task, type PhaseStatus } from './db/schema.js'
 import { appendEvent } from './events.js'
 import { newId } from './ids.js'
 import { claimsOverlap, findCycle, pickTasksToStart, type SchedTask } from './scheduler.js'
@@ -318,6 +318,31 @@ export async function listPlans(opts: { all?: boolean; appId?: string } = {}) {
     taskCount: tasks.filter((t) => t.planId === p.id).length,
     phases: phases.filter((x) => x.planId === p.id).reduce<Record<string, number>>((acc, x) => ({ ...acc, [x.status]: (acc[x.status] ?? 0) + 1 }), {}),
   }))
+}
+
+/** Every task of an app's plans (superseded aside), with its plan, its phases by status, and where planning stands. */
+export async function listTasks(appId: string) {
+  const plans = (await db.select().from(plan).where(eq(plan.appId, appId))).filter((p) => p.status !== 'superseded')
+  const ids = plans.map((p) => p.id)
+  if (!ids.length) return []
+  const tasks = await db.select().from(task).where(inArray(task.planId, ids))
+  const phases = await db.select({ taskId: phase.taskId, status: phase.status }).from(phase).where(inArray(phase.planId, ids))
+  const taskIds = tasks.map((t) => t.id)
+  const planning = taskIds.length ? await db.select({ taskId: event.taskId, type: event.type, seq: event.seq }).from(event)
+    .where(and(inArray(event.taskId, taskIds), sql`${event.type} like 'task.plan%'`)).orderBy(desc(event.seq)) : []
+  const order = new Map(plans.map((p) => [p.id, p.createdAt.getTime()]))
+  return tasks
+    .sort((a, b) => (order.get(b.planId)! - order.get(a.planId)!) || a.position - b.position)
+    .map((t) => {
+      const p = plans.find((x) => x.id === t.planId)!
+      const mine = phases.filter((x) => x.taskId === t.id)
+      return {
+        id: t.id, number: t.number, title: t.title, description: t.description, position: t.position,
+        plan: { id: p.id, title: p.title, status: p.status },
+        phases: mine.reduce<Record<string, number>>((acc, x) => ({ ...acc, [x.status]: (acc[x.status] ?? 0) + 1 }), {}),
+        planning: planning.find((e) => e.taskId === t.id)?.type ?? null, // task.planning | task.plan_waiting | task.planned | task.plan_failed
+      }
+    })
 }
 
 /**

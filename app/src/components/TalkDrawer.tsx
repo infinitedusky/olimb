@@ -24,6 +24,7 @@ export function contextFor(pathname: string, search: string): TalkContext {
   if (pathname === '/plans/new') return { path: pathname, label: 'the plan composer' }
   if (pathname.startsWith('/plans') || pathname.startsWith('/plan')) return { path: pathname, label: 'Plan' }
   if (pathname.startsWith('/build')) return { path: pathname, label: 'Build' }
+  if (pathname.startsWith('/tasks')) return { path: pathname, label: 'the task list' }
   if (pathname.startsWith('/validate')) return { path: pathname, label: 'Validate' }
   if (pathname.startsWith('/mockups')) return { path: pathname, label: 'the mockups (Storybook)' }
   if (pathname.startsWith('/ideas')) return { path: pathname, label: 'Ideate (the inbox)' }
