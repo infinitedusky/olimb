@@ -56,7 +56,7 @@ export function NewPlan() {
 
   return (
     <>
-      <p className="mono"><Link to="/plan">← Plan</Link></p>
+      <p className="mono"><Link to="/plans">← Plans</Link></p>
       <div className="page-head"><h1>New plan</h1></div>
       <section className="panel">
         <div className="form-grid">

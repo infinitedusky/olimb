@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Route, Routes, useParams } from 'react-router'
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router'
 import './tokens.css'
 import './app.css'
 import { findIdea, ideas } from './ideas'
@@ -36,7 +36,8 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route path="/" element={<Now />} />
             <Route path="/learn" element={<Learn />} />
-            <Route path="/plan" element={<Plans mode="plan" />} />
+            <Route path="/plans" element={<Plans mode="plan" />} />
+            <Route path="/plan" element={<Navigate to="/plans" replace />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/validate" element={<Validate />} />
             <Route path="/mockups" element={<Mockups />} />

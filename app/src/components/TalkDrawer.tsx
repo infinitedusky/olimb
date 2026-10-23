@@ -22,7 +22,7 @@ export function contextFor(pathname: string, search: string): TalkContext {
   const app = new URLSearchParams(search).get('app') ?? undefined
   if (plan) return { path: pathname, planId: plan, label: 'this plan' }
   if (pathname === '/plans/new') return { path: pathname, label: 'the plan composer' }
-  if (pathname.startsWith('/plans') || pathname.startsWith('/plan')) return { path: pathname, label: 'Plan' }
+  if (pathname.startsWith('/plans')) return { path: pathname, label: 'the plans list' }
   if (pathname.startsWith('/build')) return { path: pathname, label: 'Build' }
   if (pathname.startsWith('/tasks')) return { path: pathname, label: 'the task list' }
   if (pathname.startsWith('/validate')) return { path: pathname, label: 'Validate' }

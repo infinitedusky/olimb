@@ -7,7 +7,7 @@ const STAGES: { to: string; icon: string; label: string; also?: RegExp; sub?: { 
   { to: '/', icon: '🔭', label: 'Observe' },
   { to: '/learn', icon: '🧠', label: 'Learn' },
   { to: '/ideas', icon: '💡', label: 'Ideate' },
-  { to: '/plan', icon: '📋', label: 'Plan', also: /^\/plans/, sub: [{ to: '/tasks', label: 'Tasks' }] },
+  { to: '/plans', icon: '📋', label: 'Plan', also: /^\/(plans|tasks)/, sub: [{ to: '/plans', label: 'Plans' }, { to: '/tasks', label: 'Tasks' }] },
   { to: '/validate', icon: '🧪', label: 'Validate', sub: [{ to: '/mockups', label: 'Mockups' }] },
   { to: '/build', icon: '🔨', label: 'Build', also: /^\/graph/, sub: [{ to: '/graph', label: 'Graph' }] },
 ]
@@ -28,7 +28,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <NavLink to={s.to} end={s.to === '/'} className={({ isActive }) => cls(isActive || !!s.also?.test(pathname))}>
               <span className="ico" aria-hidden="true">{s.icon}</span>{s.label}
             </NavLink>
-            {s.sub?.map((x) => <NavLink key={x.to} to={x.to} className={({ isActive }) => `link sub ${isActive ? 'active' : ''}`}>{x.label}</NavLink>)}
+            {s.sub?.map((x) => <NavLink key={x.to} to={x.to} end={false} className={({ isActive }) => `link sub ${isActive && !(x.to === '/plans' && pathname === '/plans/new') ? 'active' : ''}`}>{x.label}</NavLink>)}
           </div>
         ))}
         <div className="nav-rule" />
