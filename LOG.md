@@ -493,6 +493,18 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## Retry, pause, and losing the model (Sandy, 2026-10-23; PRs #32, #33)
+
+Before driving Corner Shop through the UI, Sandy asked for three controls. **Retry** a failed (or cancelled) phase:
+three more attempts, the builder told why the last failed; "from scratch" starts over from the plan's branch;
+retrying in a stopped plan resumes the plan. **Pause** a plan: nothing new starts, running agents stop but keep
+their worktrees and sessions, a phase that is landing finishes; **Resume** continues each from its session.
+**Losing the model is not a failure**: a run that dies on a rate limit, usage limit, overload, auth or network
+error gives its attempt back, its phase is queued "waiting for the model", and the engine holds all dispatch with
+backoff (1, 2, 5, 10, 15 minutes), resuming the same sessions when the model answers; Observe shows the hold with
+"Try now". All three are in the UI and available to the agent (retry_phase, pause_plan, resume_plan). Tests for
+each path; 51 in all.
+
 ## The test bench: Corner Shop (Sandy, 2026-10-23)
 
 Sandy: the bones are in place but it isn't functional; narrow down and make specific areas work, starting from

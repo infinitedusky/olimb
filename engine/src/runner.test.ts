@@ -147,6 +147,44 @@ describe.skipIf(!reachable)('runner', () => {
     await expect(runner.retryPhase(phases[0].id)).rejects.toThrow(/only a failed or cancelled/)
   })
 
+  it('losing the model is not a failure: the attempt is given back, the engine holds, and the phase resumes', async () => {
+    const { plan: p, phases } = await createPlan({ appId, title: 'outage', tasks: [one('T', [{ key: 'o', title: 'O', files: ['o.txt'] }])] })
+    let calls = 0
+    const runner = new Runner({ execute: async (i) => (++calls === 1 ? { status: 'failed', error: 'API Error: 529 overloaded_error' } : commits('o')(i)), sessionsMax: 2 })
+    await runner.startPlan(p.id)
+    await until(async () => !!runner.hold)
+    const held = (await planGraph(p.id))!.phases[0]
+    expect(held).toMatchObject({ status: 'queued', attempt: 0 })
+    expect(held.heldReason).toContain('waiting for the model')
+    await runner.releaseHold()
+    await until(cleaned(p.id))
+    expect((await planGraph(p.id))!.phases[0]).toMatchObject({ status: 'done', attempt: 1 })
+    const types = (await db.select().from(event).where(eq(event.phaseId, phases[0].id))).map((e) => e.type)
+    expect(types).toContain('engine.hold'); expect(types).not.toContain('phase.retry'); expect(types).not.toContain('phase.failed')
+  })
+
+  it('pause stops running agents without failing them; resume picks them up from their session', async () => {
+    const { plan: p, phases } = await createPlan({ appId, title: 'pause', tasks: [one('T', [{ key: 'q', title: 'Q', files: ['q.txt'] }])] })
+    const resumedWith: (string | undefined)[] = []
+    let first = true
+    const runner = new Runner({ execute: async (i) => {
+      resumedWith.push(i.resumeSessionId)
+      if (first) { first = false; await new Promise<void>((r) => i.abort?.signal.addEventListener('abort', () => r())); return { status: 'failed', error: 'aborted', agentSessionId: 'sess-pause' } }
+      return commits('q')(i)
+    }, sessionsMax: 2 })
+    await runner.startPlan(p.id)
+    await until(async () => (await planGraph(p.id))!.phases[0].status === 'running')
+    await db.update(run).set({ agentSessionId: 'sess-pause' }).where(eq(run.phaseId, phases[0].id))
+    await runner.pausePlan(p.id)
+    await until(async () => (await db.select().from(run).where(eq(run.phaseId, phases[0].id)))[0].status === 'interrupted')
+    expect((await planGraph(p.id))!).toMatchObject({ plan: { status: 'paused' } })
+    expect((await planGraph(p.id))!.phases[0]).toMatchObject({ status: 'queued', attempt: 1 })
+    await runner.resumePlan(p.id)
+    await until(cleaned(p.id))
+    expect((await planGraph(p.id))!.phases[0].status).toBe('done')
+    expect(resumedWith).toEqual([undefined, 'sess-pause'])
+  })
+
   it('stores the builder\'s todo list as the phase\'s steps, latest list wins', async () => {
     const { plan: p, phases } = await createPlan({ appId, title: 'steps', tasks: [one('T', [{ key: 's', title: 'S', files: ['s.txt'] }])] })
     const runner = new Runner({ execute: async (i) => {

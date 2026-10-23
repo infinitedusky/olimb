@@ -46,6 +46,13 @@ export function Now() {
         </div>
       </div>
 
+      {data.hold && (
+        <div className="hold-banner">
+          <strong>Waiting for the model.</strong> {data.hold.reason} <span className="faint">Nothing has failed; the phases it stopped will resume. Trying again at {new Date(data.hold.until).toTimeString().slice(0, 5)}.</span>
+          <button className="btn small" onClick={() => void engine.releaseHold()}>Try now</button>
+        </div>
+      )}
+
       <section className="panel">
         <h2>Needs you {data.needsYou.length > 0 && <Badge tone="warn">{data.needsYou.length}</Badge>}</h2>
         {data.needsYou.length === 0
