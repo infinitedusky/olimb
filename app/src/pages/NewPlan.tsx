@@ -7,11 +7,11 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { engine } from '../engine'
 import { useCurrentApp } from '../current-app'
 
-interface PhaseRow { key: string; title: string; brief: string; dependsOn: string[]; files: string }
-interface TaskRow { key: string; title: string; brief: string; phases: PhaseRow[] }
+interface PhaseRow { key: string; title: string; description: string; brief: string; dependsOn: string[]; files: string }
+interface TaskRow { key: string; title: string; description: string; brief: string; phases: PhaseRow[] }
 let seq = 0
-const blankPhase = (): PhaseRow => ({ key: `p${++seq}`, title: '', brief: '', dependsOn: [], files: '' })
-const blankTask = (): TaskRow => ({ key: `t${++seq}`, title: '', brief: '', phases: [] })
+const blankPhase = (): PhaseRow => ({ key: `p${++seq}`, title: '', description: '', brief: '', dependsOn: [], files: '' })
+const blankTask = (): TaskRow => ({ key: `t${++seq}`, title: '', description: '', brief: '', phases: [] })
 
 export function NewPlan() {
   const nav = useNavigate()
@@ -29,7 +29,7 @@ export function NewPlan() {
       const i = all.find((x) => x.id === ideaId)
       if (!i) return
       setAppId(i.appId); setTitle(i.title); setSpec(i.body ?? '')
-      setTasks([{ ...blankTask(), title: i.title, brief: i.body ?? '' }])
+      setTasks([{ ...blankTask(), title: i.title, description: i.body ?? '' }])
     }).catch(() => {})
   }, [ideaId, app?.id])
   useEffect(() => { if (app && !appId) setAppId(app.id) }, [app, appId])
@@ -42,9 +42,9 @@ export function NewPlan() {
     setBusy(true); setError(null)
     try {
       const body = tasks.filter((t) => t.title.trim()).map((t) => ({
-        title: t.title.trim(), brief: t.brief.trim() || undefined,
+        title: t.title.trim(), description: t.description.trim() || undefined, brief: t.brief.trim() || undefined,
         phases: t.phases.filter((p) => p.title.trim()).map((p) => ({
-          key: p.key, title: p.title.trim(), brief: p.brief.trim() || undefined, dependsOn: p.dependsOn,
+          key: p.key, title: p.title.trim(), description: p.description.trim() || undefined, brief: p.brief.trim() || undefined, dependsOn: p.dependsOn,
           files: p.files.split(',').map((f) => f.trim()).filter(Boolean),
         })),
       }))
@@ -75,7 +75,8 @@ export function NewPlan() {
               <button className="btn quiet" onClick={() => setTasks((ts) => ts.filter((_, j) => j !== ti))} aria-label="remove task">×</button></div>
             <div className="form-grid">
               <label>Title<input value={t.title} onChange={(e) => updateTask(ti, { title: e.target.value })} placeholder="Harden the POC" /></label>
-              <label style={{ gridColumn: '1 / -1' }}>Brief<textarea value={t.brief} onChange={(e) => updateTask(ti, { brief: e.target.value })} rows={3} placeholder="What should be true when this is done, what's wrong today, what to avoid. The planner reads this and the repo." /></label>
+              <label style={{ gridColumn: '1 / -1' }}>What will be different<textarea value={t.description} onChange={(e) => updateTask(ti, { description: e.target.value })} rows={2} placeholder="One to three plain sentences, for a person: what changes for the people using the app, and why. No file names." /></label>
+              <label style={{ gridColumn: '1 / -1' }}>Brief for the builder (optional)<textarea value={t.brief} onChange={(e) => updateTask(ti, { brief: e.target.value })} rows={3} placeholder="What should be true when this is done, what's wrong today, what to avoid. The planner reads this and the repo." /></label>
             </div>
             <div className="phase-list">
               {t.phases.map((p, pi) => (

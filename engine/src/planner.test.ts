@@ -19,10 +19,10 @@ try { await db.execute('select 1') } catch { reachable = false }
 
 const proposal: Proposal = {
   phases: [
-    { key: 'schema', title: 'Add the settings table', summary: 'A table for the gate schedule.', depends_on: [], files: ['poc/hg/db.py'],
+    { key: 'schema', title: 'Add the settings table', description: 'For a person.', summary: 'A table for the gate schedule.', depends_on: [], files: ['poc/hg/db.py'],
       steps: [{ text: 'Add the table', technical: 'db.py: CREATE TABLE settings' }, { text: 'Migrate on boot', technical: 'init_db()' }],
       checks: [{ statement: 'The app starts with a fresh database', command: 'pytest -q poc', expected: 'all passing' }], done_when: 'Settings persist across restarts.' },
-    { key: 'ui', title: 'Parent page edits the schedule', summary: 'A form.', depends_on: ['schema'], files: ['poc/hg/app.py', 'poc/hg/templates'],
+    { key: 'ui', title: 'Parent page edits the schedule', description: 'For a person.', summary: 'A form.', depends_on: ['schema'], files: ['poc/hg/app.py', 'poc/hg/templates'],
       steps: [{ text: 'Render the form', technical: '' }], checks: [], done_when: 'A parent can set the unlock period.' },
   ],
   decisions: [{ title: 'Where the schedule lives', chosen: 'A settings table in SQLite', rejected: ['Environment variables', 'A JSON file'], reason: 'It changes at runtime from the parent page.' }],
@@ -71,9 +71,10 @@ describe.skipIf(!reachable)('planner', () => {
     expect(ui.dependsOn).toEqual([schema.id])
     expect(ui.files).toEqual(['poc/hg/app.py', 'poc/hg/templates'])
     expect(schema.brief).toContain('A table for the gate schedule.')
-    expect(schema.brief).toContain('1. Add the table — db.py: CREATE TABLE settings')
-    expect(schema.brief).toContain('- The app starts with a fresh database (`pytest -q poc` → all passing)')
-    expect(schema.brief).toContain('Done when: Settings persist across restarts.')
+    expect(schema.brief).toContain('1. Add the table\n   - db.py: CREATE TABLE settings')
+    expect(schema.brief).toContain('- The app starts with a fresh database — `pytest -q poc` → all passing')
+    expect(schema.description).toBe('For a person.')
+    expect(schema.brief).toContain('**Done when:** Settings persist across restarts.')
     expect(schema.createdBy).toBe('planner')
 
     expect(g.decisions).toHaveLength(1)
@@ -123,7 +124,7 @@ describe.skipIf(!reachable)('planner', () => {
   })
 
   it('composes briefs and sets costs', () => {
-    expect(phaseBrief({ key: 'k', title: 't', summary: 'Just this.', depends_on: [], files: [], steps: [], checks: [], done_when: '' })).toBe('Just this.')
+    expect(phaseBrief({ key: 'k', title: 't', description: 'For a person.', summary: 'Just this.', depends_on: [], files: [], steps: [], checks: [], done_when: '' })).toBe('Just this.')
     expect(questionCost({ ...proposal.questions[1], cost: 'moderate' })).toBe('moderate')
     expect(questionCost({ ...proposal.questions[1], cost: 'cheap', options: [{ label: 'a', description: '', changes: ['gate'] }, { label: 'b', description: '', changes: [] }] })).toBe('expensive')
   })

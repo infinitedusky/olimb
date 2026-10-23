@@ -26,8 +26,8 @@ describe.skipIf(!reachable)('clearPhases', () => {
 
   it('removes the phases, their edges and claims, and the planner\'s decisions and questions', async () => {
     const propose: Propose = async () => ({ status: 'completed', costUsd: 0, proposal: {
-      phases: [{ key: 'a', title: 'A', summary: 's', depends_on: [], files: ['x.py'], steps: [], checks: [], done_when: '' },
-        { key: 'b', title: 'B', summary: 's', depends_on: ['a'], files: ['y.py'], steps: [], checks: [], done_when: '' }],
+      phases: [{ key: 'a', title: 'A', description: 'For a person.', summary: 's', depends_on: [], files: ['x.py'], steps: [], checks: [], done_when: '' },
+        { key: 'b', title: 'B', description: 'For a person.', summary: 's', depends_on: ['a'], files: ['y.py'], steps: [], checks: [], done_when: '' }],
       decisions: [{ title: 'd', chosen: 'c', rejected: [], reason: 'r' }],
       questions: [{ question: 'q?', options: [{ label: 'yes', description: '', changes: [] }, { label: 'no', description: '', changes: [] }], recommended: 'yes', reason: 'r', cost: 'cheap' }],
       notes: '',

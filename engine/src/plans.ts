@@ -11,8 +11,8 @@ import { appendEvent } from './events.js'
 import { newId } from './ids.js'
 import { claimsOverlap, findCycle, pickTasksToStart, type SchedTask } from './scheduler.js'
 
-export interface NewPhase { key: string; title: string; brief?: string; dependsOn?: string[]; files?: string[]; priority?: number }
-export interface NewTask { title: string; brief?: string; phases?: NewPhase[] }
+export interface NewPhase { key: string; title: string; description?: string; brief?: string; dependsOn?: string[]; files?: string[]; priority?: number }
+export interface NewTask { title: string; description?: string; brief?: string; phases?: NewPhase[] }
 export interface NewPlan { appId: string; title: string; spec?: string; ideaId?: string; tasks: NewTask[] }
 
 export class PlanError extends Error {}
@@ -42,13 +42,13 @@ export async function createPlan(input: NewPlan) {
     const [{ maxPhase }] = await tx.select({ maxPhase: sql<number>`coalesce(max(${phase.number}), 0)` }).from(phase).where(eq(phase.appId, a.id))
     let taskNumber = Number(maxTask), phaseNumber = Number(maxPhase)
     const taskRows = input.tasks.map((t, i) => ({
-      id: newId('task'), appId: a.id, planId, ideaId: input.ideaId ?? null, number: ++taskNumber, position: i, title: t.title, brief: t.brief ?? null,
+      id: newId('task'), appId: a.id, planId, ideaId: input.ideaId ?? null, number: ++taskNumber, position: i, title: t.title, description: t.description ?? null, brief: t.brief ?? null,
     }))
     await tx.insert(task).values(taskRows)
     const idByKey = new Map(allPhases.map((ph) => [ph.key, newId('phase')]))
     const phaseRows = allPhases.map((ph, i) => ({
       id: idByKey.get(ph.key)!, appId: a.id, planId, taskId: taskRows[ph.taskIndex].id, number: ++phaseNumber,
-      title: ph.title, brief: ph.brief ?? null, priority: ph.priority ?? 0, position: i,
+      title: ph.title, description: ph.description ?? null, brief: ph.brief ?? null, priority: ph.priority ?? 0, position: i,
     }))
     if (phaseRows.length) await tx.insert(phase).values(phaseRows)
     const deps = allPhases.flatMap((ph) => (ph.dependsOn ?? []).map((d) => ({ appId: a.id, phaseId: idByKey.get(ph.key)!, dependsOnPhaseId: idByKey.get(d)! })))
@@ -79,7 +79,7 @@ export async function addPhases(taskId: string, phases: NewPhase[], actor = 'eng
     let number = Number(maxPhase), position = Number(maxPos)
     const idByKey = new Map(phases.map((p) => [p.key, newId('phase')]))
     const rows = phases.map((p) => ({
-      id: idByKey.get(p.key)!, appId: a.id, planId: t.planId, taskId: t.id, number: ++number, title: p.title, brief: p.brief ?? null,
+      id: idByKey.get(p.key)!, appId: a.id, planId: t.planId, taskId: t.id, number: ++number, title: p.title, description: p.description ?? null, brief: p.brief ?? null,
       priority: p.priority ?? 0, position: ++position, createdBy: actor,
     }))
     await tx.insert(phase).values(rows)
