@@ -25,7 +25,7 @@ export function Tasks() {
   const reload = () => { if (app) engine.tasks(app.id).then(setRows).catch((e) => setError(String(e.message ?? e))) }
   useEffect(() => { setRows(null); reload() }, [app?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const plan = async (id: string) => { setBusy(id); try { await engine.planTask(id); reload() } catch (e: any) { setError(String(e.message ?? e)) } finally { setBusy(null) } }
-  const draft = (s: string) => ['drafting', 'proposed', 'approved'].includes(s)
+  const draft = (s: string) => !['landed', 'stopped', 'superseded'].includes(s) // a task can be planned until its plan is over
   return (
     <>
       <div className="page-head"><div>

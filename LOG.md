@@ -493,6 +493,18 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## A plan runs task by task (Sandy, 2026-10-23)
+
+Sandy: "we are operating a level off. Plans are a set of tasks. Those tasks have phases. The phases is where the
+graph execution lives. Phases have steps, which show up as 0/4." The engine still treated the plan as the thing that
+runs: a plan *landed* when every phase it had was done, so Corner Shop's plan would have landed (and opened its PR)
+after task 1, with tasks 2 and 3 never planned; and a running plan couldn't plan a task at all. Now a plan runs task
+by task: when every phase of the tasks before it has landed, the engine plans the next task itself (the planner
+reads the code that just landed), its phases join the graph and run, and the plan lands only when every task has
+phases and all have landed. A person can press Plan on a task in a running plan too. If planning a task fails, the
+engine doesn't retry on its own; the task shows it and a person re-plans. Test: task 1 lands, task 2 is planned once
+after it, runs, then the plan lands. Also, the nav: Plan is a section; Plans and Tasks sit under it (#38, #39).
+
 ## Retry, pause, and losing the model (Sandy, 2026-10-23; PRs #32, #33)
 
 Before driving Corner Shop through the UI, Sandy asked for three controls. **Retry** a failed (or cancelled) phase:

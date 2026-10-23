@@ -72,7 +72,7 @@ export function PlanPage() {
       <ol className="task-strip">
         {graph.tasks.map((t) => (
           <TaskChip key={t.id} task={t} phases={graph.phases.filter((p) => p.taskId === t.id)} planning={planning(t.id)} waiting={waitingForModel(t.id)}
-            onPlan={draft && !planning(t.id) ? () => act(() => engine.planTask(t.id)) : undefined}
+            onPlan={!['landed', 'stopped', 'superseded'].includes(graph.plan.status) && !planning(t.id) ? () => act(() => engine.planTask(t.id)) : undefined}
             onReplan={draft && !planning(t.id) ? () => { if (window.confirm('Remove this task\'s phases, decisions and questions and plan it again?')) void act(async () => { await engine.clearPhases(t.id); await engine.planTask(t.id) }) } : undefined}
             busy={busy} />
         ))}
