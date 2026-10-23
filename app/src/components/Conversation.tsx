@@ -1,7 +1,7 @@
 /**
  * One conversation with the factory's agent: the transcript (live over talk.* events), permission cards, the
  * input. Used in full on the Talk page and compact in the drawer that follows you around. Each message sent
- * carries where the person is (`context`), so "plan this" needs no explaining.
+ * carries where the person is (`context`), so "project this" needs no explaining.
  */
 import { useEffect, useRef, useState } from 'react'
 import { Badge } from './Badge'

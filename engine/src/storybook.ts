@@ -7,7 +7,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { eq } from 'drizzle-orm'
 import { db } from './db/client.js'
 import { app, repo } from './db/schema.js'
-import { PlanError } from './plans.js'
+import { PlanError } from './projects.js'
 
 const running = new Map<string, { proc: ChildProcess; startedAt: Date; log: string[] }>()
 

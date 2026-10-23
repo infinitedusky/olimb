@@ -18,17 +18,17 @@ export interface RiskContext { cwd: string; branch?: string | null } // branch: 
 
 const READ_TOOLS = new Set(['Read', 'Glob', 'Grep', 'LS', 'TodoWrite', 'WebFetch', 'WebSearch'])
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
-const ENGINE_FREE = new Set(['now', 'plans', 'plan_graph', 'ideas', 'events'])
+const ENGINE_FREE = new Set(['now', 'projects', 'project_graph', 'ideas', 'events'])
 const ENGINE: Record<string, [Risk, string]> = {
   create_idea: ['cheap', 'keeps an idea; easy to drop'],
-  create_plan: ['cheap', 'a draft plan; nothing runs'],
+  create_project: ['cheap', 'a draft project; nothing runs'],
   plan_task: ['moderate', 'runs the planner: minutes and money'],
   answer_question: ['moderate', "answers a question on the person's behalf"],
-  cancel_plan: ['moderate', 'stops running agents'],
+  cancel_project: ['moderate', 'stops running agents'],
   retry_phase: ['moderate', 'runs an agent again: minutes and money'],
-  pause_plan: ['cheap', 'stops agents, keeps their place; resume undoes it'],
-  resume_plan: ['moderate', 'runs agents again: minutes and money'],
-  start_plan: ['expensive', 'runs agents, spends money, opens a pull request'],
+  pause_project: ['cheap', 'stops agents, keeps their place; resume undoes it'],
+  resume_project: ['moderate', 'runs agents again: minutes and money'],
+  start_project: ['expensive', 'runs agents, spends money, opens a pull request'],
 }
 
 const RO = /^\s*(git\s+(status|log|diff|show|blame|ls-files|rev-parse|branch(\s+(-a|-r|--list|-v+))?|remote\s+-v|worktree\s+list|stash\s+list)|ls|cat|head|tail|wc|grep|rg|find|tree|pwd|echo|which|env|printenv|node\s+-v|pnpm\s+-v|npm\s+-v|python3?\s+--version|uname|date|whoami|du|df|stat|file|jq|sed\s+-n|awk|sort|uniq|cut|tr|diff|curl\s+-s\S*\s+(https?:\/\/)?(localhost|127\.0\.0\.1))\b/

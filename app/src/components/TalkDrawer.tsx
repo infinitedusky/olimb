@@ -1,6 +1,6 @@
 /**
  * The agent, on every page: a panel on the right that follows you around, opened with the floating button or ⌘J.
- * Several conversations at once, as tabs: each is pinned to what it started on (a plan, an idea, or the first
+ * Several conversations at once, as tabs: each is pinned to what it started on (a project, an idea, or the first
  * thing said), works in its own worktree on its own branch, and keeps going while you move around the site.
  * Every message still carries the page you are on.
  */
@@ -18,11 +18,11 @@ let popup: Window | null = null
 
 /** Where the person is, from the route: enough for the agent to look the rest up. */
 export function contextFor(pathname: string, search: string): TalkContext {
-  const plan = pathname.match(/^\/plans\/(plan_[A-Za-z0-9_-]+)/)?.[1]
+  const project = pathname.match(/^\/projects\/(plan_[A-Za-z0-9_-]+)/)?.[1]
   const app = new URLSearchParams(search).get('app') ?? undefined
-  if (plan) return { path: pathname, planId: plan, label: 'this plan' }
-  if (pathname === '/plans/new') return { path: pathname, label: 'the plan composer' }
-  if (pathname.startsWith('/plans')) return { path: pathname, label: 'the plans list' }
+  if (project) return { path: pathname, projectId: project, label: 'this project' }
+  if (pathname === '/projects/new') return { path: pathname, label: 'the project composer' }
+  if (pathname.startsWith('/projects')) return { path: pathname, label: 'the projects list' }
   if (pathname.startsWith('/build')) return { path: pathname, label: 'Build' }
   if (pathname.startsWith('/tasks')) return { path: pathname, label: 'the task list' }
   if (pathname.startsWith('/validate')) return { path: pathname, label: 'Validate' }
@@ -73,7 +73,7 @@ export function TalkDrawer({ standalone = false }: { standalone?: boolean }) {
     if (recall(POPPED_KEY) === '1') { alive.current = false; ch.postMessage({ type: 'ping' } satisfies Msg); window.setTimeout(() => { if (!alive.current) { setPopped(false); remember(POPPED_KEY, '0') } }, 800) }
     ch.onmessage = (e: MessageEvent<Msg>) => { if (e.data.type === 'hello') { alive.current = true; send(); setPopped(true); remember(POPPED_KEY, '1') } if (e.data.type === 'closed') { setPopped(false); remember(POPPED_KEY, '0') } }
     return () => ch.close()
-  }, [standalone, local.path, local.planId, app?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [standalone, local.path, local.projectId, app?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const popOut = () => {
     popup = window.open(`${window.location.origin}/agent`, 'self-evident-agent', 'popup,width=520,height=900')
     if (!popup) { setProblem('The browser blocked the new window. Allow pop-ups for this site, or keep the agent here.'); return }
@@ -100,7 +100,7 @@ export function TalkDrawer({ standalone = false }: { standalone?: boolean }) {
     if (!app) { setProblem('Pick an app in the nav, or add one in Settings. A conversation belongs to an app.'); return }
     setStarting(true); setProblem(null)
     try {
-      const s = await engine.startTalk({ appId: app.id, subjectRef: { planId: context.planId, path: context.path } })
+      const s = await engine.startTalk({ appId: app.id, subjectRef: { projectId: context.projectId, path: context.path } })
       await reload(); pick(s.id)
     } catch (e: any) { setProblem(String(e.message ?? e)) } finally { setStarting(false) }
   }
@@ -131,7 +131,7 @@ export function TalkDrawer({ standalone = false }: { standalone?: boolean }) {
             {s.busy && <span className="dot" />}{label(s)}
           </button>
         ))}
-        <button className="talk-tab new" disabled={starting} onClick={start} title={app ? `New conversation about ${app.name}${context.planId ? ', pinned to this plan' : ''}` : 'Pick an app first'}>+</button>
+        <button className="talk-tab new" disabled={starting} onClick={start} title={app ? `New conversation about ${app.name}${context.projectId ? ', pinned to this project' : ''}` : 'Pick an app first'}>+</button>
         {standalone
           ? <button className="talk-tab close" onClick={backIn} title="Put the agent back in the page">↙</button>
           : <><button className="talk-tab pop" onClick={popOut} title="Open the agent in its own window">↗</button><button className="talk-tab close" onClick={() => setOpenKeep(false)} title="Close (⌘J)">×</button></>}
@@ -147,7 +147,7 @@ export function TalkDrawer({ standalone = false }: { standalone?: boolean }) {
           </div>
           <div className="faint" style={{ fontSize: 12, padding: '0 12px 6px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <span>{appName(current)}{current.branch ? ` · ${current.branch}` : ''}</span>
-            {current.subjectRef?.planId && <Link to={`/plans/${current.subjectRef.planId}`}>open its plan</Link>}
+            {current.subjectRef?.projectId && <Link to={`/projects/${current.subjectRef.projectId}`}>open its project</Link>}
             <span>· looking at {context.label}</span>
           </div>
           {problem && <div className="faint" style={{ fontSize: 12, padding: '0 12px 6px', color: 'var(--warn)' }}>{problem}</div>}
@@ -155,7 +155,7 @@ export function TalkDrawer({ standalone = false }: { standalone?: boolean }) {
         </>
       ) : (
         <div style={{ padding: 16 }}>
-          <p className="muted" style={{ marginTop: 0 }}>No conversation open. Press <strong>+</strong> to start one about {app?.name ?? 'an app'}{context.planId ? ', pinned to this plan' : ''}. It gets its own worktree and branch; you can have several at once and switch with the tabs.</p>
+          <p className="muted" style={{ marginTop: 0 }}>No conversation open. Press <strong>+</strong> to start one about {app?.name ?? 'an app'}{context.projectId ? ', pinned to this project' : ''}. It gets its own worktree and branch; you can have several at once and switch with the tabs.</p>
           {problem && <div className="empty bad">{problem}</div>}
         </div>
       )}

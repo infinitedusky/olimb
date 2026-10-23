@@ -15,13 +15,13 @@ import { db, pool } from './db/client.js'
 import { app as appTable, PHASE_STATUSES, repo as repoTable, workspace, type PhaseStatus } from './db/schema.js'
 import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
-import { createIdea, listIdeas, planFromIdea } from './ideas.js'
+import { createIdea, listIdeas, projectFromIdea } from './ideas.js'
 import { answerPermission, closeTalks, endTalk, interruptTalk, listTalks, renameTalk, say, setAutoApprove, startTalk, talkTranscript, type SubjectRef, type TalkContext } from './talk.js'
-import { describePlan } from './describe.js'
+import { describeProject } from './describe.js'
 import { now } from './now.js'
 import { startStorybook, stopStorybooks, storybookStatus } from './storybook.js'
 import { answerQuestion, finishPlanning, preparePlanning, recoverPlanning } from './planner.js'
-import { listTasks, addPhases, appGraph, clearPhases, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
+import { listTasks, addPhases, appGraph, clearPhases, createProject, listProjects, PlanError, projectGraph, setPhaseStatus, tick } from './projects.js'
 import { runner } from './runner.js'
 
 export const SESSIONS_MAX = Number(process.env.SESSIONS_MAX ?? 4)
@@ -36,20 +36,20 @@ export function buildApp(bus: EventBus) {
 
   api.get('/', (c) => c.json({
     engine: 'Self Evident',
-    model: 'idea → plan (tasks in order) → task (title + brief) → phase (one agent, one worktree, one commit) → step (the builder\'s todo list)',
+    model: 'idea → project (tasks in order) → task (title + brief) → phase (one agent, one worktree, one commit) → step (the builder\'s todo list)',
     routes: {
       'GET /health': 'database reachable?',
       'POST /workspaces': '{name}', 'POST /apps': '{workspaceId, name, defaultBranch?, setup?}', 'POST /repos': '{appId, fullName, localPath?, baseBranch?}',
       'GET /apps': 'all apps, each with its repos', 'PATCH /apps/:id': '{name?, defaultBranch?, setup?}', 'PATCH /repos/:id': '{fullName?, localPath?, baseBranch?}', 'GET /workspaces': 'all workspaces',
-      'GET /apps/:id/graph': 'the top-level graph: every phase of every plan in the app', 'GET /now': 'the front door: running, needs you, recent',
-      'POST /plans': '{appId, title, spec?, tasks: [{title, brief?, phases?: [{key, title, brief?, dependsOn?, files?}]}]}',
-      'GET /plans': 'all plans with counts', 'GET /plans/:id/graph': 'tasks in order, phases with edges, claims, held reasons, last run, steps, the PR',
+      'GET /apps/:id/graph': 'the top-level graph: every phase of every project in the app', 'GET /now': 'the front door: running, needs you, recent',
+      'POST /projects': '{appId, title, spec?, tasks: [{title, brief?, phases?: [{key, title, brief?, dependsOn?, files?}]}]}',
+      'GET /projects': 'all projects with counts', 'GET /projects/:id/graph': 'tasks in order, phases with edges, claims, held reasons, last run, steps, the PR',
       'POST /tasks/:id/phases': '[{key, title, brief?, dependsOn?, files?}] — add phases to a task by hand',
-      'POST /tasks/:id/plan?wait=1': 'the planner: the task\'s brief → phases, decisions, questions (one read-only agent run); 202 at once, or wait',
+      'POST /tasks/:id/project?wait=1': 'the planner: the task\'s brief → phases, decisions, questions (one read-only agent run); 202 at once, or wait',
       'POST /questions/:id/answer': '{answer}',
-      'POST /plans/:id/start': 'run it: worktrees, agent runs, landing, PR', 'POST /plans/:id/tick?room=N': 'one dispatch pass for a draft (no launching)',
+      'POST /projects/:id/start': 'run it: worktrees, agent runs, landing, PR', 'POST /projects/:id/tick?room=N': 'one dispatch pass for a draft (no launching)',
       'POST /phases/:id/status': '{status} — by hand, for drafts',
-      'GET /events?since=SEQ&app=&plan=&task=&phase=': 'SSE: replay from SEQ, then live',
+      'GET /events?since=SEQ&app=&project=&task=&phase=': 'SSE: replay from SEQ, then live',
     },
     cli: 'pnpm if --help  (engine/README.md)',
   }))
@@ -127,29 +127,29 @@ export function buildApp(bus: EventBus) {
   })
   api.post('/talks/:id/end', async (c) => c.json(await endTalk(c.req.param('id'))))
 
-  // The inbox: capture an idea in a moment; make it a plan when its time comes.
+  // The inbox: capture an idea in a moment; make it a project when its time comes.
   api.get('/ideas', async (c) => { const a = c.req.query('app'); return a ? c.json(await listIdeas(a)) : c.json({ error: 'app is required: one app at a time' }, 400) })
   api.post('/ideas', async (c) => {
     try { return c.json(await createIdea({ ...(await c.req.json()), actor: 'user' }), 201) } catch (err) { return planError(c, err) }
   })
-  api.post('/ideas/:id/plan', async (c) => {
+  api.post('/ideas/:id/project', async (c) => {
     const body = await c.req.json<{ tasks?: { title: string; brief?: string }[] }>().catch(() => ({} as { tasks?: { title: string; brief?: string }[] }))
-    try { return c.json(await planFromIdea(c.req.param('id'), body.tasks), 201) } catch (err) { return planError(c, err) }
+    try { return c.json(await projectFromIdea(c.req.param('id'), body.tasks), 201) } catch (err) { return planError(c, err) }
   })
 
   api.get('/tasks', async (c) => { const a = c.req.query('app'); return a ? c.json(await listTasks(a)) : c.json({ error: 'app is required: one app at a time' }, 400) })
-  api.get('/plans', async (c) => { const a = c.req.query('app'); return a ? c.json(await listPlans({ all: c.req.query('all') === '1', appId: a })) : c.json({ error: 'app is required: one app at a time' }, 400) })
-  api.post('/plans', async (c) => {
-    try { return c.json(await createPlan(await c.req.json()), 201) } catch (err) { return planError(c, err) }
+  api.get('/projects', async (c) => { const a = c.req.query('app'); return a ? c.json(await listProjects({ all: c.req.query('all') === '1', appId: a })) : c.json({ error: 'app is required: one app at a time' }, 400) })
+  api.post('/projects', async (c) => {
+    try { return c.json(await createProject(await c.req.json()), 201) } catch (err) { return planError(c, err) }
   })
-  api.get('/plans/:id/graph', async (c) => {
-    const g = await planGraph(c.req.param('id'))
-    return g ? c.json(g) : c.json({ error: 'no such plan' }, 404)
+  api.get('/projects/:id/graph', async (c) => {
+    const g = await projectGraph(c.req.param('id'))
+    return g ? c.json(g) : c.json({ error: 'no such project' }, 404)
   })
-  api.post('/plans/:id/start', async (c) => {
-    try { return c.json(await runner.startPlan(c.req.param('id'))) } catch (err) { return planError(c, err) }
+  api.post('/projects/:id/start', async (c) => {
+    try { return c.json(await runner.startProject(c.req.param('id'))) } catch (err) { return planError(c, err) }
   })
-  api.post('/plans/:id/tick', async (c) => {
+  api.post('/projects/:id/tick', async (c) => {
     const room = Number(c.req.query('room') ?? SESSIONS_MAX)
     try { return c.json(await tick(c.req.param('id'), room)) } catch (err) { return planError(c, err, 404) }
   })
@@ -160,19 +160,19 @@ export function buildApp(bus: EventBus) {
   api.delete('/tasks/:id/phases', async (c) => { // a draft task back to its brief, so it can be planned again
     try { return c.json(await clearPhases(c.req.param('id'), 'user')) } catch (err) { return planError(c, err) }
   })
-  api.post('/plans/:id/describe', async (c) => { // plain descriptions for tasks and phases that have none
-    try { return c.json(await describePlan(c.req.param('id'))) } catch (err) { return planError(c, err) }
+  api.post('/projects/:id/describe', async (c) => { // plain descriptions for tasks and phases that have none
+    try { return c.json(await describeProject(c.req.param('id'))) } catch (err) { return planError(c, err) }
   })
-  api.post('/plans/:id/cancel', async (c) => {
-    try { return c.json(await runner.cancelPlan(c.req.param('id'))) } catch (err) { return planError(c, err, 404) }
+  api.post('/projects/:id/cancel', async (c) => {
+    try { return c.json(await runner.cancelProject(c.req.param('id'))) } catch (err) { return planError(c, err, 404) }
   })
 
   // The planner takes minutes: by default the request returns at once and the outcome arrives on the event stream
   // (task.planned or task.plan_failed, then the graph has the phases); ?wait=1 holds the request until it is done.
-  api.post('/tasks/:id/plan', async (c) => {
+  api.post('/tasks/:id/project', async (c) => {
     let ctx
     try { ctx = await preparePlanning(c.req.param('id'), { actor: 'user' }) } catch (err) { return planError(c, err) }
-    const onPlanned = () => void runner.dispatch() // phases planned into a running plan start right away
+    const onPlanned = () => void runner.dispatch() // phases planned into a running project start right away
     if (c.req.query('wait') === '1') { const out = await finishPlanning(ctx, { onPlanned }); return c.json(out, out.status === 'completed' ? 200 : 500) }
     void finishPlanning(ctx, { onPlanned })
     return c.json({ runId: ctx.runId }, 202)
@@ -183,12 +183,12 @@ export function buildApp(bus: EventBus) {
     try { return c.json(await answerQuestion(c.req.param('id'), answer, 'user')) } catch (err) { return planError(c, err, 404) }
   })
 
-  // By-hand transitions: how a person drives a draft's graph. The executor owns running plans.
-  api.post('/plans/:id/pause', async (c) => { try { return c.json(await runner.pausePlan(c.req.param('id'))) } catch (err) { return planError(c, err) } })
-  api.post('/plans/:id/resume', async (c) => { try { return c.json(await runner.resumePlan(c.req.param('id'))) } catch (err) { return planError(c, err) } })
+  // By-hand transitions: how a person drives a draft's graph. The executor owns running projects.
+  api.post('/projects/:id/pause', async (c) => { try { return c.json(await runner.pauseProject(c.req.param('id'))) } catch (err) { return planError(c, err) } })
+  api.post('/projects/:id/resume', async (c) => { try { return c.json(await runner.resumeProject(c.req.param('id'))) } catch (err) { return planError(c, err) } })
   api.get('/engine', (c) => c.json({ hold: runner.hold })) // is the engine waiting for the model?
   api.post('/engine/release', async (c) => c.json(await runner.releaseHold())) // try the model now
-  api.post('/phases/:id/retry', async (c) => { // a failed or cancelled phase gets three more attempts; {fresh: true} starts over from the plan's branch
+  api.post('/phases/:id/retry', async (c) => { // a failed or cancelled phase gets three more attempts; {fresh: true} starts over from the project's branch
     const body = await c.req.json<{ fresh?: boolean }>().catch(() => ({} as { fresh?: boolean }))
     try { return c.json(await runner.retryPhase(c.req.param('id'), { fresh: !!body.fresh })) } catch (err) { return planError(c, err) }
   })
@@ -201,7 +201,7 @@ export function buildApp(bus: EventBus) {
   // The live feed: replay from ?since=<seq>, then stream as events are committed.
   api.get('/events', (c) => {
     const since = Number(c.req.query('since') ?? 0)
-    const filter = { workspaceId: c.req.query('workspace'), appId: c.req.query('app'), planId: c.req.query('plan'), taskId: c.req.query('task'), phaseId: c.req.query('phase') }
+    const filter = { workspaceId: c.req.query('workspace'), appId: c.req.query('app'), projectId: c.req.query('project'), taskId: c.req.query('task'), phaseId: c.req.query('phase') }
     return streamSSE(c, async (stream) => {
       let last = since
       let sending: Promise<void> = Promise.resolve()
@@ -243,8 +243,8 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()
   await bus.start()
   const recovered = await runner.recover()
   const stranded = await recoverPlanning()
-  if (stranded) console.log(`[engine] ${stranded} planner run(s) interrupted by the restart; plan those tasks again`)
-  if (recovered.plans || recovered.phases || recovered.reaped) console.log('recovered:', JSON.stringify(recovered))
+  if (stranded) console.log(`[engine] ${stranded} planner run(s) interrupted by the restart; project those tasks again`)
+  if (recovered.projects || recovered.phases || recovered.reaped) console.log('recovered:', JSON.stringify(recovered))
   const port = Number(process.env.PORT ?? 4000)
   serve({ fetch: buildApp(bus).fetch, port }, (info) => console.log(`engine listening on http://localhost:${info.port}  (API under /api; UI at / when built)`))
   const shutdown = async () => { stopStorybooks(); closeTalks(); await runner.shutdown(); await bus.stop(); await pool.end(); process.exit(0) }

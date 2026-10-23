@@ -1,6 +1,6 @@
 /**
- * Landing: parallel work, serial landing. A finished task is merged with the plan's integration branch, tested on
- * the merged commit, and fast-forwarded onto the integration branch — one task at a time per plan.
+ * Landing: parallel work, serial landing. A finished task is merged with the project's integration branch, tested on
+ * the merged commit, and fast-forwarded onto the integration branch — one task at a time per project.
  * (InDusk run-the-graph D5/D6; the data on agent PR conflicts says keep writes single-threaded.)
  */
 import { spawn } from 'node:child_process'
@@ -19,7 +19,7 @@ export type LandResult = { ok: true; sha: string } | { ok: false; stage: 'merge'
 
 const locks = new Map<string, Promise<unknown>>()
 
-/** Serialize work per key (a plan): the next landing waits for the previous one. */
+/** Serialize work per key (a project): the next landing waits for the previous one. */
 export function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
   const prev = locks.get(key) ?? Promise.resolve()
   const next = prev.then(fn, fn)

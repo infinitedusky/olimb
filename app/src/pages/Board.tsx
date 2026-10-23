@@ -1,5 +1,5 @@
 /**
- * Ideas: the inbox first (rows in the engine: type it, it's kept; make it a plan when its time comes), then the
+ * Ideas: the inbox first (rows in the engine: type it, it's kept; make it a project when its time comes), then the
  * design-phase idea files below, as they were.
  */
 import { useEffect, useState } from 'react'
@@ -8,7 +8,7 @@ import type { Idea } from '../ideas'
 import { LANES } from '../ideas'
 import { Badge } from '../components/Badge'
 import { LaneColumn } from '../components/LaneColumn'
-import { engine, type IdeaRow, type PlanSummary } from '../engine'
+import { engine, type IdeaRow, type ProjectSummary } from '../engine'
 import { useCurrentApp } from '../current-app'
 
 export function Board({ ideas }: { ideas: Idea[] }) {
@@ -16,12 +16,12 @@ export function Board({ ideas }: { ideas: Idea[] }) {
   const { apps, app } = useCurrentApp()
   const appId = app?.id ?? ''
   const [rows, setRows] = useState<IdeaRow[] | null>(null)
-  const [plans, setPlans] = useState<PlanSummary[]>([])
+  const [projects, setPlans] = useState<ProjectSummary[]>([])
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
-  const reload = () => Promise.all([engine.ideas(appId || undefined), engine.plans(appId || undefined)]).then(([i, p]) => { setRows(i); setPlans(p) }).catch((e) => setError(String(e.message ?? e)))
+  const reload = () => Promise.all([engine.ideas(appId || undefined), engine.projects(appId || undefined)]).then(([i, p]) => { setRows(i); setPlans(p) }).catch((e) => setError(String(e.message ?? e)))
   useEffect(() => { setRows(null); setPlans([]); if (appId) void reload() }, [appId]) // eslint-disable-line react-hooks/exhaustive-deps
   const add = async () => {
     if (!title.trim() || !appId) return
@@ -30,9 +30,9 @@ export function Board({ ideas }: { ideas: Idea[] }) {
   }
   const makePlan = async (id: string) => {
     setBusy(id)
-    try { const { plan } = await engine.planIdea(id); nav(`/plans/${plan.id}`) } catch (e: any) { setError(String(e.message ?? e)); setBusy(null) }
+    try { const { project } = await engine.planIdea(id); nav(`/projects/${project.id}`) } catch (e: any) { setError(String(e.message ?? e)); setBusy(null) }
   }
-  const planOf = (i: IdeaRow) => plans.find((p) => p.ideaId === i.id)
+  const projectOf = (i: IdeaRow) => projects.find((p) => p.ideaId === i.id)
   const notes = ideas.filter((i) => i.app === app?.name) // the files are labelled with the app they are about
   const inbox = (rows ?? []).filter((r) => r.lane === 'inbox')
   const planned = (rows ?? []).filter((r) => r.lane !== 'inbox')
@@ -42,7 +42,7 @@ export function Board({ ideas }: { ideas: Idea[] }) {
       <div className="page-head">
         <div>
           <h1>💡 Ideate{app ? <span className="muted" style={{ fontWeight: 400 }}> · {app.name}</span> : null}</h1>
-          <p className="muted" style={{ margin: '4px 0 0' }}>Type it, it's kept. When its time comes, it becomes one task, or a plan of several.</p>
+          <p className="muted" style={{ margin: '4px 0 0' }}>Type it, it's kept. When its time comes, it becomes one task, or a project of several.</p>
         </div>
         <span className="mono faint">{inbox.length} in the inbox</span>
       </div>
@@ -67,15 +67,15 @@ export function Board({ ideas }: { ideas: Idea[] }) {
                 <div><strong>{i.title}</strong>{i.body && <div className="muted" style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{i.body}</div>}
                   <div className="faint" style={{ fontSize: 12 }}>{apps.find((a) => a.id === i.appId)?.name}</div></div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="btn small" disabled={busy === i.id} onClick={() => makePlan(i.id)} title="A plan of one task: this title, this brief">Make it a task</button>
-                  <Link className="btn quiet small" to={`/plans/new?idea=${i.id}`} title="A plan of several tasks, in order">Break it down</Link>
+                  <button className="btn small" disabled={busy === i.id} onClick={() => makePlan(i.id)} title="A project of one task: this title, this brief">Make it a task</button>
+                  <Link className="btn quiet small" to={`/projects/new?idea=${i.id}`} title="A project of several tasks, in order">Break it down</Link>
                 </div>
               </li>
             ))}
           </ul>
         )}
         {planned.length > 0 && (
-          <p className="faint" style={{ margin: '12px 0 0', fontSize: 13 }}>Planned: {planned.map((i) => { const p = planOf(i); return p ? <span key={i.id}><Link to={`/plans/${p.id}`}>{i.title}</Link> <Badge>{p.status}</Badge> </span> : <span key={i.id}>{i.title} </span> })}</p>
+          <p className="faint" style={{ margin: '12px 0 0', fontSize: 13 }}>Planned: {planned.map((i) => { const p = projectOf(i); return p ? <span key={i.id}><Link to={`/projects/${p.id}`}>{i.title}</Link> <Badge>{p.status}</Badge> </span> : <span key={i.id}>{i.title} </span> })}</p>
         )}
       </section>
 

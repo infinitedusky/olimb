@@ -1,13 +1,13 @@
 /**
- * Ideas: the inbox. An idea is a title and a body, captured in a moment; it becomes one task (a plan of one) or a
- * plan of several. Nothing is lost: an idea that never becomes a plan stays in the inbox with its lane.
+ * Ideas: the inbox. An idea is a title and a body, captured in a moment; it becomes one task (a project of one) or a
+ * project of several. Nothing is lost: an idea that never becomes a project stays in the inbox with its lane.
  */
 import { desc, eq, sql } from 'drizzle-orm'
 import { db } from './db/client.js'
 import { app, idea } from './db/schema.js'
 import { appendEvent } from './events.js'
 import { newId } from './ids.js'
-import { createPlan, PlanError } from './plans.js'
+import { createProject, PlanError } from './projects.js'
 
 export const listIdeas = (appId?: string) => (appId ? db.select().from(idea).where(eq(idea.appId, appId)) : db.select().from(idea)).orderBy(desc(idea.number))
 
@@ -25,11 +25,11 @@ export async function createIdea(input: { appId: string; title: string; body?: s
   })
 }
 
-/** An idea becomes a plan: one task by default (the idea's title, its body as the brief), or the tasks given. */
-export async function planFromIdea(ideaId: string, tasks?: { title: string; brief?: string }[]) {
+/** An idea becomes a project: one task by default (the idea's title, its body as the brief), or the tasks given. */
+export async function projectFromIdea(ideaId: string, tasks?: { title: string; brief?: string }[]) {
   const [i] = await db.select().from(idea).where(eq(idea.id, ideaId))
   if (!i) throw new PlanError(`no idea ${ideaId}`)
-  return createPlan({ // createPlan moves the idea to the 'build' lane
+  return createProject({ // createProject moves the idea to the 'build' lane
     appId: i.appId, title: i.title, spec: i.body ?? undefined, ideaId: i.id,
     tasks: tasks?.length ? tasks : [{ title: i.title, brief: i.body ?? undefined }],
   })

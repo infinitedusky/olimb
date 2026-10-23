@@ -1,12 +1,12 @@
 /**
  * The engine's schema. Git holds code; this holds all state; the engine is the single writer.
  * From research/parallel-engine.md §5: [LS] Lightsprint-derived, [ID] InDusk run-the-graph, [IF] ours.
- * Hierarchy: idea → plan (tasks in order) → task (authored: title + brief) → phase (the atomic unit the engine runs)
+ * Hierarchy: idea → project (tasks in order) → task (authored: title + brief) → phase (the atomic unit the engine runs)
  * → step (the builder's own todo list while it builds a phase).
  * IDs are prefixed short strings (ids.ts). State tables are the truth; `event` is the append-only log and live feed.
  *
  * Every row below an app carries `app_id`, required, and a composite foreign key ties it to its parent's app
- * (`(plan_id, app_id) → plan(id, app_id)`), so a row can never claim a different app than the thing it belongs
+ * (`(project_id, app_id) → project(id, app_id)`), so a row can never claim a different app than the thing it belongs
  * to. Scoping is then `where app_id = ?` everywhere, with `(app_id, …)` indexes; row-level security per workspace
  * can sit on top when there is more than one person.
  */
@@ -90,38 +90,38 @@ export const evidence = pgTable('evidence', { // [IF] append-only telemetry resu
 }, (t) => [index('evidence_app').on(t.appId), inList('evidence_kind', t.kind, ['baseline', 'finding', 'verdict', 'guard', 'post_ship']),
   foreignKey({ name: 'evidence_idea_app_fk', columns: [t.ideaId, t.appId], foreignColumns: [idea.id, idea.appId] })])
 
-export const plan = pgTable('plan', { // a group of tasks in order (an InDusk master plan); the branch and PR unit
+export const project = pgTable('project', { // a group of tasks in order (an InDusk master plan); the branch and PR unit
   id: id(), appId: appId(), ideaId: text('idea_id').references(() => idea.id),
   title: text('title').notNull(), status: text('status').notNull().default('drafting'),
-  integrationBranch: text('integration_branch'), // [ID] the plan's branch; tasks land here, only it reaches trunk
+  integrationBranch: text('integration_branch'), // [ID] the project's branch; tasks land here, only it reaches trunk
   spec: text('spec'), createdAt: createdAt(),
-}, (t) => [uniqueIndex('plan_id_app').on(t.id, t.appId), index('plan_app').on(t.appId),
-  inList('plan_status', t.status, ['drafting', 'proposed', 'approved', 'running', 'paused', 'landed', 'stopped', 'superseded']),
-  foreignKey({ name: 'plan_idea_app_fk', columns: [t.ideaId, t.appId], foreignColumns: [idea.id, idea.appId] })])
+}, (t) => [uniqueIndex('project_id_app').on(t.id, t.appId), index('project_app').on(t.appId),
+  inList('project_status', t.status, ['drafting', 'proposed', 'approved', 'running', 'paused', 'landed', 'stopped', 'superseded']),
+  foreignKey({ name: 'project_idea_app_fk', columns: [t.ideaId, t.appId], foreignColumns: [idea.id, idea.appId] })])
 
-export const task = pgTable('task', { // authored: a title and a brief (like an InDusk plan); plans are tasks in order
-  id: id(), appId: appId(), planId: text('plan_id').notNull().references(() => plan.id),
-  ideaId: text('idea_id').references(() => idea.id), // an idea can be one task, or a plan of several
-  number: integer('number').notNull(), position: integer('position').notNull().default(0), // order within the plan
+export const task = pgTable('task', { // authored: a title and a brief (like an InDusk project); projects are tasks in order
+  id: id(), appId: appId(), projectId: text('project_id').notNull().references(() => project.id),
+  ideaId: text('idea_id').references(() => idea.id), // an idea can be one task, or a project of several
+  number: integer('number').notNull(), position: integer('position').notNull().default(0), // order within the project
   title: text('title').notNull(), brief: text('brief'), // brief: the builder's instructions, Markdown
   description: text('description'), // for a person: one to three plain sentences, what will be different; no file names or code
   createdBy: text('created_by'), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }),
-}, (t) => [uniqueIndex('task_app_number').on(t.appId, t.number), uniqueIndex('task_id_app').on(t.id, t.appId), index('task_plan').on(t.planId),
-  foreignKey({ name: 'task_plan_app_fk', columns: [t.planId, t.appId], foreignColumns: [plan.id, plan.appId] }),
+}, (t) => [uniqueIndex('task_app_number').on(t.appId, t.number), uniqueIndex('task_id_app').on(t.id, t.appId), index('task_project').on(t.projectId),
+  foreignKey({ name: 'task_project_app_fk', columns: [t.projectId, t.appId], foreignColumns: [project.id, project.appId] }),
   foreignKey({ name: 'task_idea_app_fk', columns: [t.ideaId, t.appId], foreignColumns: [idea.id, idea.appId] })])
 
 export const decision = pgTable('decision', { // [LS] decision card; [IF] provisional flag
-  id: id(), appId: appId(), ideaId: text('idea_id').references(() => idea.id), planId: text('plan_id').references(() => plan.id),
+  id: id(), appId: appId(), ideaId: text('idea_id').references(() => idea.id), projectId: text('project_id').references(() => project.id),
   taskId: text('task_id'), runId: text('run_id'), // the planner's decisions belong to a task and the run that made them
   question: text('question').notNull(), options: jsonb('options').notNull(), // [{key:'A', text, tradeoff, recommended, story}]
   chosen: text('chosen'), provisional: boolean('provisional').notNull().default(false),
   decidedBy: text('decided_by').references(() => user.id), decidedAt: timestamp('decided_at', { withTimezone: true }),
   rationale: text('rationale'),
-}, (t) => [index('decision_app').on(t.appId), index('decision_plan').on(t.planId),
-  foreignKey({ name: 'decision_plan_app_fk', columns: [t.planId, t.appId], foreignColumns: [plan.id, plan.appId] })])
+}, (t) => [index('decision_app').on(t.appId), index('decision_project').on(t.projectId),
+  foreignKey({ name: 'decision_project_app_fk', columns: [t.projectId, t.appId], foreignColumns: [project.id, project.appId] })])
 
 export const phase = pgTable('phase', { // the atomic unit: one agent, one worktree, one commit. [ID] graph semantics
-  id: id(), appId: appId(), planId: text('plan_id').notNull().references(() => plan.id),
+  id: id(), appId: appId(), projectId: text('project_id').notNull().references(() => project.id),
   taskId: text('task_id').notNull().references(() => task.id), number: integer('number').notNull(),
   title: text('title').notNull(), brief: text('brief'), // brief: the builder's instructions, Markdown
   description: text('description'), // for a person: one to three plain sentences, what will be different; no file names or code
@@ -134,10 +134,10 @@ export const phase = pgTable('phase', { // the atomic unit: one agent, one workt
   createdBy: text('created_by'), prId: text('pr_id'),
   createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }),
 }, (t) => [uniqueIndex('phase_app_number').on(t.appId, t.number), uniqueIndex('phase_id_app').on(t.id, t.appId),
-  index('phase_plan').on(t.planId), index('phase_task').on(t.taskId),
+  index('phase_project').on(t.projectId), index('phase_task').on(t.taskId),
   inList('phase_status', t.status, PHASE_STATUSES),
   check('phase_size', sql`${t.size} is null or ${t.size} in ('S', 'M', 'L', 'XL')`),
-  foreignKey({ name: 'phase_plan_app_fk', columns: [t.planId, t.appId], foreignColumns: [plan.id, plan.appId] }),
+  foreignKey({ name: 'phase_project_app_fk', columns: [t.projectId, t.appId], foreignColumns: [project.id, project.appId] }),
   foreignKey({ name: 'phase_task_app_fk', columns: [t.taskId, t.appId], foreignColumns: [task.id, task.appId] })])
 
 export const phaseDependency = pgTable('phase_dependency', { // [ID] explicit edges; task order adds implicit ones. Same app on both ends.
@@ -162,7 +162,7 @@ export const step = pgTable('step', { // how the builder intends to build a phas
 export const session = pgTable('session', { // a conversation with an agent: a talk session (a person and the app's agent) or, later, one per phase
   id: id(), appId: appId(), kind: text('kind').notNull().default('talk'), phaseId: text('phase_id').references(() => phase.id),
   cwd: text('cwd'), branch: text('branch'), worktreePath: text('worktree_path'), // where the agent works: its own worktree of the app's repo, on its own branch
-  title: text('title'), subject: text('subject'), subjectRef: jsonb('subject_ref'), // what the conversation is about, pinned on first contact: {planId} | {ideaId} | {path}
+  title: text('title'), subject: text('subject'), subjectRef: jsonb('subject_ref'), // what the conversation is about, pinned on first contact: {projectId} | {ideaId} | {path}
   agentSessionId: text('agent_session_id'), // the SDK session, for --resume after a restart
   status: text('status').notNull().default('open'), createdBy: text('created_by'), createdAt: createdAt(),
   lastActiveAt: timestamp('last_active_at', { withTimezone: true }),
@@ -182,7 +182,7 @@ export const sessionMessage = pgTable('session_message', { // the transcript: wh
   foreignKey({ name: 'session_message_session_app_fk', columns: [t.sessionId, t.appId], foreignColumns: [session.id, session.appId] })])
 
 export const run = pgTable('run', { // [LS] agent run; [ID] attempt
-  id: id(), appId: appId(), phaseId: text('phase_id').references(() => phase.id), taskId: text('task_id').references(() => task.id), // a build run has a phase; a plan run has a task
+  id: id(), appId: appId(), phaseId: text('phase_id').references(() => phase.id), taskId: text('task_id').references(() => task.id), // a build run has a phase; a project run has a task
   sessionId: text('session_id').references(() => session.id),
   attempt: integer('attempt').notNull(), kind: text('kind').notNull(),
   agent: text('agent').notNull(), model: text('model'), status: text('status').notNull().default('starting'),
@@ -194,26 +194,26 @@ export const run = pgTable('run', { // [LS] agent run; [ID] attempt
   foreignKey({ name: 'run_task_app_fk', columns: [t.taskId, t.appId], foreignColumns: [task.id, task.appId] })])
 
 export const question = pgTable('question', { // [ID] questions with a cost
-  id: id(), appId: appId(), ideaId: text('idea_id'), planId: text('plan_id'), taskId: text('task_id'), phaseId: text('phase_id'), runId: text('run_id'),
+  id: id(), appId: appId(), ideaId: text('idea_id'), projectId: text('project_id'), taskId: text('task_id'), phaseId: text('phase_id'), runId: text('run_id'),
   text: text('text').notNull(), options: jsonb('options'), reason: text('reason'), // options: [{label, description, changes[], recommended}]; reason: why that one
   cost: text('cost'), // cheap | moderate | expensive — set by the server, never the agent
   status: text('status').notNull().default('open'), answer: text('answer'), answeredBy: text('answered_by'),
   answeredAt: timestamp('answered_at', { withTimezone: true }), askedAt: timestamp('asked_at', { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index('question_app').on(t.appId, t.status), index('question_plan').on(t.planId), inList('question_status', t.status, ['open', 'answered', 'skipped', 'expired']),
-  foreignKey({ name: 'question_plan_app_fk', columns: [t.planId, t.appId], foreignColumns: [plan.id, plan.appId] })])
+}, (t) => [index('question_app').on(t.appId, t.status), index('question_project').on(t.projectId), inList('question_status', t.status, ['open', 'answered', 'skipped', 'expired']),
+  foreignKey({ name: 'question_project_app_fk', columns: [t.projectId, t.appId], foreignColumns: [project.id, project.appId] })])
 
 export const event = pgTable('event', { // [IF] append-only live stream; the graph view's feed
   seq: bigserial('seq', { mode: 'number' }).primaryKey(), ts: timestamp('ts', { withTimezone: true }).notNull().defaultNow(),
-  workspaceId: text('workspace_id').notNull(), appId: appId(), ideaId: text('idea_id'), planId: text('plan_id'),
+  workspaceId: text('workspace_id').notNull(), appId: appId(), ideaId: text('idea_id'), projectId: text('project_id'),
   taskId: text('task_id'), phaseId: text('phase_id'), runId: text('run_id'), sessionId: text('session_id'),
   actor: text('actor').notNull(), // engine | agent:<run_id> | user:<id> | github | posthog
   type: text('type').notNull(), // phase.status, phase.held, run.tool_call, run.message, run.steps, land.landed, pr.opened, question.asked, evidence.captured
   payload: jsonb('payload').notNull().default({}),
 }, (t) => [index('event_workspace_seq').on(t.workspaceId, t.seq), index('event_phase_seq').on(t.phaseId, t.seq),
-  index('event_plan_seq').on(t.planId, t.seq), index('event_app_seq').on(t.appId, t.seq)])
+  index('event_project_seq').on(t.projectId, t.seq), index('event_app_seq').on(t.appId, t.seq)])
 
-export const pr = pgTable('pr', { // [LS] githubPullRequests + review hub; [IF] pitch. One per plan (its integration branch).
-  id: id(), appId: appId(), planId: text('plan_id').notNull().references(() => plan.id), repoId: text('repo_id').references(() => repo.id),
+export const pr = pgTable('pr', { // [LS] githubPullRequests + review hub; [IF] pitch. One per project (its integration branch).
+  id: id(), appId: appId(), projectId: text('project_id').notNull().references(() => project.id), repoId: text('repo_id').references(() => repo.id),
   number: integer('number'), url: text('url'), headBranch: text('head_branch'), baseBranch: text('base_branch'),
   headSha: text('head_sha'), mergeSha: text('merge_sha'), status: text('status').notNull(),
   additions: integer('additions'), deletions: integer('deletions'), changedFiles: integer('changed_files'),
@@ -221,7 +221,7 @@ export const pr = pgTable('pr', { // [LS] githubPullRequests + review hub; [IF] 
   pitch: jsonb('pitch'), // [IF] {off_switch_flag, guard_metric, schema_impact, revertable_alone, fake_data}
   openedAt: timestamp('opened_at', { withTimezone: true }), mergedAt: timestamp('merged_at', { withTimezone: true }),
 }, (t) => [uniqueIndex('pr_repo_number').on(t.repoId, t.number), index('pr_app').on(t.appId, t.status), inList('pr_status', t.status, PR_STATUSES),
-  foreignKey({ name: 'pr_plan_app_fk', columns: [t.planId, t.appId], foreignColumns: [plan.id, plan.appId] })])
+  foreignKey({ name: 'pr_project_app_fk', columns: [t.projectId, t.appId], foreignColumns: [project.id, project.appId] })])
 
 export const verification = pgTable('verification', { // [LS] Feature/Entry shots; [IF] demo kinds + fake-data notes
   id: id(), appId: appId(), phaseId: text('phase_id').notNull().references(() => phase.id), prId: text('pr_id').references(() => pr.id),
