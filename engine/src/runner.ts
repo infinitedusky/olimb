@@ -302,7 +302,8 @@ export class Runner {
   private async planNext(projectId: string, taskId: string) {
     if (this.planningTasks.has(taskId)) return
     const [last] = await db.select().from(event).where(and(eq(event.taskId, taskId), inArray(event.type, ['task.planning', 'task.plan_waiting', 'task.planned', 'task.plan_failed']))).orderBy(desc(event.seq)).limit(1)
-    if (last && ['task.planning', 'task.plan_waiting', 'task.plan_failed'].includes(last.type)) return
+    const restarted = last?.type === 'task.plan_failed' && String((last.payload as any)?.error ?? '').includes('engine restarted') // a restart is not a failure: plan it again
+    if (last && ['task.planning', 'task.plan_waiting', 'task.plan_failed'].includes(last.type) && !restarted) return
     this.planningTasks.add(taskId)
     try {
       const ctx = await preparePlanning(taskId, { actor: 'engine' })
