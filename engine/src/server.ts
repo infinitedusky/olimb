@@ -54,7 +54,7 @@ export function buildApp(bus: EventBus) {
   }))
 
   api.get('/health', async (c) => { await db.execute('select 1'); return c.json({ ok: true }) })
-  api.get('/now', async (c) => { const a = c.req.query('app'); return a ? c.json(await now(a)) : c.json({ error: 'app is required: one app at a time' }, 400) }) // the front door: running, needs you, recent
+  api.get('/now', async (c) => { const a = c.req.query('app'); return a ? c.json({ ...(await now(a)), hold: runner.hold }) : c.json({ error: 'app is required: one app at a time' }, 400) }) // the front door: running, needs you, recent
 
   api.post('/workspaces', async (c) => {
     const { name } = await c.req.json<{ name: string }>()
@@ -179,6 +179,10 @@ export function buildApp(bus: EventBus) {
   })
 
   // By-hand transitions: how a person drives a draft's graph. The executor owns running plans.
+  api.post('/plans/:id/pause', async (c) => { try { return c.json(await runner.pausePlan(c.req.param('id'))) } catch (err) { return planError(c, err) } })
+  api.post('/plans/:id/resume', async (c) => { try { return c.json(await runner.resumePlan(c.req.param('id'))) } catch (err) { return planError(c, err) } })
+  api.get('/engine', (c) => c.json({ hold: runner.hold })) // is the engine waiting for the model?
+  api.post('/engine/release', async (c) => c.json(await runner.releaseHold())) // try the model now
   api.post('/phases/:id/retry', async (c) => { // a failed or cancelled phase gets three more attempts; {fresh: true} starts over from the plan's branch
     const body = await c.req.json<{ fresh?: boolean }>().catch(() => ({} as { fresh?: boolean }))
     try { return c.json(await runner.retryPhase(c.req.param('id'), { fresh: !!body.fresh })) } catch (err) { return planError(c, err) }

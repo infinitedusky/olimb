@@ -62,7 +62,8 @@ export interface RunningPlan {
   held: { id: string; number: number; title: string; reason: string | null }[]
   pr: { number: number | null; url: string | null; status: string } | null
 }
-export interface Now { running: RunningPlan[]; needsYou: Attention[]; recent: Event[]; counts: { plans: number; running: number; needsYou: number } }
+export interface Hold { until: string; reason: string; level: number }
+export interface Now { hold?: Hold | null; running: RunningPlan[]; needsYou: Attention[]; recent: Event[]; counts: { plans: number; running: number; needsYou: number } }
 
 // Talk: a conversation with the factory's agent. Messages are rows; talk.* events say when to refetch.
 export type Risk = 'free' | 'cheap' | 'moderate' | 'expensive'
@@ -103,6 +104,9 @@ export const engine = {
   answer: (questionId: string, answer: string) => call<unknown>('POST', `/questions/${questionId}/answer`, { answer }),
   start: (id: string) => call<unknown>('POST', `/plans/${id}/start`),
   tick: (id: string) => call<unknown>('POST', `/plans/${id}/tick`),
+  pause: (planId: string) => call<unknown>('POST', `/plans/${planId}/pause`),
+  resume: (planId: string) => call<unknown>('POST', `/plans/${planId}/resume`),
+  releaseHold: () => call<unknown>('POST', '/engine/release'),
   retry: (phaseId: string, fresh = false) => call<{ phase: number; fresh: boolean; resumed: number[] }>('POST', `/phases/${phaseId}/retry`, { fresh }),
   setStatus: (phaseId: string, status: PhaseStatus) => call<unknown>('POST', `/phases/${phaseId}/status`, { status }),
 }
@@ -110,7 +114,7 @@ export const engine = {
 export const EVENT_TYPES = [
   'plan.created', 'plan.started', 'plan.landed', 'plan.cleaned', 'task.created',
   'task.planning', 'task.planned', 'task.plan_failed', 'task.cleared', 'plan.cancelled', 'question.asked', 'question.answered',
-  'talk.message', 'talk.permission', 'talk.result', 'idea.created',
+  'talk.message', 'talk.permission', 'talk.result', 'idea.created', 'plan.paused', 'plan.resumed', 'engine.hold', 'engine.resumed',
   'phase.created', 'phase.status', 'phase.held', 'phase.retry', 'phase.failed', 'phase.error', 'phase.interrupted',
   'run.started', 'run.message', 'run.steps', 'run.tool_call', 'run.tool_result', 'run.result', 'run.error', 'run.rate_limit',
   'land.committed', 'land.tested', 'land.landed', 'land.conflict', 'land.retry', 'pr.opened', 'pr.updated', 'pr.error',

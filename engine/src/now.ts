@@ -37,7 +37,7 @@ export async function now(appId?: string) {
   }
   const tag = (p: typeof plans[number]) => ({ planId: p.id, planTitle: p.title, appName: appName(p.appId) })
 
-  const running = plans.filter((p) => p.status === 'running').map((p) => {
+  const running = plans.filter((p) => p.status === 'running' || p.status === 'paused').map((p) => {
     const mine = phases.filter((x) => x.planId === p.id)
     const thePr = prs.find((q) => q.planId === p.id)
     return {

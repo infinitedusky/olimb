@@ -26,6 +26,8 @@ const ENGINE: Record<string, [Risk, string]> = {
   answer_question: ['moderate', "answers a question on the person's behalf"],
   cancel_plan: ['moderate', 'stops running agents'],
   retry_phase: ['moderate', 'runs an agent again: minutes and money'],
+  pause_plan: ['cheap', 'stops agents, keeps their place; resume undoes it'],
+  resume_plan: ['moderate', 'runs agents again: minutes and money'],
   start_plan: ['expensive', 'runs agents, spends money, opens a pull request'],
 }
 

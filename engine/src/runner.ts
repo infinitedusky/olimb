@@ -15,6 +15,7 @@ import { land, withLock } from './landing.js'
 import { ensurePlanPr, prBody } from './pr.js'
 import { planGraph, PlanError, tickAll } from './plans.js'
 import { reapAgentProcesses } from './reap.js'
+import { holdMinutes, isOutage } from './outage.js'
 
 export const SESSIONS_MAX = Number(process.env.SESSIONS_MAX ?? 4)
 
@@ -22,6 +23,11 @@ interface AppSetup { test_cmd?: string; model?: string; max_budget_usd?: number;
 
 export class Runner {
   private active = new Map<string, AbortController>() // phase id → abort for its live run
+  private interrupting = new Set<string>() // phases a pause is stopping on purpose: their run's end is not a failure
+  /** The engine holds all dispatch while the model is unavailable; it tries again at `until`, backing off. */
+  hold: { until: Date; reason: string; level: number } | null = null
+  private outages = 0
+  private holdTimer: NodeJS.Timeout | undefined
   private execute: Execute
   private sessionsMax: number
 
@@ -50,6 +56,7 @@ export class Runner {
    */
   dispatch(): Promise<void> {
     return withLock('dispatch', async () => {
+      if (this.hold && this.hold.until.getTime() > Date.now()) return // waiting for the model; the timer dispatches when the hold ends
       const room = Math.max(0, this.sessionsMax - this.active.size)
       await tickAll(room)
       const running = await db.select().from(plan).where(eq(plan.status, 'running'))
@@ -120,6 +127,13 @@ export class Runner {
       costUsd: result.costUsd?.toString() ?? null, summary: result.summary ?? null, error: result.error ?? null,
     }).where(eq(run.id, runId))
 
+    if (this.interrupting.has(phaseId)) { // paused on purpose: the run resumes from its session later
+      this.interrupting.delete(phaseId); this.active.delete(phaseId)
+      await db.update(run).set({ status: 'interrupted', error: 'paused' }).where(eq(run.id, runId))
+      return
+    }
+    if (result.status !== 'completed' && isOutage(result.error)) return this.outage(phaseId, runId, result.error!, rb)
+    if (result.status === 'completed' && this.outages) { this.outages = 0; this.hold = null; await this.emit({ ...base, type: 'engine.resumed', payload: {} }) }
     if (result.status !== 'completed') return this.failed(phaseId, attempt, x.maxAttempts, `the run ${result.error ?? 'failed'}`, rb)
 
     await db.update(phase).set({ status: 'merging', updatedAt: new Date() }).where(eq(phase.id, phaseId))
@@ -155,6 +169,58 @@ export class Runner {
     await this.emit({ ...pb, type: again ? 'phase.retry' : 'phase.failed', payload: { attempt, max, why: why.slice(0, 2000) } })
     this.active.delete(phaseId)
     await this.dispatch()
+  }
+
+  /** The model or account is unavailable: not the phase's fault. Give the attempt back, queue it to resume, hold the engine. */
+  private async outage(phaseId: string, runId: string, error: string, pb: Omit<NewEvent, 'type'>) {
+    const [x] = await db.select().from(phase).where(eq(phase.id, phaseId))
+    await db.update(run).set({ status: 'interrupted', error: `outage: ${error.slice(0, 400)}` }).where(eq(run.id, runId))
+    const minutes = holdMinutes(this.outages)
+    this.outages++
+    const until = new Date(Date.now() + minutes * 60_000)
+    this.hold = { until, reason: error.slice(0, 200), level: this.outages }
+    await db.update(phase).set({ status: 'queued', attempt: Math.max(0, (x?.attempt ?? 1) - 1), heldReason: `waiting for the model (${error.slice(0, 80)}); trying again at ${until.toTimeString().slice(0, 5)}`, updatedAt: new Date() }).where(eq(phase.id, phaseId))
+    await this.emit({ ...pb, type: 'engine.hold', payload: { reason: error.slice(0, 400), minutes, until: until.toISOString(), level: this.outages } })
+    this.active.delete(phaseId)
+    clearTimeout(this.holdTimer)
+    this.holdTimer = setTimeout(() => void this.dispatch(), minutes * 60_000 + 500)
+  }
+
+  /** A person ends the hold early: try the model now. */
+  async releaseHold() {
+    clearTimeout(this.holdTimer)
+    this.hold = null
+    void this.dispatch()
+    return { released: true }
+  }
+
+  /**
+   * Pause a plan: nothing new starts; running agents are stopped but keep their worktrees and conversations; a phase
+   * that is landing finishes landing. Resume picks each stopped one up from its session.
+   */
+  async pausePlan(planId: string, actor = 'user') {
+    const ctx = await this.context(planId)
+    if (ctx.p.status !== 'running') throw new PlanError(`plan is ${ctx.p.status}; only a running plan can be paused`)
+    await db.update(plan).set({ status: 'paused' }).where(eq(plan.id, planId))
+    const live = await db.select().from(phase).where(and(eq(phase.planId, planId), eq(phase.status, 'running')))
+    for (const x of live) {
+      this.interrupting.add(x.id)
+      await db.update(run).set({ status: 'interrupted', endedAt: new Date(), error: 'paused' }).where(and(eq(run.phaseId, x.id), eq(run.status, 'working')))
+      await db.update(phase).set({ status: 'queued', heldReason: 'paused; will resume where it stopped', updatedAt: new Date() }).where(eq(phase.id, x.id))
+      this.active.get(x.id)?.abort()
+    }
+    await this.emit({ ...ctx.base, actor, type: 'plan.paused', payload: { interrupted: live.map((x) => x.number) } })
+    return { paused: true, interrupted: live.map((x) => x.number) }
+  }
+
+  async resumePlan(planId: string, actor = 'user') {
+    const ctx = await this.context(planId)
+    if (ctx.p.status !== 'paused') throw new PlanError(`plan is ${ctx.p.status}; only a paused plan can be resumed`)
+    await db.update(plan).set({ status: 'running' }).where(eq(plan.id, planId))
+    await db.update(phase).set({ heldReason: null, updatedAt: new Date() }).where(and(eq(phase.planId, planId), eq(phase.status, 'queued')))
+    await this.emit({ ...ctx.base, actor, type: 'plan.resumed', payload: {} })
+    void this.dispatch()
+    return { resumed: true }
   }
 
   /** The last failure reason comes from the log, so it survives a restart. (A landed phase never retries again.) */

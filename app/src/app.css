@@ -189,3 +189,5 @@ a.badge { text-decoration: none; }
 .md code { font-size: 12px; background: var(--ground); padding: 1px 4px; border-radius: 4px; word-break: break-word; }
 .edge-why { position: absolute; pointer-events: none; z-index: 10; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; line-height: 1.4; color: var(--ink); box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; }
 .retry-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.hold-banner { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 14px; margin-bottom: 16px; border: 1px solid var(--warn); background: var(--warn-wash); border-radius: var(--radius); font-size: 14px; }
+.hold-banner .btn { margin-left: auto; }

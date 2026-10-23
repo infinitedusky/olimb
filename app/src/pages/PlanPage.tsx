@@ -10,7 +10,7 @@ import { Brief } from '../components/Brief'
 import { engine, useLivePlan, type Decision, type Event, type GraphPhase, type GraphTask, type Question } from '../engine'
 import { useCurrentApp } from '../current-app'
 
-const PLAN_TONE: Record<string, Tone> = { drafting: 'neutral', proposed: 'neutral', approved: 'neutral', running: 'accent', landed: 'ok', stopped: 'warn', superseded: 'neutral' }
+const PLAN_TONE: Record<string, Tone> = { paused: 'warn', drafting: 'neutral', proposed: 'neutral', approved: 'neutral', running: 'accent', landed: 'ok', stopped: 'warn', superseded: 'neutral' }
 const COST_TONE: Record<string, Tone> = { cheap: 'neutral', moderate: 'warn', expensive: 'bad' }
 const short = (t: string) => (t.length > 28 ? t.slice(0, 26).trimEnd() + '…' : t)
 
@@ -56,7 +56,9 @@ export function PlanPage() {
           {draft && (
             <button className="btn quiet" disabled={busy} onClick={() => { if (window.confirm('Discard this draft? Its tasks, phases, questions and decisions go with it.')) void act(async () => { await engine.cancelPlan(graph.plan.id); nav('/plans') }) }}>Discard draft</button>
           )}
-          {graph.plan.status === 'running' && (
+          {graph.plan.status === 'running' && <button className="btn quiet" disabled={busy} onClick={() => act(() => engine.pause(graph.plan.id))} title="Nothing new starts; running agents stop and resume where they were">Pause</button>}
+          {graph.plan.status === 'paused' && <button className="btn" disabled={busy} onClick={() => act(() => engine.resume(graph.plan.id))}>Resume</button>}
+          {['running', 'paused'].includes(graph.plan.status) && (
             <button className="btn quiet" disabled={busy} onClick={() => { if (window.confirm('Cancel this plan? Running agents are stopped; what has landed stays on its branch.')) void act(() => engine.cancelPlan(graph.plan.id)) }}>Cancel plan</button>
           )}
           {draft && graph.phases.length > 0 && (
