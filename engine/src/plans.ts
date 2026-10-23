@@ -141,14 +141,28 @@ export function fileConflicts(phases: { id: string; status: string; files: strin
 }
 
 /** Files more than one open phase claims: nodes of their own on the graph, with who has the file right now. */
+/**
+ * Shared files, as the graph draws them: one node per contested path, by the scheduler's own rule (claimsOverlap: a
+ * directory covers everything inside it). The node is the most specific path in the overlap; a phase that claims a
+ * directory above it joins that node, so a wait the scheduler enforces is always a wait the graph shows.
+ */
 export function sharedFiles(phases: { id: string; status: string; files: string[] }[]): { path: string; phases: string[]; heldBy: string | null }[] {
   const open = phases.filter((x) => !['done', 'failed', 'cancelled'].includes(x.status))
   const active = (s: string) => ['running', 'awaiting_answer', 'merging', 'testing'].includes(s)
-  const byPath = new Map<string, string[]>()
-  for (const x of open) for (const f of new Set(x.files.map((p) => p.replace(/\/+$/, '')))) byPath.set(f, [...(byPath.get(f) ?? []), x.id])
-  return [...byPath].filter(([, ids]) => ids.length > 1).sort(([a], [b]) => a.localeCompare(b)).map(([path, ids]) => ({
-    path, phases: ids, heldBy: ids.find((id) => active(open.find((x) => x.id === id)!.status)) ?? null,
-  }))
+  const claims = open.map((x) => ({ id: x.id, files: [...new Set(x.files.map((p) => p.replace(/\/+$/, '')))] }))
+  const byPath = new Map<string, Set<string>>()
+  for (let i = 0; i < claims.length; i++) for (let j = i + 1; j < claims.length; j++) {
+    for (const f of claims[i].files) for (const g of claims[j].files) {
+      if (!claimsOverlap(f, g)) continue
+      const path = f.length >= g.length ? f : g // the more specific side names the node
+      const ids = byPath.get(path) ?? new Set<string>()
+      ids.add(claims[i].id); ids.add(claims[j].id); byPath.set(path, ids)
+    }
+  }
+  return [...byPath].sort(([a], [b]) => a.localeCompare(b)).map(([path, set]) => {
+    const ids = open.filter((x) => set.has(x.id)).map((x) => x.id) // plan order
+    return { path, phases: ids, heldBy: ids.find((id) => active(open.find((x) => x.id === id)!.status)) ?? null }
+  })
 }
 
 export const planGraph = (planId: string) => loadPlan(db, planId)
