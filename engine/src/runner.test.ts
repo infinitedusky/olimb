@@ -131,6 +131,22 @@ describe.skipIf(!reachable)('runner', () => {
     expect(types.filter((x) => x === 'phase.failed')).toHaveLength(1)
   })
 
+  it('a person retries a failed phase: three more attempts, told why it failed, then it lands', async () => {
+    const { plan: p, phases } = await createPlan({ appId, title: 'retry by hand', tasks: [one('T', [{ key: 'r', title: 'R', files: ['r.txt'] }])] })
+    let fail = true
+    const told: (string | undefined)[] = []
+    const runner = new Runner({ execute: async (i) => { told.push(i.previousFailure); return fail ? { status: 'failed', error: 'flaky' } : commits('r')(i) }, sessionsMax: 2 })
+    await runner.startPlan(p.id)
+    await until(async () => (await planGraph(p.id))!.phases[0].status === 'failed')
+    fail = false
+    await expect(runner.retryPhase(phases[0].id)).resolves.toMatchObject({ fresh: false })
+    await until(cleaned(p.id))
+    const after = (await planGraph(p.id))!
+    expect(after.phases[0]).toMatchObject({ status: 'done', attempt: 4, maxAttempts: 6 })
+    expect(told.at(-1)).toContain('flaky')
+    await expect(runner.retryPhase(phases[0].id)).rejects.toThrow(/only a failed or cancelled/)
+  })
+
   it('stores the builder\'s todo list as the phase\'s steps, latest list wins', async () => {
     const { plan: p, phases } = await createPlan({ appId, title: 'steps', tasks: [one('T', [{ key: 's', title: 'S', files: ['s.txt'] }])] })
     const runner = new Runner({ execute: async (i) => {

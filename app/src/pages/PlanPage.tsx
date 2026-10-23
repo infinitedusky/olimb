@@ -192,6 +192,13 @@ function PhaseDetail({ phase, task, planStatus, busy, act }: { phase: GraphPhase
           {phase.lastRun.summary && <div className="summary">{phase.lastRun.summary}</div>}
           {phase.lastRun.error && <div className="summary bad">{phase.lastRun.error}</div>}</dd></>}
       </dl>
+      {['failed', 'cancelled'].includes(phase.status) && (
+        <div className="retry-row">
+          <button className="btn" disabled={busy} onClick={() => act(() => engine.retry(phase.id))} title="Three more attempts in the same worktree; the builder is told why the last one failed">Retry</button>
+          <button className="btn quiet" disabled={busy} onClick={() => { if (window.confirm(`Start #${phase.number} over from the plan's branch? What the last attempt left in its worktree is thrown away.`)) void act(() => engine.retry(phase.id, true)) }}>Retry from scratch</button>
+          {planStatus === 'stopped' && <span className="faint" style={{ fontSize: 13 }}>The plan is stopped; retrying resumes it, with its other cancelled phases.</span>}
+        </div>
+      )}
       {manual && (
         <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
           <span className="faint mono" style={{ alignSelf: 'center' }}>by hand:</span>

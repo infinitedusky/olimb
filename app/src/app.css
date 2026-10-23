@@ -188,3 +188,4 @@ a.badge { text-decoration: none; }
 .md ol, .md ul { margin: 0 0 8px; padding-left: 20px; } .md li { margin: 2px 0; } .md li > ul { margin-top: 2px; color: var(--ink-faint); }
 .md code { font-size: 12px; background: var(--ground); padding: 1px 4px; border-radius: 4px; word-break: break-word; }
 .edge-why { position: absolute; pointer-events: none; z-index: 10; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; line-height: 1.4; color: var(--ink); box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; }
+.retry-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }

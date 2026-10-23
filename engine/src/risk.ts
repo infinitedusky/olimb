@@ -25,6 +25,7 @@ const ENGINE: Record<string, [Risk, string]> = {
   plan_task: ['moderate', 'runs the planner: minutes and money'],
   answer_question: ['moderate', "answers a question on the person's behalf"],
   cancel_plan: ['moderate', 'stops running agents'],
+  retry_phase: ['moderate', 'runs an agent again: minutes and money'],
   start_plan: ['expensive', 'runs agents, spends money, opens a pull request'],
 }
 
