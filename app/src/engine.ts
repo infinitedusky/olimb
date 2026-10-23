@@ -9,12 +9,12 @@ export type PhaseStatus = 'queued' | 'ready' | 'running' | 'awaiting_answer' | '
 export interface Run { id: string; attempt: number; status: string; model: string | null; costUsd: string | null; summary: string | null; error: string | null; startedAt: string; endedAt: string | null }
 export interface Step { id: number; position: number; text: string; status: 'pending' | 'in_progress' | 'completed' }
 export interface GraphPhase {
-  id: string; number: number; title: string; brief: string | null; status: PhaseStatus; attempt: number; maxAttempts: number
+  id: string; number: number; title: string; description?: string | null; brief: string | null; status: PhaseStatus; attempt: number; maxAttempts: number
   planId: string; taskId: string; branch: string | null; heldReason: string | null
   dependsOn: string[]; orderedAfter?: string[] // explicit dependencies; and task order, drawn (finishers of the task before)
   files: string[]; lastRun: Run | null; steps?: Step[]
 }
-export interface GraphTask { id: string; number: number; position: number; title: string; brief: string | null; phaseIds: string[] }
+export interface GraphTask { id: string; number: number; position: number; title: string; description?: string | null; brief: string | null; phaseIds: string[] }
 // What the planner settled (provisional until a person approves) and what it could not.
 export interface Decision { id: string; taskId: string | null; question: string; options: { key: string; text: string; recommended: boolean }[]; chosen: string | null; provisional: boolean; rationale: string | null }
 export interface Question { id: string; taskId: string | null; text: string; options: { label: string; description: string; changes: string[]; recommended: boolean }[]; reason: string | null; cost: 'cheap' | 'moderate' | 'expensive' | null; status: string; answer: string | null }
@@ -38,8 +38,8 @@ export interface Repo { id: string; appId: string; fullName: string; localPath: 
 export interface App { id: string; workspaceId?: string; name: string; defaultBranch: string; setup?: AppSetup; repos?: Repo[] }
 export interface Workspace { id: string; name: string }
 export interface Event { seq: number; ts: string; type: string; actor: string; taskId: string | null; phaseId: string | null; planId: string | null; payload: Record<string, unknown> }
-export interface NewPhase { key: string; title: string; brief?: string; dependsOn?: string[]; files?: string[] }
-export interface NewTask { title: string; brief?: string; phases?: NewPhase[] }
+export interface NewPhase { key: string; title: string; description?: string; brief?: string; dependsOn?: string[]; files?: string[] }
+export interface NewTask { title: string; description?: string; brief?: string; phases?: NewPhase[] }
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(API + path, { method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined })

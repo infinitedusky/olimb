@@ -17,6 +17,7 @@ import { EventBus, eventsSince } from './events.js'
 import { newId } from './ids.js'
 import { createIdea, listIdeas, planFromIdea } from './ideas.js'
 import { answerPermission, closeTalks, endTalk, interruptTalk, listTalks, renameTalk, say, setAutoApprove, startTalk, talkTranscript, type SubjectRef, type TalkContext } from './talk.js'
+import { describePlan } from './describe.js'
 import { now } from './now.js'
 import { answerQuestion, finishPlanning, preparePlanning, recoverPlanning } from './planner.js'
 import { addPhases, appGraph, clearPhases, createPlan, listPlans, PlanError, planGraph, setPhaseStatus, tick } from './plans.js'
@@ -154,6 +155,9 @@ export function buildApp(bus: EventBus) {
   })
   api.delete('/tasks/:id/phases', async (c) => { // a draft task back to its brief, so it can be planned again
     try { return c.json(await clearPhases(c.req.param('id'), 'user')) } catch (err) { return planError(c, err) }
+  })
+  api.post('/plans/:id/describe', async (c) => { // plain descriptions for tasks and phases that have none
+    try { return c.json(await describePlan(c.req.param('id'))) } catch (err) { return planError(c, err) }
   })
   api.post('/plans/:id/cancel', async (c) => {
     try { return c.json(await runner.cancelPlan(c.req.param('id'))) } catch (err) { return planError(c, err, 404) }

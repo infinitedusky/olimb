@@ -487,6 +487,18 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## Briefs a person can read (Sandy, 2026-10-23)
+
+Sandy: "we need our briefs to have much more legible descriptions" (with a screenshot of #29's brief: one
+paragraph of `CLERK_SECRET_KEY`, `authorized_parties`, routes). The brief is the builder's text; a person had
+nothing else. Now every task and phase has a **description** — one to three plain sentences, what will be
+different for the people using the app, no file names or code — shown first everywhere; the **brief** is the
+builder's Markdown, folded under "For the builder". The planner writes both (title as an outcome, description for
+a person, summary in short paragraphs, one action per step with its technical note under it); the composer and
+the agent's `create_plan` take a description. Existing plans: a `describe` step (one model call per plan, no
+tools, structured output; `POST /plans/:id/describe`) wrote 42 descriptions across Homework Gate's five plans.
+Migration 0007.
+
 ## The wall between apps (Sandy, 2026-10-22; PR #20)
 
 Sandy: "we still have the issue of app_id not being a hard wall between the apps. I am seeing plans when I switch

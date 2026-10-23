@@ -103,7 +103,8 @@ export const task = pgTable('task', { // authored: a title and a brief (like an 
   id: id(), appId: appId(), planId: text('plan_id').notNull().references(() => plan.id),
   ideaId: text('idea_id').references(() => idea.id), // an idea can be one task, or a plan of several
   number: integer('number').notNull(), position: integer('position').notNull().default(0), // order within the plan
-  title: text('title').notNull(), brief: text('brief'),
+  title: text('title').notNull(), brief: text('brief'), // brief: the builder's instructions, Markdown
+  description: text('description'), // for a person: one to three plain sentences, what will be different; no file names or code
   createdBy: text('created_by'), createdAt: createdAt(), updatedAt: timestamp('updated_at', { withTimezone: true }),
 }, (t) => [uniqueIndex('task_app_number').on(t.appId, t.number), uniqueIndex('task_id_app').on(t.id, t.appId), index('task_plan').on(t.planId),
   foreignKey({ name: 'task_plan_app_fk', columns: [t.planId, t.appId], foreignColumns: [plan.id, plan.appId] }),
@@ -122,7 +123,8 @@ export const decision = pgTable('decision', { // [LS] decision card; [IF] provis
 export const phase = pgTable('phase', { // the atomic unit: one agent, one worktree, one commit. [ID] graph semantics
   id: id(), appId: appId(), planId: text('plan_id').notNull().references(() => plan.id),
   taskId: text('task_id').notNull().references(() => task.id), number: integer('number').notNull(),
-  title: text('title').notNull(), brief: text('brief'),
+  title: text('title').notNull(), brief: text('brief'), // brief: the builder's instructions, Markdown
+  description: text('description'), // for a person: one to three plain sentences, what will be different; no file names or code
   status: text('status').notNull().default('queued'),
   attempt: integer('attempt').notNull().default(0), maxAttempts: integer('max_attempts').notNull().default(3), // [ID]
   branch: text('branch'), worktreePath: text('worktree_path'), baseSha: text('base_sha'), // [ID]

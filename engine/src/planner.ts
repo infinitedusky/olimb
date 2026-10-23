@@ -32,7 +32,7 @@ export type Changes = 'brief' | 'promise' | 'look' | 'gate'
 export type Cost = 'cheap' | 'moderate' | 'expensive'
 export interface Proposal {
   phases: {
-    key: string; title: string; summary: string; depends_on: string[]; files: string[]
+    key: string; title: string; description: string; summary: string; depends_on: string[]; files: string[]
     steps: { text: string; technical: string }[]
     checks: { statement: string; command: string; expected: string }[]
     done_when: string
@@ -51,7 +51,7 @@ const obj = (properties: Record<string, unknown>) => ({ type: 'object', properti
 /** What the planner must return. Every field is required; "none" is an empty string or array. */
 export const PROPOSAL_SCHEMA = obj({
   phases: arr(obj({
-    key: str, title: str, summary: str, depends_on: arr(str), files: arr(str),
+    key: str, title: str, description: str, summary: str, depends_on: arr(str), files: arr(str),
     steps: arr(obj({ text: str, technical: str })),
     checks: arr(obj({ statement: str, command: str, expected: str })),
     done_when: str,
@@ -86,8 +86,10 @@ function prompt(i: ProposeInput): string {
     '- Cut by what each phase produces and consumes: granular enough to track, not so granular they are busywork. Most tasks are one to six phases; a small task is one phase.',
     '- files: the paths (files or directories, relative to the repository root) the phase will change. Two phases that share a path never run at once. Declare honestly: a phase with no files declared claims the whole app.',
     '- depends_on: keys of phases in this task whose result this phase needs. Prefer fewer; a shared file already serializes two phases.',
-    '- summary: a short paragraph for someone who has worked in this repository but never read this plan — what the phase does and why.',
-    '- steps: the work in order, each with a technical note (the file, the function, the approach) so the builder does not rediscover it.',
+    '- title: what will be true when it lands, in plain words ("Parents sign in with Clerk"), not the code change.',
+    '- description: one to three short sentences for the person who asked for this, who may never read the code: what will be different for the people using the app, and why it matters. No file names, functions, columns, routes or environment variables. Write it so it reads aloud.',
+    '- summary: for the builder, in short paragraphs (a blank line between them, at most four sentences each): what the phase does in this codebase and why. File names and code go in backticks.',
+    '- steps: the work in order, one action each, each with a technical note (the file, the function, the approach) so the builder does not rediscover it. Keep each step to one sentence; put detail in the note.',
     '- checks: behavioural checks a non-engineer could read aloud, with the command and the expected result where there is one.',
     '- done_when: one sentence.',
     i.testCmd ? `- The tests run with: ${i.testCmd}` : '- There is no test command configured; say in each phase how it is verified.',
@@ -143,10 +145,11 @@ export function questionCost(q: Proposal['questions'][number]): Cost {
 }
 
 /** The phase's brief, as the builder will read it: the summary, then the steps, checks and done-when the planner wrote. */
+/** The phase's brief, as Markdown: the summary, then steps (each with its technical note under it), checks and done-when. */
 export function phaseBrief(p: Proposal['phases'][number]): string {
-  const steps = p.steps.map((s, n) => `${n + 1}. ${s.text}${s.technical ? ` — ${s.technical}` : ''}`).join('\n')
-  const checks = p.checks.map((c) => `- ${c.statement}${c.command ? ` (\`${c.command}\`${c.expected ? ` → ${c.expected}` : ''})` : ''}`).join('\n')
-  return [p.summary.trim(), steps && `Steps:\n${steps}`, checks && `Checks:\n${checks}`, p.done_when && `Done when: ${p.done_when.trim()}`].filter(Boolean).join('\n\n')
+  const steps = p.steps.map((s, n) => `${n + 1}. ${s.text}${s.technical ? `\n   - ${s.technical}` : ''}`).join('\n')
+  const checks = p.checks.map((c) => `- ${c.statement}${c.command ? ` — \`${c.command}\`${c.expected ? ` → ${c.expected}` : ''}` : ''}`).join('\n')
+  return [p.summary.trim(), steps && `### Steps\n\n${steps}`, checks && `### Checks\n\n${checks}`, p.done_when && `**Done when:** ${p.done_when.trim()}`].filter(Boolean).join('\n\n')
 }
 
 /** Shape problems the schema cannot catch. Throws PlanError. */
@@ -230,7 +233,7 @@ export async function finishPlanning(ctx: PlanningContext, opts: { propose?: Pro
   try {
     const written = await db.transaction(async (tx) => {
       const phases = await addPhases(ctx.taskId, proposal.phases.map((p): NewPhase => ({
-        key: p.key, title: p.title, brief: phaseBrief(p), dependsOn: p.depends_on ?? [], files: p.files ?? [],
+        key: p.key, title: p.title, description: p.description?.trim() || undefined, brief: phaseBrief(p), dependsOn: p.depends_on ?? [], files: p.files ?? [],
       })), 'planner', tx)
       const decisions = proposal.decisions.length ? await tx.insert(decision).values(proposal.decisions.map((d) => ({
         id: newId('decision'), appId: ctx.appId, planId: ctx.planId, taskId: ctx.taskId, runId: ctx.runId, question: d.title,

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Badge, type Tone } from '../components/Badge'
 import { PlanGraphView, STATUS_TONE } from '../components/PlanGraphView'
+import { Brief } from '../components/Brief'
 import { engine, useLivePlan, type Decision, type Event, type GraphPhase, type GraphTask, type Question } from '../engine'
 import { useCurrentApp } from '../current-app'
 
@@ -111,7 +112,7 @@ function TaskChip({ task, phases, planning, onPlan, onReplan, busy }: { task: Gr
   const live = phases.some((p) => ['running', 'merging', 'testing'].includes(p.status))
   const tone: Tone = phases.length && done === phases.length ? 'ok' : live ? 'accent' : 'neutral'
   return (
-    <li className="task-chip" data-component="TaskChip" title={task.brief ?? undefined}>
+    <li className="task-chip" data-component="TaskChip" title={task.description ?? task.brief?.slice(0, 300) ?? undefined}>
       <span className="mono faint">task #{task.number}</span>
       <strong>{task.title}</strong>
       {planning ? <Badge tone="accent" dot>planning…</Badge>
@@ -174,8 +175,8 @@ function PhaseDetail({ phase, task, planStatus, busy, act }: { phase: GraphPhase
     <>
       <h2>#{phase.number} {phase.title} <Badge tone={STATUS_TONE[phase.status]}>{phase.status.replace('_', ' ')}</Badge></h2>
       <dl className="fields">
-        <dt>Task</dt><dd>{task ? `#${task.number} ${task.title}` : '—'}</dd>
-        <dt>Brief</dt><dd>{phase.brief ? <div className="brief">{phase.brief}</div> : <span className="faint">None.</span>}</dd>
+        <dt>Task</dt><dd>{task ? <>#{task.number} {task.title}{task.description && <div className="faint" style={{ fontSize: 13 }}>{task.description}</div>}</> : '—'}</dd>
+        <dt>What</dt><dd><Brief description={phase.description} brief={phase.brief} /></dd>
         <dt>Files</dt><dd>{phase.files.length ? <span className="mono">{phase.files.join(', ')}</span> : <span className="faint">None declared: claims the whole app.</span>}</dd>
         <dt>Depends on</dt><dd>
           {phase.dependsOn.length ? `${phase.dependsOn.length} phase${phase.dependsOn.length > 1 ? 's' : ''}` : <span className="faint">Nothing explicit.</span>}
