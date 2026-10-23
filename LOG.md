@@ -493,6 +493,23 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## The test bench: Corner Shop (Sandy, 2026-10-23)
+
+Sandy: the bones are in place but it isn't functional; narrow down and make specific areas work, starting from
+Observe — and "I'm not trying to figure out whether Homework Gate is good, I'm trying to figure out whether our
+user interface is functional for building applications." Decision: a purpose-built test bench, **Corner Shop**
+(`infinitedusky/corner-shop`, private), a tiny Next.js + SQLite shop with a real funnel, PostHog events and
+feature flags, and a seeded simulator of scripted personas (browsers, mobile abandoners, coupon hunters, regulars)
+that plants problems with known answers. Every stage of Self Evident gets graded against ground truth: can Observe
+show the planted pattern, does Learn find it with the right numbers, does Ideate turn it into a usable idea, do
+Plan/Validate/Build ship a fix **behind a flag**, does the experiment report the planted effect (e.g. +12% mobile,
+nothing desktop) with the right confidence, and does a rerun of the same seed show the number move. Scripted
+personas, not a model playing shoppers: determinism and known answers are the point. Homework Gate stays the
+second app, the check that we didn't build for a toy.
+- Built **through Self Evident**: plan `plan_9FGbB0iNKsCA` with three authored tasks (the shop; every step
+  measured; shoppers with planted problems), planner running on task 1. Tasks 2 and 3 are planned after task 1
+  lands, so the planner reads the real code.
+
 ## Briefs a person can read (Sandy, 2026-10-23)
 
 Sandy: "we need our briefs to have much more legible descriptions" (with a screenshot of #29's brief: one
