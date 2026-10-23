@@ -493,6 +493,24 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## Names: project → task → phase → step; "plan" is the verb (Sandy, 2026-10-23; PR #41)
+
+Sandy, after the engine was found running a level off: "plan needs to become a master plan, about an idea or goal
+having multiple features, bugfixes or other changes" — then, settling it: "project, task, phase, step, and then plan
+becomes what you're doing. It's the activity, not what you're creating… That way we can keep it saying Plan, not
+Planning; otherwise we would need Ideation, Learning, Observing, Building." So the nav keeps its five verbs
+(Observe, Learn, Ideate, Plan, Build); the things carry nouns: a **project** (an idea or goal with several changes;
+owns the branch and the PR) holds **tasks** in order (one change each); the planner turns a task into **phases**
+(the graph that runs); a phase's **steps** are the builder's checklist (the 0/4). Under Plan: Projects and Tasks.
+Renamed everywhere: table `plan` → `project`, `plan_id` → `project_id`, constraints and indexes (migration 0009,
+renames only; drizzle confirms no drift), the engine, `/projects` routes, `project.*` events, the agent's tools
+(`projects`, `project_graph`, `create_project`, `start_project`, …), the CLI (`pnpm se project …`), the UI. The verb
+stays: the planner, planning runs (`run.kind = 'plan'`), `plan_task`, "Plan" on a task. New project ids start
+`proj_`; existing ones keep `plan_` ids and branches; old `/plans/…` links redirect.
+- First live run of "a project runs task by task" (PR #40), on Corner Shop: task 1's four phases landed and the
+  engine planned task 2 by itself a few seconds later. Then merging #41 restarted the engine mid-planning, which was
+  recorded as a failed planning and not retried; a restart now counts as an interruption and planning resumes.
+
 ## A plan runs task by task (Sandy, 2026-10-23)
 
 Sandy: "we are operating a level off. Plans are a set of tasks. Those tasks have phases. The phases is where the

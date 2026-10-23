@@ -21,6 +21,9 @@ import { Validate } from './pages/Validate'
 import { Mockups } from './pages/Mockups'
 import { Tasks } from './pages/Tasks'
 
+/** Links from before projects were called projects. */
+function OldPlanLink() { return <Navigate to={`/projects/${useParams().id}`} replace /> }
+
 function IdeaRoute() {
   const idea = findIdea(useParams().slug ?? '')
   return idea ? <IdeaPage idea={idea} /> : <p>No such idea.</p>
@@ -37,7 +40,9 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/" element={<Now />} />
             <Route path="/learn" element={<Learn />} />
             <Route path="/projects" element={<Projects mode="project" />} />
-            <Route path="/project" element={<Navigate to="/projects" replace />} />
+            <Route path="/plan" element={<Navigate to="/projects" replace />} />
+            <Route path="/plans" element={<Navigate to="/projects" replace />} />
+            <Route path="/plans/:id" element={<OldPlanLink />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/validate" element={<Validate />} />
             <Route path="/mockups" element={<Mockups />} />

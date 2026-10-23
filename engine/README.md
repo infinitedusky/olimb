@@ -26,9 +26,9 @@ In here, `pnpm serve` runs just the engine and `pnpm se …` is the CLI (against
 ```bash
 pnpm se workspace "My workspace"            # → {"id":"ws_…"}
 pnpm se app "Homework Gate" -w ws_…          # → {"id":"app_…"}
-pnpm se plan create -a app_… -t "The gate" -f examples/demo-plan.json   # tasks in order, each with phases
-pnpm se plan tick plan_… -r 2               # one dispatch pass with 2 free slots (drafts)
-pnpm se plan graph plan_…                   # tasks, phases, edges, why each held phase waits, steps
+pnpm se project create -a app_… -t "The gate" -f examples/demo-plan.json   # tasks in order, each with phases
+pnpm se project tick plan_… -r 2               # one dispatch pass with 2 free slots (drafts)
+pnpm se project graph plan_…                   # tasks, phases, edges, why each held phase waits, steps
 pnpm se phase status ph_… done              # drive a draft by hand, or:
 pnpm se watch -p plan_…                     # replay the plan's events, then follow live
 pnpm se task plan task_…                    # the planner: brief → phases, decisions, questions (minutes; read-only on the repo)
@@ -43,8 +43,8 @@ To run a plan for real, the app needs a repo with a local main checkout and a te
 ```bash
 pnpm se app "Homework Gate" -w ws_… --test-cmd "/abs/path/to/.venv/bin/python -m pytest -q poc" --max-budget-usd 10
 pnpm se repo infinitedusky/homework-gate -a app_… -p /abs/path/to/homework-gate
-pnpm se plan create -a app_… -t "Health endpoint" -f examples/homework-gate-health.json
-pnpm se plan start plan_…                   # integration branch, worktree per task, agent run, landing, PR
+pnpm se project create -a app_… -t "Health endpoint" -f examples/homework-gate-health.json
+pnpm se project start plan_…                   # integration branch, worktree per task, agent run, landing, PR
 ```
 
 Each phase gets `<repo>-worktrees/<plan>--<n>` on branch `phase/<plan>/<n>`, cut from `plan/<plan>` (itself cut from
