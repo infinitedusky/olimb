@@ -179,6 +179,10 @@ export function buildApp(bus: EventBus) {
   })
 
   // By-hand transitions: how a person drives a draft's graph. The executor owns running plans.
+  api.post('/phases/:id/retry', async (c) => { // a failed or cancelled phase gets three more attempts; {fresh: true} starts over from the plan's branch
+    const body = await c.req.json<{ fresh?: boolean }>().catch(() => ({} as { fresh?: boolean }))
+    try { return c.json(await runner.retryPhase(c.req.param('id'), { fresh: !!body.fresh })) } catch (err) { return planError(c, err) }
+  })
   api.post('/phases/:id/status', async (c) => {
     const { status } = await c.req.json<{ status: PhaseStatus }>()
     if (!PHASE_STATUSES.includes(status)) return c.json({ error: `status must be one of ${PHASE_STATUSES.join(', ')}` }, 400)

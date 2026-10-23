@@ -73,7 +73,7 @@ function AttentionRow({ a, busy, act }: { a: Attention; busy: string | null; act
   switch (a.kind) {
     case 'failed_phase': return (
       <li><Badge tone="bad">failed</Badge><div><strong>#{a.number} {a.title}</strong> {where}{a.error && <div className="muted" style={{ fontSize: 13 }}>{a.error.slice(0, 200)}</div>}</div>
-        <Link className="btn quiet small" to={`/plans/${a.planId}`}>Look</Link></li>)
+        <span style={{ display: 'flex', gap: 6 }}><button className="btn small" disabled={busy === a.phaseId} onClick={() => act(a.phaseId, () => engine.retry(a.phaseId))}>Retry</button><Link className="btn quiet small" to={`/plans/${a.planId}`}>Look</Link></span></li>)
     case 'question': return (
       <li><Badge tone={COST_TONE[a.cost ?? ''] ?? 'neutral'}>question</Badge><div><strong>{a.text}</strong> {where}{a.taskNumber != null && <span className="faint"> · task #{a.taskNumber}</span>}</div>
         <Link className="btn quiet small" to={`/plans/${a.planId}`}>Answer</Link></li>)

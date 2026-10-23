@@ -10,7 +10,7 @@ import { promisify } from 'node:util'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from './db/client.js'
-import { app, idea, plan, question, repo, session, sessionMessage, task, workspace } from './db/schema.js'
+import { app, idea, phase, plan, question, repo, session, sessionMessage, task, workspace } from './db/schema.js'
 import { addWorktree, git, removeWorktree } from './git.js'
 import { withLock } from './landing.js'
 import { appendEvent } from './events.js'
@@ -90,6 +90,7 @@ function engineTools(appId: string) {
       tool('plan_task', 'Run the planner on a task of this app (minutes): reads the repo and the brief, writes phases, decisions and questions. Returns when done.', { taskId: z.string() }, async (a) => tryIt(async () => { await ownTask(a.taskId); return finishPlanning(await preparePlanning(a.taskId, { actor: 'agent' })) })),
       tool('answer_question', 'Answer one of the planner\'s questions on the person\'s behalf; say so to them first.', { questionId: z.string(), answer: z.string() }, async (a) => tryIt(async () => { await ownQuestion(a.questionId); return answerQuestion(a.questionId, a.answer, 'agent') })),
       tool('start_plan', 'Run a plan of this app: integration branch, a worktree and an agent per phase, landing, PR.', { planId: z.string() }, async (a) => tryIt(async () => { await ownPlan(a.planId); return runner.startPlan(a.planId) })),
+      tool('retry_phase', 'Retry a failed or cancelled phase of this app: three more attempts, told why it failed; fresh=true starts over from the plan\'s branch.', { phaseId: z.string(), fresh: z.boolean().optional() }, async (a) => tryIt(async () => { const [x] = await db.select().from(phase).where(eq(phase.id, a.phaseId)); if (!x || x.appId !== appId) throw foreign(); return runner.retryPhase(a.phaseId, { fresh: a.fresh, actor: 'agent' }) })),
       tool('cancel_plan', 'Stop a plan of this app: agents aborted, unlanded phases cancelled, landed work kept.', { planId: z.string() }, async (a) => tryIt(async () => { await ownPlan(a.planId); return runner.cancelPlan(a.planId) })),
       tool('events', 'This app\'s event log, newest last. Filter by plan or phase; since is a sequence number.', { planId: z.string().optional(), phaseId: z.string().optional(), since: z.number().optional(), limit: z.number().optional() },
         async (a) => tryIt(async () => (await eventsSince(a.since ?? 0, { appId, planId: a.planId, phaseId: a.phaseId })).slice(-(a.limit ?? 50)))),

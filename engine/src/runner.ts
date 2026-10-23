@@ -159,7 +159,7 @@ export class Runner {
 
   /** The last failure reason comes from the log, so it survives a restart. (A landed phase never retries again.) */
   private async lastFailure(phaseId: string): Promise<string | undefined> {
-    const [e] = await db.select().from(event).where(and(eq(event.phaseId, phaseId), eq(event.type, 'phase.retry'))).orderBy(desc(event.seq)).limit(1)
+    const [e] = await db.select().from(event).where(and(eq(event.phaseId, phaseId), inArray(event.type, ['phase.retry', 'phase.failed']))).orderBy(desc(event.seq)).limit(1)
     return e ? String((e.payload as any).why ?? '') : undefined
   }
 
@@ -218,6 +218,40 @@ export class Runner {
     await this.emit({ ...ctx.base, type: 'plan.cancelled', payload: { why, cancelled: open.length, landed: phases.length - open.length } })
     await this.cleanup(planId).catch(() => {}) // a worktree with an agent mid-write may refuse once; recovery handles leftovers
     return { cancelled: open.length, landed: phases.length - open.length }
+  }
+
+  /**
+   * A person retries a failed (or cancelled) phase: three more attempts, and the builder is told why the last one
+   * failed. By default it continues in the same worktree with what the last attempt left; fresh starts over from
+   * the plan's branch. A stopped plan resumes: it runs again, with its other cancelled phases queued too.
+   */
+  async retryPhase(phaseId: string, opts: { fresh?: boolean; actor?: string } = {}) {
+    const [x] = await db.select().from(phase).where(eq(phase.id, phaseId))
+    if (!x) throw new PlanError(`no phase ${phaseId}`)
+    if (!['failed', 'cancelled'].includes(x.status)) throw new PlanError(`phase #${x.number} is ${x.status}; only a failed or cancelled phase can be retried`)
+    const ctx = await this.context(x.planId)
+    const { p, a, r } = ctx
+    if (!r) throw new PlanError(`app ${a.name} has no repo with a local path`)
+    if (opts.fresh && (x.worktreePath || x.branch)) {
+      await withLock(`git:${r.localPath}`, async () => {
+        if (x.worktreePath) await removeWorktree(r.localPath!, x.worktreePath)
+        if (x.branch) await git(r.localPath!, ['branch', '-D', x.branch], { allowFail: true })
+      })
+    }
+    const requeue = { status: 'queued', heldReason: null, maxAttempts: x.attempt + 3, updatedAt: new Date(), ...(opts.fresh ? { worktreePath: null, branch: null } : {}) }
+    await db.update(phase).set(requeue).where(eq(phase.id, phaseId))
+    const resumed: number[] = []
+    if (p.status !== 'running') {
+      if (p.status === 'stopped') { // resume: the other cancelled phases come back too
+        const others = (await db.select().from(phase).where(and(eq(phase.planId, p.id), eq(phase.status, 'cancelled')))).filter((o) => o.id !== phaseId)
+        for (const o of others) { await db.update(phase).set({ status: 'queued', heldReason: null, maxAttempts: o.attempt + 3, updatedAt: new Date() }).where(eq(phase.id, o.id)); resumed.push(o.number) }
+      }
+      await ensureBranch(r.localPath!, p.integrationBranch!, a.defaultBranch)
+      await db.update(plan).set({ status: 'running' }).where(eq(plan.id, p.id))
+    }
+    await this.emit({ ...ctx.base, actor: opts.actor ?? 'user', taskId: x.taskId, phaseId, type: 'phase.status', payload: { from: x.status, to: 'queued', why: `retried by a person${opts.fresh ? ', from scratch' : ''}`, attempts: 3, resumed } })
+    void this.dispatch()
+    return { phase: x.number, fresh: !!opts.fresh, resumed }
   }
 
   private async updatePr(planId: string) {

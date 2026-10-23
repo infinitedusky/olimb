@@ -103,6 +103,7 @@ export const engine = {
   answer: (questionId: string, answer: string) => call<unknown>('POST', `/questions/${questionId}/answer`, { answer }),
   start: (id: string) => call<unknown>('POST', `/plans/${id}/start`),
   tick: (id: string) => call<unknown>('POST', `/plans/${id}/tick`),
+  retry: (phaseId: string, fresh = false) => call<{ phase: number; fresh: boolean; resumed: number[] }>('POST', `/phases/${phaseId}/retry`, { fresh }),
   setStatus: (phaseId: string, status: PhaseStatus) => call<unknown>('POST', `/phases/${phaseId}/status`, { status }),
 }
 
