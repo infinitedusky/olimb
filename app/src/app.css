@@ -200,3 +200,6 @@ a.badge { text-decoration: none; }
 .mockups { display: flex; flex-direction: column; height: calc(100vh - 64px); }
 .sb-frame { flex: 1; width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; min-height: 480px; }
 .sb-log { font-size: 11px; max-height: 160px; overflow: auto; background: var(--ground); padding: 8px; border-radius: 8px; text-align: left; }
+.talk-fab-group { position: fixed; right: 20px; bottom: 20px; z-index: 40; display: flex; gap: 6px; }
+.talk-fab-group .talk-fab { position: static; }
+.talk-fab.back { background: var(--surface); color: var(--ink); border-color: var(--line); padding: 10px 12px; }

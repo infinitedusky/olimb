@@ -11,7 +11,7 @@ const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(file
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5180, strictPort: true, // one address to remember; `pnpm dev` at the repo root prints it
+    port: 5180, strictPort: true, host: '127.0.0.1', // IPv4 too: some browsers resolve localhost to 127.0.0.1, and Node binds only ::1 by default // one address to remember; `pnpm dev` at the repo root prints it
     // The idea files live one level up, at the repo root.
     fs: { allow: ['..'] },
     // The engine serves its API under /api (and the built UI at / in production); the UI never talks to the database.
