@@ -286,6 +286,21 @@ Details and sources in `research/`.
   Build order protects the edge: the telemetry loop first, the middle in
   its simplest form, then thicken it.
 
+- **A project has a backlog: nothing to remember** (Sandy, 2026-10-23: "some
+  way for you to say, okay, this is what I need to accomplish, and I know
+  it's all here and I don't feel like I have to worry about forgetting
+  anything"). Beside its tasks, a project keeps a backlog: one line per thing
+  it has to cover. Items come from the person, the agent (from a
+  conversation), an idea (adding an idea to a project takes it out of the
+  inbox), the planner (what it noticed but left out of a task) and the
+  builders (a `Later:` list at the end of a phase's summary, kept once the
+  phase lands). Every item ends one of two ways: **covered** by a task (a new
+  one made from it, or one the project already has) or **dropped with a
+  reason**. Nothing disappears silently, and **a project lands only when
+  nothing in its backlog is open**: the engine holds the landing and the
+  front door says what is left. The pull request lists what was left out on
+  purpose, with why.
+
 ## Open questions
 
 - Comps: who already does each part (`research/comps-*.md`).

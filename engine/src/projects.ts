@@ -6,7 +6,7 @@
  */
 import { and, asc, desc, eq, inArray, notInArray, sql } from 'drizzle-orm'
 import { db, type Tx } from './db/client.js'
-import { app, decision, event, idea, phase, phaseDependency, phaseFileClaim, project, pr, question, run, step, task, type PhaseStatus } from './db/schema.js'
+import { app, backlogItem, decision, event, idea, phase, phaseDependency, phaseFileClaim, project, pr, question, run, step, task, type PhaseStatus } from './db/schema.js'
 import { appendEvent } from './events.js'
 import { newId } from './ids.js'
 import { claimsOverlap, findCycle, pickTasksToStart, type SchedTask } from './scheduler.js'
@@ -94,6 +94,30 @@ export async function addPhases(taskId: string, phases: NewPhase[], actor = 'eng
   return outer ? work(outer) : db.transaction(work)
 }
 
+/**
+ * A new task at the end of an existing project (from its backlog, or by hand). In a running project it is planned
+ * when the tasks before it have landed, like any other; a project that has landed, stopped or been superseded takes
+ * no new tasks.
+ */
+export async function addTask(projectId: string, input: { title: string; description?: string; brief?: string; ideaId?: string }, actor = 'user', outer?: Tx) {
+  if (!input.title?.trim()) throw new PlanError('a task needs a title')
+  const work = async (tx: Tx) => {
+    const [p] = await tx.select().from(project).where(eq(project.id, projectId))
+    if (!p) throw new PlanError(`no project ${projectId}`)
+    if (['landed', 'stopped', 'superseded'].includes(p.status)) throw new PlanError(`project is ${p.status}; it takes no new tasks`)
+    const [a] = await tx.select().from(app).where(eq(app.id, p.appId))
+    const [{ maxTask }] = await tx.select({ maxTask: sql<number>`coalesce(max(${task.number}), 0)` }).from(task).where(eq(task.appId, a.id))
+    const [{ maxPos }] = await tx.select({ maxPos: sql<number>`coalesce(max(${task.position}), -1)` }).from(task).where(eq(task.projectId, projectId))
+    const [t] = await tx.insert(task).values({
+      id: newId('task'), appId: a.id, projectId, ideaId: input.ideaId ?? null, number: Number(maxTask) + 1, position: Number(maxPos) + 1,
+      title: input.title.trim(), description: input.description?.trim() || null, brief: input.brief?.trim() || null, createdBy: actor,
+    }).returning()
+    await appendEvent(tx, { workspaceId: a.workspaceId, appId: a.id, projectId, taskId: t.id, actor, type: 'task.created', payload: { number: t.number, title: t.title } })
+    return t
+  }
+  return outer ? work(outer) : db.transaction(work)
+}
+
 async function loadProject(tx: Tx | typeof db, projectId: string) {
   const [p] = await tx.select().from(project).where(eq(project.id, projectId))
   if (!p) return null
@@ -108,6 +132,7 @@ async function loadProject(tx: Tx | typeof db, projectId: string) {
   const [thePr] = await tx.select().from(pr).where(eq(pr.projectId, projectId))
   const decisions = await tx.select().from(decision).where(eq(decision.projectId, projectId))
   const questions = await tx.select().from(question).where(eq(question.projectId, projectId)).orderBy(asc(question.askedAt))
+  const backlog = await tx.select().from(backlogItem).where(eq(backlogItem.projectId, projectId)).orderBy(asc(backlogItem.createdAt))
   const full = phases.map((x) => {
     const last = runs.filter((r) => r.phaseId === x.id).sort((r, q) => q.attempt - r.attempt)[0] ?? null
     return {
@@ -121,6 +146,7 @@ async function loadProject(tx: Tx | typeof db, projectId: string) {
   const order = orderEdges(full, tasks)
   return {
     project: p, app: { id: a.id, name: a.name, defaultBranch: a.defaultBranch, workspaceId: a.workspaceId }, pr: thePr ?? null,
+    backlog, // everything the project has to cover: open, covered by a task, or dropped with a reason
     decisions, questions, // the planner's: what it settled (provisional until approved) and what it could not
     tasks: tasks.map((t) => ({ ...t, phaseIds: phases.filter((x) => x.taskId === t.id).map((x) => x.id) })),
     phases: full.map((x) => ({ ...x, orderedAfter: order.get(x.id) ?? [] })),
@@ -313,9 +339,10 @@ export async function listProjects(opts: { all?: boolean; appId?: string } = {})
   const ids = projects.map((p) => p.id)
   const tasks = ids.length ? await db.select({ projectId: task.projectId }).from(task).where(inArray(task.projectId, ids)) : []
   const phases = ids.length ? await db.select({ projectId: phase.projectId, status: phase.status }).from(phase).where(inArray(phase.projectId, ids)) : []
+  const items = ids.length ? await db.select({ projectId: backlogItem.projectId }).from(backlogItem).where(and(inArray(backlogItem.projectId, ids), eq(backlogItem.state, 'open'))) : []
   return projects.map((p) => ({
     ...p, app: apps.find((a) => a.id === p.appId) ?? null,
-    taskCount: tasks.filter((t) => t.projectId === p.id).length,
+    taskCount: tasks.filter((t) => t.projectId === p.id).length, backlogOpen: items.filter((i) => i.projectId === p.id).length,
     phases: phases.filter((x) => x.projectId === p.id).reduce<Record<string, number>>((acc, x) => ({ ...acc, [x.status]: (acc[x.status] ?? 0) + 1 }), {}),
   }))
 }
@@ -329,7 +356,7 @@ export async function listTasks(appId: string) {
   const phases = await db.select({ taskId: phase.taskId, status: phase.status }).from(phase).where(inArray(phase.projectId, ids))
   const taskIds = tasks.map((t) => t.id)
   const planning = taskIds.length ? await db.select({ taskId: event.taskId, type: event.type, seq: event.seq }).from(event)
-    .where(and(inArray(event.taskId, taskIds), sql`${event.type} like 'task.project%'`)).orderBy(desc(event.seq)) : []
+    .where(and(inArray(event.taskId, taskIds), sql`${event.type} like 'task.plan%'`)).orderBy(desc(event.seq)) : []
   const order = new Map(projects.map((p) => [p.id, p.createdAt.getTime()]))
   return tasks
     .sort((a, b) => (order.get(b.projectId)! - order.get(a.projectId)!) || a.position - b.position)

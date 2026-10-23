@@ -18,6 +18,8 @@ import { newId } from './ids.js'
 import { rank, riskOf, type Risk } from './risk.js'
 import { holdMinutes, isOutage } from './outage.js'
 import { createIdea, listIdeas } from './ideas.js'
+import { addIdea, addItems, coverItem, dropItem, itemToTask } from './backlog.js'
+import { backlogItem } from './db/schema.js'
 import { now } from './now.js'
 import { answerQuestion, finishPlanning, preparePlanning } from './planner.js'
 import { createProject, listProjects, PlanError, projectGraph } from './projects.js'
@@ -30,7 +32,7 @@ const PERMISSION_TIMEOUT_MS = 10 * 60_000
 
 const talkPrompt = (cwd: string, branch: string | null, base: string) => `You are Self Evident's agent (Self Evident: software that proves itself — observe, learn, ideate, mockup, build), talking with the person who runs it, in its own web UI.
 The factory builds software from ideas: idea → project (tasks in order) → task (a title and a brief) → phase (one agent, one worktree, one commit) → step. Read CLAUDE.md, LOG.md and SHAPE.md in this checkout when you need the history; LOG.md's top entries are the latest decisions.
-You have the engine as tools (mcp__engine__*): see what needs attention, keep ideas, make projects, run the planner on a task, answer its questions, start or cancel projects, read the event log. Use them rather than describing what the person should click.
+You have the engine as tools (mcp__engine__*): see what needs attention, keep ideas, make projects, keep each project's backlog (everything it has to cover; when the person mentions something a project should not forget, add it), run the planner on a task, answer its questions, start or cancel projects, read the event log. Use them rather than describing what the person should click.
 You can read, search and edit files and run commands here, as in any Claude Code session. The engine rates every action's risk (free, cheap, moderate, expensive); up to the person's threshold it runs without asking and is logged, above it a card asks them. Expensive things (main, force, deletes, merges, publishing, starting a project) always ask. Work on a branch in a worktree, never in a checkout that is on main; say what each action is for.
 You work in your own worktree, ${cwd}, on branch ${branch ?? '(none)'} cut from ${base}: edit and commit there; push and open a pull request when the work is ready (both ask).
 How this person works: PRs only, main is production; short answers that lead with the answer; questions are questions, not instructions to change things; give a recommendation, not a survey; write decisions into LOG.md or SHAPE.md the moment they are made; one git worktree per branch, never the main checkout.`
@@ -67,13 +69,14 @@ const summariseInput = (name: string, input: any) => {
 }
 
 /** The engine, as tools. Thin wrappers over the same functions the routes call. */
-function engineTools(appId: string) {
+function engineTools(appId: string, sessionId?: string) {
   const text = (v: unknown) => ({ content: [{ type: 'text' as const, text: typeof v === 'string' ? v : JSON.stringify(v, null, 2) }] })
   const tryIt = async (fn: () => Promise<unknown>) => { try { return text(await fn()) } catch (err: any) { return { ...text(`error: ${err?.message ?? err}`), isError: true } } }
   // The wall: this conversation sees and touches only its own app. Anything addressed by id is checked against it.
   const foreign = () => new PlanError('that belongs to another app; this conversation is scoped to its own')
   const ownProject = async (projectId: string) => { const g = await projectGraph(projectId); if (!g || g.project.appId !== appId) throw foreign(); return g }
   const ownTask = async (taskId: string) => { const [t] = await db.select().from(task).where(eq(task.id, taskId)); if (!t || t.appId !== appId) throw foreign(); return t }
+  const ownItem = async (itemId: string) => { const [i] = await db.select().from(backlogItem).where(eq(backlogItem.id, itemId)); if (!i || i.appId !== appId) throw foreign(); return i }
   const ownQuestion = async (questionId: string) => { const [q] = await db.select().from(question).where(eq(question.id, questionId)); if (!q || q.appId !== appId) throw foreign(); return q }
   return createSdkMcpServer({
     name: 'engine', version: '0.2.0',
@@ -81,13 +84,22 @@ function engineTools(appId: string) {
     tools: [
       tool('now', 'What is running, what needs a person, what just happened, in this app.', {}, async () => tryIt(() => now(appId))),
       tool('projects', 'This app\'s projects with counts (superseded hidden unless all=true).', { all: z.boolean().optional() }, async (a) => tryIt(() => listProjects({ all: a.all, appId }))),
-      tool('project_graph', 'A project in full: tasks in order, phases with dependencies, files, held reasons, steps and last run; the planner\'s decisions and questions.', { projectId: z.string() }, async (a) => tryIt(() => ownProject(a.projectId))),
+      tool('project_graph', 'A project in full: its backlog (open, covered, dropped), tasks in order, phases with dependencies, files, held reasons, steps and last run; the planner\'s decisions and questions.', { projectId: z.string() }, async (a) => tryIt(() => ownProject(a.projectId))),
       tool('ideas', 'This app\'s ideas inbox and what left it.', {}, async () => tryIt(() => listIdeas(appId))),
       tool('create_idea', 'Keep an idea in this app: a title and, optionally, why and what is already decided.', { title: z.string(), body: z.string().optional() }, async (a) => tryIt(() => createIdea({ ...a, appId, actor: 'agent' }))),
       tool('create_project', 'Create a project in this app: tasks in order, each a title and a brief. Phases come from the planner (plan_task) or can be given.', {
         title: z.string(), spec: z.string().optional(), ideaId: z.string().optional(),
         tasks: z.array(z.object({ title: z.string(), description: z.string().optional().describe('one to three plain sentences for a person: what will be different; no file names or code'), brief: z.string().optional().describe('the builder\'s instructions, Markdown, short paragraphs'), phases: z.array(z.object({ key: z.string(), title: z.string(), description: z.string().optional(), brief: z.string().optional(), dependsOn: z.array(z.string()).optional(), files: z.array(z.string()).optional() })).optional() })),
       }, async (a) => tryIt(() => createProject({ ...a, appId }))),
+      tool('backlog_add', 'Add to a project\'s backlog: things the project must not forget (one line each, optional detail), or an idea of this app (ideaId). Use it whenever the person mentions something the project should cover.', {
+        projectId: z.string(), items: z.array(z.object({ text: z.string(), body: z.string().optional() })).optional(), ideaId: z.string().optional(),
+      }, async (a) => tryIt(async () => { await ownProject(a.projectId); return a.ideaId ? addIdea(a.projectId, a.ideaId, 'agent') : addItems(a.projectId, (a.items ?? []).map((i) => ({ ...i, source: 'agent' as const, sourceRef: sessionId ? { sessionId } : undefined })), 'agent') })),
+      tool('backlog_task', 'Make an open backlog item a new task at the end of its project (title and brief default to the item). In a running project the engine plans it when its turn comes.', { itemId: z.string(), title: z.string().optional(), brief: z.string().optional() },
+        async (a) => tryIt(async () => { await ownItem(a.itemId); const out = await itemToTask(a.itemId, a, 'agent'); void runner.dispatch(); return out })),
+      tool('backlog_cover', 'Mark an open backlog item covered by a task the project already has.', { itemId: z.string(), taskId: z.string(), reason: z.string().optional() },
+        async (a) => tryIt(async () => { await ownItem(a.itemId); const out = await coverItem(a.itemId, a.taskId, a.reason, 'agent'); void runner.dispatch(); return out })),
+      tool('backlog_drop', 'Drop an open backlog item, with the reason (required). Ask the person first unless they said so.', { itemId: z.string(), reason: z.string() },
+        async (a) => tryIt(async () => { await ownItem(a.itemId); const out = await dropItem(a.itemId, a.reason, 'agent'); void runner.dispatch(); return out })),
       tool('plan_task', 'Run the planner on a task of this app (minutes): reads the repo and the brief, writes phases, decisions and questions. Returns when done.', { taskId: z.string() }, async (a) => tryIt(async () => { await ownTask(a.taskId); return finishPlanning(await preparePlanning(a.taskId, { actor: 'agent' }), { onPlanned: () => void runner.dispatch() }) })),
       tool('answer_question', 'Answer one of the planner\'s questions on the person\'s behalf; say so to them first.', { questionId: z.string(), answer: z.string() }, async (a) => tryIt(async () => { await ownQuestion(a.questionId); return answerQuestion(a.questionId, a.answer, 'agent') })),
       tool('start_project', 'Run a project of this app: integration branch, a worktree and an agent per phase, landing, PR.', { projectId: z.string() }, async (a) => tryIt(async () => { await ownProject(a.projectId); return runner.startProject(a.projectId) })),
@@ -194,7 +206,7 @@ async function open(sessionId: string): Promise<Live> {
       model: setup.model,
       settingSources: ['project'],
       systemPrompt: { type: 'preset', preset: 'claude_code', append: talkPrompt(s.cwd!, s.branch, a?.defaultBranch ?? 'main') },
-      mcpServers: { engine: engineTools(s.appId) },
+      mcpServers: { engine: engineTools(s.appId, s.id) },
       tools: [...READ_TOOLS, ...ASK_TOOLS],
       allowedTools: READ_TOOLS, // everything else is rated by the hook (the hook sees every call; allowedTools would not)
       permissionMode: 'default',

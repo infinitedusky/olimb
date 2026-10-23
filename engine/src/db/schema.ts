@@ -1,7 +1,7 @@
 /**
  * The engine's schema. Git holds code; this holds all state; the engine is the single writer.
  * From research/parallel-engine.md §5: [LS] Lightsprint-derived, [ID] InDusk run-the-graph, [IF] ours.
- * Hierarchy: idea → project (tasks in order) → task (authored: title + brief) → phase (the atomic unit the engine runs)
+ * Hierarchy: idea → project (a backlog, and tasks in order) → task (authored: title + brief) → phase (the atomic unit the engine runs)
  * → step (the builder's own todo list while it builds a phase).
  * IDs are prefixed short strings (ids.ts). State tables are the truth; `event` is the append-only log and live feed.
  *
@@ -109,6 +109,28 @@ export const task = pgTable('task', { // authored: a title and a brief (like an 
 }, (t) => [uniqueIndex('task_app_number').on(t.appId, t.number), uniqueIndex('task_id_app').on(t.id, t.appId), index('task_project').on(t.projectId),
   foreignKey({ name: 'task_project_app_fk', columns: [t.projectId, t.appId], foreignColumns: [project.id, project.appId] }),
   foreignKey({ name: 'task_idea_app_fk', columns: [t.ideaId, t.appId], foreignColumns: [idea.id, idea.appId] })])
+
+// A project's backlog: everything it has to cover, so nothing is forgotten (Sandy, 2026-10-23: "this is what I need to
+// accomplish and I know it's all here"). An item comes from a person, the agent, an idea, the planner or a builder; it
+// ends covered by a task (a new one, or one that already does it) or dropped with a reason. A project lands only when
+// nothing in its backlog is open.
+export const BACKLOG_SOURCES = ['person', 'agent', 'idea', 'planner', 'builder'] as const
+export const BACKLOG_STATES = ['open', 'covered', 'dropped'] as const
+export const backlogItem = pgTable('backlog_item', {
+  id: id(), appId: appId(), projectId: text('project_id').notNull().references(() => project.id),
+  text: text('text').notNull(), body: text('body'), // text: one line to remember; body: anything more
+  source: text('source').notNull(), sourceRef: jsonb('source_ref'), // {sessionId} | {taskId, runId} | {phaseId, runId}
+  ideaId: text('idea_id').references(() => idea.id), // the idea it came from, if any
+  state: text('state').notNull().default('open'),
+  taskId: text('task_id').references(() => task.id), // covered: the task that does it
+  reason: text('reason'), // dropped: why; covered: how, when it is not obvious
+  createdBy: text('created_by'), createdAt: createdAt(),
+  resolvedBy: text('resolved_by'), resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+}, (t) => [index('backlog_item_project').on(t.projectId), inList('backlog_item_source', t.source, BACKLOG_SOURCES), inList('backlog_item_state', t.state, BACKLOG_STATES),
+  check('backlog_item_resolution', sql`(${t.state} = 'open') or (${t.state} = 'covered' and ${t.taskId} is not null) or (${t.state} = 'dropped' and ${t.reason} is not null)`),
+  foreignKey({ name: 'backlog_item_project_app_fk', columns: [t.projectId, t.appId], foreignColumns: [project.id, project.appId] }),
+  foreignKey({ name: 'backlog_item_task_app_fk', columns: [t.taskId, t.appId], foreignColumns: [task.id, task.appId] }),
+  foreignKey({ name: 'backlog_item_idea_app_fk', columns: [t.ideaId, t.appId], foreignColumns: [idea.id, idea.appId] })])
 
 export const decision = pgTable('decision', { // [LS] decision card; [IF] provisional flag
   id: id(), appId: appId(), ideaId: text('idea_id').references(() => idea.id), projectId: text('project_id').references(() => project.id),

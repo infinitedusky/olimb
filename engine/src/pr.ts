@@ -32,7 +32,7 @@ export async function ensureProjectPr(i: PrInput): Promise<{ number: number; url
 
 export interface LandedTask { number: number; title: string; summary?: string | null; costUsd?: number | null; sha?: string | null }
 
-export function prBody(project: { title: string; spec?: string | null; id: string }, tasks: LandedTask[], pending: { number: number; title: string }[]): string {
+export function prBody(project: { title: string; spec?: string | null; id: string }, tasks: LandedTask[], pending: { number: number; title: string }[], backlog: { text: string; state: string; reason: string | null }[] = []): string {
   const lines = [
     `Built by Self Evident from project \`${project.id}\`: ${project.title}.`,
     project.spec ? `\n${project.spec}` : '',
@@ -42,6 +42,8 @@ export function prBody(project: { title: string; spec?: string | null; id: strin
       t.summary?.trim() || '_No summary from the run._',
       t.costUsd != null ? `_Run cost estimate: $${Number(t.costUsd).toFixed(2)}_` : ''].join('\n\n')),
     pending.length ? `\n## Still to land\n${pending.map((t) => `- #${t.number} ${t.title}`).join('\n')}` : '',
+    backlog.some((b) => b.state === 'open') ? `\n## Backlog still open\n${backlog.filter((b) => b.state === 'open').map((b) => `- ${b.text}`).join('\n')}` : '',
+    backlog.some((b) => b.state === 'dropped') ? `\n## Left out on purpose\n${backlog.filter((b) => b.state === 'dropped').map((b) => `- ${b.text}: ${b.reason}`).join('\n')}` : '',
     '',
     'Each task ran in its own worktree, was merged with this branch, tested on the merged commit, and fast-forwarded here, one at a time.',
     '',

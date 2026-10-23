@@ -87,7 +87,7 @@ task.command('phases').argument('<taskId>').requiredOption('-f, --file <file>', 
   })
 task.command('plan').argument('<taskId>').description("the planner: the task's brief → phases, decisions and questions (one read-only agent run; minutes)")
   .action(async (taskId: string) => {
-    const out = await api<any>('POST', `/tasks/${taskId}/project?wait=1`)
+    const out = await api<any>('POST', `/tasks/${taskId}/plan?wait=1`)
     for (const x of out.phases) console.log(`  phase ${x.id}  #${x.number}  ${x.title}`)
     for (const d of out.decisions) console.log(`  decided  ${d.question} → ${d.options[0]?.text}  (${d.rationale})`)
     for (const q of out.questions) console.log(`  question ${q.id} [${q.cost}]  ${q.text}  (recommends ${q.options.find((o: any) => o.recommended)?.label})`)

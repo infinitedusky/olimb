@@ -28,6 +28,10 @@ const ENGINE: Record<string, [Risk, string]> = {
   retry_phase: ['moderate', 'runs an agent again: minutes and money'],
   pause_project: ['cheap', 'stops agents, keeps their place; resume undoes it'],
   resume_project: ['moderate', 'runs agents again: minutes and money'],
+  backlog_add: ['cheap', 'a line on a project\'s backlog; easy to drop'],
+  backlog_cover: ['cheap', 'marks an item covered by a task; reopen undoes it'],
+  backlog_drop: ['cheap', 'drops an item with a reason; reopen undoes it'],
+  backlog_task: ['moderate', 'adds a task; in a running project the planner runs on it'],
   start_project: ['expensive', 'runs agents, spends money, opens a pull request'],
 }
 

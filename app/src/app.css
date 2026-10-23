@@ -206,3 +206,14 @@ a.badge { text-decoration: none; }
 .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
 .filter { font: 500 13px var(--sans); padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); cursor: pointer; }
 .filter.active { border-color: var(--accent); color: var(--ink); font-weight: 600; background: var(--accent-wash); }
+
+/* A project's backlog: what it has to cover; open items first, settled ones folded away. */
+.backlog-items { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
+.backlog-items li { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.backlog-items.done li { opacity: .8; }
+.backlog-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.backlog-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.backlog-add input { flex: 1; min-width: 220px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: 14px var(--sans); }
+.backlog select.small { padding: 3px 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: 13px var(--sans); max-width: 220px; }
+.linkish { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-size: 13px; }
+@media (max-width: 700px) { .backlog-items li { flex-direction: column; } .backlog-actions { justify-content: flex-start; } }

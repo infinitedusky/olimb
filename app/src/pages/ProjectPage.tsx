@@ -7,7 +7,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { Badge, type Tone } from '../components/Badge'
 import { PlanGraphView, STATUS_TONE } from '../components/PlanGraphView'
 import { Brief } from '../components/Brief'
-import { engine, useLiveProject, type Decision, type Event, type GraphPhase, type GraphTask, type Question } from '../engine'
+import { engine, useLiveProject, type BacklogItem, type Graph, type IdeaRow, type Decision, type Event, type GraphPhase, type GraphTask, type Question } from '../engine'
 import { useCurrentApp } from '../current-app'
 
 const PROJECT_TONE: Record<string, Tone> = { paused: 'warn', drafting: 'neutral', proposed: 'neutral', approved: 'neutral', running: 'accent', landed: 'ok', stopped: 'warn', superseded: 'neutral' }
@@ -35,7 +35,7 @@ export function ProjectPage() {
   const draft = ['drafting', 'proposed', 'approved'].includes(graph.project.status)
   const act = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn() } finally { setBusy(false) } }
   // A task is being planned from its last planning event until the planner reports back.
-  const lastPlanEvent = (taskId: string) => events.filter((e) => e.taskId === taskId && e.type.startsWith('task.project')).at(-1)?.type
+  const lastPlanEvent = (taskId: string) => events.filter((e) => e.taskId === taskId && e.type.startsWith('task.plan')).at(-1)?.type
   const planning = (taskId: string) => ['task.planning', 'task.plan_waiting'].includes(lastPlanEvent(taskId) ?? '')
   const waitingForModel = (taskId: string) => lastPlanEvent(taskId) === 'task.plan_waiting'
   const open = graph.questions.filter((q) => q.status === 'open')
@@ -69,11 +69,13 @@ export function ProjectPage() {
         </div>
       </div>
 
+      <BacklogPanel graph={graph} busy={busy} act={act} />
+
       <ol className="task-strip">
         {graph.tasks.map((t) => (
           <TaskChip key={t.id} task={t} phases={graph.phases.filter((p) => p.taskId === t.id)} planning={planning(t.id)} waiting={waitingForModel(t.id)}
             onPlan={!['landed', 'stopped', 'superseded'].includes(graph.project.status) && !planning(t.id) ? () => act(() => engine.planTask(t.id)) : undefined}
-            onReplan={draft && !planning(t.id) ? () => { if (window.confirm('Remove this task\'s phases, decisions and questions and project it again?')) void act(async () => { await engine.clearPhases(t.id); await engine.planTask(t.id) }) } : undefined}
+            onReplan={draft && !planning(t.id) ? () => { if (window.confirm('Remove this task\'s phases, decisions and questions and plan it again?')) void act(async () => { await engine.clearPhases(t.id); await engine.planTask(t.id) }) } : undefined}
             busy={busy} />
         ))}
       </ol>
@@ -111,6 +113,68 @@ export function ProjectPage() {
   )
 }
 
+const SOURCE_LABEL: Record<BacklogItem['source'], string> = { person: 'you', agent: 'agent', idea: 'idea', planner: 'planner', builder: 'builder' }
+
+/**
+ * Everything the project has to cover, so nobody has to remember it. Each item becomes a task, is covered by one the
+ * project has, or is dropped with a reason; the project lands only when nothing here is open.
+ */
+function BacklogPanel({ graph, busy, act }: { graph: Graph; busy: boolean; act: (fn: () => Promise<unknown>) => Promise<void> }) {
+  const [text, setText] = useState('')
+  const [ideas, setIdeas] = useState<IdeaRow[]>([])
+  const [showDone, setShowDone] = useState(false)
+  const closed = ['landed', 'stopped', 'superseded'].includes(graph.project.status)
+  useEffect(() => { if (!closed) engine.ideas(graph.app.id).then(setIdeas).catch(() => setIdeas([])) }, [graph.app.id, closed, graph.backlog.length])
+  const items = graph.backlog ?? []
+  const open = items.filter((i) => i.state === 'open')
+  const done = items.filter((i) => i.state !== 'open')
+  const inBacklog = new Set(items.filter((i) => i.state !== 'dropped').map((i) => i.ideaId))
+  const addable = ideas.filter((i) => i.lane === 'inbox' && !inBacklog.has(i.id))
+  const workDone = graph.phases.length > 0 && graph.phases.every((p) => p.status === 'done') && graph.tasks.every((t) => t.phaseIds.length)
+  const add = () => { const t = text.trim(); if (!t) return; void act(async () => { await engine.addBacklog(graph.project.id, t); setText('') }) }
+  const taskLabel = (id: string | null) => { const t = graph.tasks.find((x) => x.id === id); return t ? `task #${t.number} ${t.title}` : 'a task' }
+  return (
+    <section className="panel backlog" data-component="BacklogPanel">
+      <h2>Backlog {open.length > 0 && <Badge tone={workDone && graph.project.status === 'running' ? 'warn' : 'neutral'}>{open.length} open</Badge>}
+        {workDone && open.length > 0 && graph.project.status === 'running' && <span className="faint" style={{ fontSize: 13, fontWeight: 400 }}> · the work has landed; the project lands when these are covered or dropped</span>}</h2>
+      {!items.length && <p className="muted" style={{ margin: '0 0 10px' }}>Everything this project has to cover. Add what you don't want to forget; the planner and builders add what they notice. Each item becomes a task, is covered by one, or is dropped with a reason, and the project lands only when nothing here is open.</p>}
+      {open.length > 0 && <ul className="backlog-items">{open.map((i) => (
+        <li key={i.id}>
+          <div><span>{i.text}</span> <Badge>{SOURCE_LABEL[i.source]}</Badge>{i.body && <div className="faint" style={{ fontSize: 13 }}>{i.body}</div>}</div>
+          {!closed && <span className="backlog-actions">
+            <button className="btn quiet small" disabled={busy} onClick={() => act(() => engine.itemToTask(i.id))} title="A new task at the end of the project">Make a task</button>
+            {graph.tasks.length > 0 && <select className="small" disabled={busy} value="" onChange={(e) => { const id = e.target.value; if (id) void act(() => engine.coverItem(i.id, id)) }} title="A task the project already has does this">
+              <option value="">Covered by…</option>
+              {graph.tasks.map((t) => <option key={t.id} value={t.id}>task #{t.number} {t.title}</option>)}
+            </select>}
+            <button className="btn quiet small" disabled={busy} onClick={() => { const why = window.prompt(`Drop "${i.text}"? Say why, so the backlog remembers.`); if (why?.trim()) void act(() => engine.dropItem(i.id, why.trim())) }}>Drop</button>
+          </span>}
+        </li>))}</ul>}
+      {!closed && (
+        <div className="backlog-add">
+          <input value={text} placeholder="Something this project must not forget" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add() }} />
+          <button className="btn small" disabled={busy || !text.trim()} onClick={add}>Add</button>
+          {addable.length > 0 && <select className="small" disabled={busy} value="" onChange={(e) => { const id = e.target.value; if (id) void act(() => engine.addIdeaToBacklog(graph.project.id, id)) }}>
+            <option value="">Add an idea…</option>
+            {addable.map((i) => <option key={i.id} value={i.id}>#{i.number} {i.title}</option>)}
+          </select>}
+        </div>
+      )}
+      {done.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <button className="linkish faint" onClick={() => setShowDone(!showDone)}>{showDone ? '▾' : '▸'} {done.filter((i) => i.state === 'covered').length} covered, {done.filter((i) => i.state === 'dropped').length} dropped</button>
+          {showDone && <ul className="backlog-items done">{done.map((i) => (
+            <li key={i.id}>
+              <div><span>{i.text}</span> <Badge>{SOURCE_LABEL[i.source]}</Badge>
+                <div className="faint" style={{ fontSize: 13 }}>{i.state === 'covered' ? `→ ${taskLabel(i.taskId)}${i.reason ? ` (${i.reason})` : ''}` : `dropped: ${i.reason}`}</div></div>
+              {!closed && <span className="backlog-actions"><button className="btn quiet small" disabled={busy} onClick={() => act(() => engine.reopenItem(i.id))}>Reopen</button></span>}
+            </li>))}</ul>}
+        </div>
+      )}
+    </section>
+  )
+}
+
 function TaskChip({ task, phases, planning, waiting, onPlan, onReplan, busy }: { task: GraphTask; phases: GraphPhase[]; planning: boolean; waiting?: boolean; onPlan?: () => void; onReplan?: () => void; busy: boolean }) {
   const done = phases.filter((p) => p.status === 'done').length
   const live = phases.some((p) => ['running', 'merging', 'testing'].includes(p.status))
@@ -120,7 +184,7 @@ function TaskChip({ task, phases, planning, waiting, onPlan, onReplan, busy }: {
       <span className="mono faint">task #{task.number}</span>
       <strong>{task.title}</strong>
       {planning ? <Badge tone={waiting ? 'warn' : 'accent'} dot>{waiting ? 'waiting for the model' : 'planning…'}</Badge>
-        : phases.length ? <><Badge tone={tone} dot={live}>{done}/{phases.length} phases</Badge>{onReplan && <button className="btn quiet small" disabled={busy} onClick={onReplan} title="Remove the phases and project this task again">Re-project</button>}</>
+        : phases.length ? <><Badge tone={tone} dot={live}>{done}/{phases.length} phases</Badge>{onReplan && <button className="btn quiet small" disabled={busy} onClick={onReplan} title="Remove the phases and plan this task again">Plan again</button>}</>
         : onPlan ? <button className="btn quiet small" disabled={busy} onClick={onPlan}>Plan</button> : <Badge>no phases</Badge>}
     </li>
   )

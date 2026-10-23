@@ -493,6 +493,26 @@ From Sandy trying the app live on `samples/fake-01-characteristics-of-life`:
 - Policy question noticed: the tutor confirms correct answers ("Yes, D is
   right"). Seems fine; belongs in the directives.
 
+## A project has a backlog (Sandy, 2026-10-23)
+
+Sandy: a project "should have tasks, but it should also have like backlog or something… somehow linked to the
+ideas. Some way for you to say like okay, this is what I need to accomplish and I know it's all here and I don't feel
+like I have to worry about forgetting anything." Shaped and agreed ("Sounds great"); the rule is in SHAPE.md.
+- One table, `backlog_item` (migration 0010): text, optional detail, source (person, agent, idea, planner, builder),
+  state (open, covered, dropped). A check constraint makes "covered" need a task and "dropped" need a reason.
+- The planner's proposal gains `later` (things it noticed that the task should not do); the builder ends its summary
+  with a `Later:` list when it has one, read once the phase lands. Both join the backlog as open items.
+- Make a task from an item (it joins the end of the project; in a running project the engine plans it when its turn
+  comes), cover it with an existing task, drop it with a reason, reopen it. The same as agent tools (`backlog_add`,
+  `backlog_task`, `backlog_cover`, `backlog_drop`).
+- The landing rule: every task planned, every phase landed, **and nothing open in the backlog**. When only the
+  backlog is left the engine logs `project.backlog_open` and Now lists the project under "needs you". The PR body
+  lists the backlog still open and what was left out on purpose.
+- The project page shows the backlog above the tasks; the Projects list shows how many items are open.
+- Found while building it, from the rename (#41): "plan this task" had become `POST /tasks/:id/project` (now
+  `/tasks/:id/plan` again), the Tasks list and the project page looked for `task.project*` events (so planning never
+  showed), and the button said "Re-project". All fixed.
+
 ## Names: project → task → phase → step; "plan" is the verb (Sandy, 2026-10-23; PR #41)
 
 Sandy, after the engine was found running a level off: "plan needs to become a master plan, about an idea or goal
