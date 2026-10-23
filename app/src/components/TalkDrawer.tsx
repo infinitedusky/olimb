@@ -10,7 +10,11 @@ import { Conversation } from './Conversation'
 import { engine, type TalkContext, type TalkSession } from '../engine'
 import { useCurrentApp } from '../current-app'
 
-const OPEN_KEY = 'if.talk.open', SESSION_KEY = 'if.talk.session'
+const OPEN_KEY = 'if.talk.open', SESSION_KEY = 'if.talk.session', POPPED_KEY = 'if.talk.popped'
+// The main window and a popped-out agent window talk over this channel: where the person is, which app, closed.
+type Msg = { type: 'context'; context: TalkContext; appId?: string } | { type: 'hello' } | { type: 'closed' }
+const channel = () => (typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('self-evident-agent'))
+let popup: Window | null = null
 
 /** Where the person is, from the route: enough for the agent to look the rest up. */
 export function contextFor(pathname: string, search: string): TalkContext {
@@ -32,16 +36,42 @@ export function contextFor(pathname: string, search: string): TalkContext {
 const remember = (k: string, v: string | null) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v) } catch { /* fine */ } }
 const recall = (k: string) => { try { return localStorage.getItem(k) } catch { return null } }
 
-export function TalkDrawer() {
+/** The agent in its own browser window: the same panel, filling the window, told by the main window where the person is. */
+export function AgentWindow() { return <TalkDrawer standalone /> }
+
+export function TalkDrawer({ standalone = false }: { standalone?: boolean }) {
   const loc = useLocation()
-  const { app, apps } = useCurrentApp()
-  const [open, setOpen] = useState(() => recall(OPEN_KEY) === '1')
+  const { app, apps, setAppId } = useCurrentApp()
+  const [open, setOpen] = useState(() => standalone || recall(OPEN_KEY) === '1')
+  const [popped, setPopped] = useState(() => !standalone && recall(POPPED_KEY) === '1')
+  const [remote, setRemote] = useState<TalkContext | null>(null) // standalone: the main window's page
   const [sessions, setSessions] = useState<TalkSession[]>([])
   const [sessionId, setSessionId] = useState<string | null>(() => recall(SESSION_KEY))
   const [problem, setProblem] = useState<string | null>(null)
   const [starting, setStarting] = useState(false)
   const [renaming, setRenaming] = useState(false)
-  const context = useMemo(() => ({ ...contextFor(loc.pathname, loc.search), appId: app?.id }), [loc.pathname, loc.search, app?.id])
+  const local = useMemo(() => ({ ...contextFor(loc.pathname, loc.search), appId: app?.id }), [loc.pathname, loc.search, app?.id])
+  const context: TalkContext = standalone ? remote ?? { path: '/', label: 'the main window' } : local
+  useEffect(() => { // the two windows keep each other informed
+    const ch = channel()
+    if (!ch) return
+    if (standalone) {
+      ch.onmessage = (e: MessageEvent<Msg>) => { if (e.data.type === 'context') { setRemote(e.data.context); if (e.data.appId && e.data.appId !== app?.id) setAppId(e.data.appId) } }
+      ch.postMessage({ type: 'hello' } satisfies Msg)
+      const bye = () => ch.postMessage({ type: 'closed' } satisfies Msg)
+      window.addEventListener('beforeunload', bye)
+      return () => { window.removeEventListener('beforeunload', bye); ch.close() }
+    }
+    const send = () => ch.postMessage({ type: 'context', context: local, appId: app?.id } satisfies Msg)
+    send()
+    ch.onmessage = (e: MessageEvent<Msg>) => { if (e.data.type === 'hello') { send(); setPopped(true); remember(POPPED_KEY, '1') } if (e.data.type === 'closed') { setPopped(false); remember(POPPED_KEY, '0') } }
+    return () => ch.close()
+  }, [standalone, local.path, local.planId, app?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const popOut = () => {
+    popup = window.open('/agent', 'self-evident-agent', 'popup,width=520,height=900')
+    setPopped(true); remember(POPPED_KEY, '1')
+  }
+  const backIn = () => { channel()?.postMessage({ type: 'closed' } satisfies Msg); window.close() }
   const current = sessions.find((s) => s.id === sessionId) ?? null
   const setOpenKeep = (v: boolean) => { setOpen(v); remember(OPEN_KEY, v ? '1' : '0') }
   const pick = (id: string | null) => { setSessionId(id); remember(SESSION_KEY, id) }
@@ -52,7 +82,7 @@ export function TalkDrawer() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
-  useEffect(() => { document.body.classList.toggle('talk-open', open); return () => document.body.classList.remove('talk-open') }, [open])
+  useEffect(() => { if (standalone) return; document.body.classList.toggle('talk-open', open && !popped); return () => document.body.classList.remove('talk-open') }, [open, popped, standalone])
   useEffect(() => { // on open: the remembered conversation if still open, else the latest, else none (start one on demand)
     if (!open) return
     void reload().then((all) => { if (!all.some((s) => s.id === sessionId)) pick(all[0]?.id ?? null) })
@@ -75,11 +105,12 @@ export function TalkDrawer() {
   }
   const rename = async (subject: string) => { if (current && subject.trim()) { await engine.renameTalk(current.id, subject); await reload() } setRenaming(false) }
 
+  if (popped) return <button className="talk-fab" onClick={() => { if (popup && !popup.closed) popup.focus(); else popOut() }} title="The agent is in its own window" data-component="TalkFab">Agent ↗</button>
   if (!open) return <button className="talk-fab" onClick={() => setOpenKeep(true)} title="Talk (⌘J)" data-component="TalkFab">Talk</button>
   const appName = (s: TalkSession) => apps.find((a) => a.id === s.appId)?.name ?? ''
   const label = (s: TalkSession) => s.subject ?? `New · ${appName(s)}`
   return (
-    <aside className="talk-drawer" data-component="TalkDrawer">
+    <aside className={standalone ? 'talk-drawer standalone' : 'talk-drawer'} data-component="TalkDrawer">
       <div className="talk-tabs">
         {sessions.map((s) => (
           <button key={s.id} className={`talk-tab ${s.id === sessionId ? 'active' : ''}`} onClick={() => pick(s.id)} title={`${label(s)} · ${appName(s)}${s.branch ? ` · ${s.branch}` : ''}`}>
@@ -87,7 +118,9 @@ export function TalkDrawer() {
           </button>
         ))}
         <button className="talk-tab new" disabled={starting} onClick={start} title={app ? `New conversation about ${app.name}${context.planId ? ', pinned to this plan' : ''}` : 'Pick an app first'}>+</button>
-        <button className="talk-tab close" onClick={() => setOpenKeep(false)} title="Close (⌘J)">×</button>
+        {standalone
+          ? <button className="talk-tab close" onClick={backIn} title="Put the agent back in the page">↙</button>
+          : <><button className="talk-tab pop" onClick={popOut} title="Open the agent in its own window">↗</button><button className="talk-tab close" onClick={() => setOpenKeep(false)} title="Close (⌘J)">×</button></>}
       </div>
       {current ? (
         <>
